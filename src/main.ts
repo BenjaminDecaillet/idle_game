@@ -1,5 +1,5 @@
 import './style.css';
-import { tick } from './game/engine';
+import { grantBoost, tick, timeSkip } from './game/engine';
 import { loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
 import { Fx } from './ui/fx';
@@ -72,3 +72,16 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 window.addEventListener('pagehide', () => saveGame(state));
+
+// Console API for demoing/integrating monetization rewards before any ad or
+// payment SDK is wired up (see docs/monetization.md). Example in DevTools:
+//   isv.boost(2, 240)   → 2x output for 4 minutes
+//   isv.skip(3600)      → instantly simulate 1 hour
+(window as { isv?: object }).isv = {
+  boost: (mult = 2, seconds = 240) => grantBoost(state, mult, seconds, 'dev'),
+  skip: (seconds = 3600) => {
+    const earned = timeSkip(state, seconds);
+    ui.replaceState(state);
+    return earned;
+  },
+};

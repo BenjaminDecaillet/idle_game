@@ -20,7 +20,7 @@ import type {
   WorkerState,
 } from './types';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2; // v2: added boosts[] (monetization groundwork)
 
 // ---------------------------------------------------------------------------
 // State creation
@@ -43,6 +43,7 @@ export function createInitialState(now = Date.now()): GameState {
     upgrades: {},
     candidates: [],
     candidateRerollCost: 10,
+    boosts: [],
     settings: { sound: true, particles: true },
     nextEntityId: 1,
   };
@@ -73,7 +74,21 @@ export function skillMultiplier(worker: WorkerState): number {
 export function globalOutputMultiplier(state: GameState): number {
   const coffee = 1 + 0.1 * (state.upgrades['coffee'] ?? 0);
   const fiber = 1 + 0.15 * (state.upgrades['fiber'] ?? 0);
-  return coffee * fiber;
+  let boost = 1;
+  for (const b of state.boosts) boost *= b.mult;
+  return coffee * fiber * boost;
+}
+
+/** Strongest currently-active boost, for HUD display. Null if none. */
+export function activeBoost(state: GameState): { mult: number; remainingSec: number } | null {
+  if (state.boosts.length === 0) return null;
+  let mult = 1;
+  let remainingSec = 0;
+  for (const b of state.boosts) {
+    mult *= b.mult;
+    remainingSec = Math.max(remainingSec, b.remainingSec);
+  }
+  return { mult, remainingSec };
 }
 
 export function stationMultiplier(state: GameState, stationInstanceId: number | null): number {
@@ -179,8 +194,22 @@ export function tick(state: GameState, dt: number): TickEvents {
 
   // 2. Generate work and gain experience.
   const project = getProject(state, state.activeProjectId);
-  const rate = totalWorkRate(state);
+  let rate = totalWorkRate(state);
+  // Boosts that expire mid-tick only cover part of dt: correct the full
+  // multiplier baked into totalWorkRate down to the covered fraction.
+  for (const b of state.boosts) {
+    if (b.remainingSec < dt && b.mult !== 0) {
+      const frac = b.remainingSec / dt;
+      rate *= (1 + (b.mult - 1) * frac) / b.mult;
+    }
+  }
   project.progress += rate * dt;
+
+  // Count down and expire boosts (after they contributed to this tick).
+  if (state.boosts.length > 0) {
+    for (const b of state.boosts) b.remainingSec -= dt;
+    state.boosts = state.boosts.filter((b) => b.remainingSec > 0);
+  }
 
   const expGain = dt * expMultiplier(state);
   for (const worker of state.workers) {
@@ -321,6 +350,38 @@ export function rerollCandidates(state: GameState): string | null {
   state.candidates = rollCandidates(state);
   state.candidateRerollCost = Math.round(state.candidateRerollCost * 1.5);
   return null;
+}
+
+/**
+ * Grant a temporary output boost (monetization reward delivery: rewarded
+ * ads, purchases, events). Re-granting from the same source extends the
+ * existing boost instead of stacking it.
+ */
+export function grantBoost(
+  state: GameState,
+  mult: number,
+  durationSec: number,
+  source: string,
+): string | null {
+  if (mult <= 1 || durationSec <= 0) return 'Invalid boost';
+  const existing = state.boosts.find((b) => b.source === source && b.mult === mult);
+  if (existing) {
+    existing.remainingSec += durationSec;
+  } else {
+    if (state.boosts.length >= 5) return 'Too many active boosts';
+    state.boosts.push({ mult, remainingSec: durationSec, source });
+  }
+  return null;
+}
+
+/**
+ * Instantly simulate `seconds` of progression (a purchasable/ad-rewarded
+ * "time skip"). Runs through the exact same tick rules as live play.
+ * Returns the money earned.
+ */
+export function timeSkip(state: GameState, seconds: number): number {
+  if (seconds <= 0) return 0;
+  return simulateOffline(state, seconds, seconds);
 }
 
 export function renameCompany(state: GameState, name: string): string | null {

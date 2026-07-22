@@ -54,4 +54,4 @@ public/      PWA icons + favicon
 docs/        specs, implementation plan, agent instructions
 ```
 
-See [docs/specs.md](docs/specs.md) for the architecture, [docs/plan.md](docs/plan.md) for the implementation plan, status and roadmap.
+See [docs/specs.md](docs/specs.md) for the architecture, [docs/plan.md](docs/plan.md) for the implementation plan, status and roadmap, and [docs/monetization.md](docs/monetization.md) for the monetization strategy (rewarded ads, IAP, store releases).

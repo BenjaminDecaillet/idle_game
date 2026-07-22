@@ -70,6 +70,7 @@ Returns `TickEvents` (completions, level-ups) that the UI turns into confetti/so
 - **Costs**: workstations `base × 1.18–1.22^owned`; upgrades `base × 2.4–3^level` with level caps; training `150 × 4^tierIndex × level²`; candidate reroll ×1.5 each time.
 - **Candidates**: 3 rolled at a time, tier pool weighted by what the player can roughly afford.
 - **Projects**: 12 defs in `data.ts`, unlock with money; exactly one active; switching is free.
+- **Boosts** (monetization delivery, see `docs/monetization.md`): `grantBoost(state, mult, sec, source)` adds a timed output multiplier (max 5 sources, same source extends); counted down inside `tick` with mid-tick expiry pro-rating, so online/offline behave identically. `timeSkip(state, sec)` fast-forwards through real ticks. HUD shows a pulsing 🚀 badge while boosted. Save format v2.
 
 ## Persistence
 

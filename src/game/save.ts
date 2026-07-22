@@ -62,6 +62,7 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
     version: SAVE_VERSION,
     settings: { ...fresh.settings, ...(parsed.settings ?? {}) },
     upgrades: { ...(parsed.upgrades ?? {}) },
+    boosts: Array.isArray(parsed.boosts) ? parsed.boosts : [],
   };
   // Ensure every project defined in data.ts has a state entry (new content
   // added in updates appears automatically in old saves).

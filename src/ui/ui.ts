@@ -7,6 +7,7 @@ import {
   tierById,
 } from '../game/data';
 import {
+  activeBoost,
   buyUpgrade,
   buyWorkstation,
   estimatedIncome,
@@ -76,6 +77,7 @@ export class UI {
             🏢 <span id="company-name"></span>
           </button>
           <div class="hud-badges">
+            <span class="badge badge-boost" id="hud-boost" hidden title="Active boost"></span>
             <span class="badge badge-income" id="hud-income" title="Estimated net income"></span>
           </div>
         </div>
@@ -135,6 +137,15 @@ export class UI {
     }
     this.text('hud-salary', `salaries ${formatMoney(totalSalaries(s))}/s`);
     this.text('company-name', s.companyName);
+
+    const boost = activeBoost(s);
+    const boostEl = document.getElementById('hud-boost');
+    if (boostEl) {
+      boostEl.hidden = boost === null;
+      if (boost) {
+        boostEl.textContent = `🚀 ×${boost.mult} ${formatDuration(boost.remainingSec)}`;
+      }
+    }
 
     const project = getProject(s, s.activeProjectId);
     const def = projectDefById(project.defId);

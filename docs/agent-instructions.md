@@ -30,6 +30,7 @@ Key principles (unchanged):
 - *Feature:* "Implement prestige: an `ipo()` action in engine.ts that resets state but grants a permanent output multiplier `1 + log10(totalEarned/1e6)`; migrate old saves; add UI on the Stats tab; unit-test the multiplier math."
 - *Balance:* "Early game feels slow — raise Intern baseRate to 0.6 and cut Landing Page baseWork to 25, then update the affected test expectations."
 - *UI:* "Add a sparkline of money over the last 10 minutes to the Stats tab; sample in main.ts, render as inline SVG, no new dependencies."
+- *Monetization:* "Build the Shop tab from docs/monetization.md Phase 2: three rewarded-ad offers (2× for 4h boost, 1h time skip, free reroll) calling `grantBoost`/`timeSkip` through a `showRewardedAd(placement)` adapter that in dev resolves after a fake 5s countdown; daily cap of 6 stored in GameState (migrate!); unit-test the cap logic."
 
 ## Troubleshooting
 

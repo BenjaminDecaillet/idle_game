@@ -23,6 +23,11 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 ## Roadmap / TODOs (in suggested order)
 
 - [ ] **Playtest & balance tuning** — adjust `data.ts` values after real play sessions
+- [x] **Monetization groundwork** — timed boosts (`grantBoost`), `timeSkip`, HUD boost badge, save migration (v2), dev console API (`isv.boost/skip`)
+- [ ] **Monetization Phase 0** — analytics (PostHog/Plausible) + privacy policy → see [monetization.md](monetization.md)
+- [ ] **Shop/Boost tab** — UI for boost & time-skip offers over the existing engine hooks (mock "ad" in dev)
+- [ ] **Rewarded ads** — portal SDK (CrazyGames/Poki) or H5 Games Ads + consent banner
+- [ ] **Web IAP** — Founder Edition / Starter Pack via a Merchant of Record
 - [ ] **Prestige** ("IPO & found a new startup"): reset for permanent multiplier based on `totalEarned`
 - [ ] **Achievements** (first hire, $1M, 100 completions…) with small permanent bonuses
 - [ ] **Statistics graphs** — money-over-time sparkline on the Stats tab
@@ -30,7 +35,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [ ] **Multiple concurrent projects** — one active project per specialization team
 - [ ] **Worker traits** — rare candidates with quirks (night owl, coffee addict)
 - [ ] **Cloud saves** — optional backend or Google Drive sync
-- [ ] **Capacitor wrapper** — publish to App Store / Play Store if the PWA isn't enough
+- [ ] **Capacitor wrapper** — App Store / Play Store with AdMob + RevenueCat (monetization Phase 4)
 - [ ] **i18n** — EN/FR/DE
 - [ ] **Lighthouse pass** — PWA/perf/a11y audit on the deployed URL
 

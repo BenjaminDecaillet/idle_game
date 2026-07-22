@@ -69,6 +69,19 @@ export interface Settings {
   particles: boolean;
 }
 
+/**
+ * Temporary output multiplier — the delivery vehicle for monetization
+ * rewards (rewarded ads, purchased boosts). Counted down inside tick()
+ * so it works identically online and offline.
+ */
+export interface Boost {
+  /** e.g. 2 for a "2x income" boost */
+  mult: number;
+  remainingSec: number;
+  /** where it came from, for analytics: 'ad' | 'iap' | 'event' | 'dev' */
+  source: string;
+}
+
 export interface GameState {
   version: number;
   companyName: string;
@@ -85,6 +98,7 @@ export interface GameState {
   upgrades: Record<string, number>;
   candidates: Candidate[];
   candidateRerollCost: number;
+  boosts: Boost[];
   settings: Settings;
   nextEntityId: number;
 }
