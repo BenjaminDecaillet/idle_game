@@ -31,6 +31,22 @@ import { formatDuration, formatMoney, formatNumber, formatRate } from '../game/f
 import { exportSave, importSave, resetGame, saveGame } from '../game/save';
 import type { GameState, WorkerState } from '../game/types';
 import type { Fx } from './fx';
+import { personaAtDesk, personaAvatar, personaStanding } from './persona';
+
+const SPEECH_LINES = [
+  'Shipping it! 🚀',
+  'Just one more line…',
+  'Compiling… ☕',
+  'It works on my machine!',
+  'Refactoring… again',
+  'LGTM 👍',
+  '99 little bugs in the code…',
+  'Standup in 5!',
+  'Deploy on Friday? 😱',
+  'Rubber duck says hi 🦆',
+  'Have you tried turning it off and on?',
+  'TODO: fix later',
+];
 
 type Tab = 'projects' | 'team' | 'office' | 'upgrades' | 'stats';
 
@@ -48,6 +64,7 @@ export class UI {
   private state: GameState;
   private tab: Tab = 'projects';
   private rebuildTimer = 0;
+  private officeDirty = true;
   private onStateReplaced: (next: GameState) => void;
 
   constructor(
@@ -228,9 +245,20 @@ export class UI {
       case 'team':
         content.innerHTML = this.renderTeam();
         break;
-      case 'office':
-        content.innerHTML = this.renderOffice();
+      case 'office': {
+        // The office floor holds looping CSS animations (typing personas) —
+        // rebuilding it at 2 Hz would visibly reset them. Only rebuild the
+        // floor on structural changes; refresh just the shop otherwise.
+        const floor = document.getElementById('office-floor');
+        if (!floor || this.officeDirty) {
+          content.innerHTML = this.renderOffice();
+          this.officeDirty = false;
+        } else {
+          const shop = document.getElementById('office-shop');
+          if (shop) shop.innerHTML = this.renderOfficeShop();
+        }
         break;
+      }
       case 'upgrades':
         content.innerHTML = this.renderUpgrades();
         break;
@@ -299,7 +327,7 @@ export class UI {
         const affordable = s.money >= tier.hireCost;
         return `
         <div class="card candidate-card">
-          <span class="card-emoji">${tier.emoji}</span>
+          <span class="card-emoji persona-slot">${personaAvatar(`c:${c.name}:${c.tierId}`, c.specialization, c.tierId)}</span>
           <div class="card-main">
             <h3>${c.name}</h3>
             <span class="muted">${tier.title} · ${formatRate(tier.baseRate)} · salary ${formatMoney(tier.salary)}/s</span>
@@ -351,7 +379,7 @@ export class UI {
     return `
       <div class="card worker-card ${station ? '' : 'benched'}">
         <div class="card-row">
-          <span class="card-emoji">${tier.emoji}</span>
+          <span class="card-emoji persona-slot">${personaAvatar(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}</span>
           <div class="card-main">
             <h3>${w.name} <span class="lvl">Lv ${w.skillLevel}</span></h3>
             <span class="muted">${tier.title} · ${deskLabel}</span>
@@ -378,6 +406,81 @@ export class UI {
   }
 
   private renderOffice(): string {
+    return `
+      <div class="stack">
+        <div id="office-floor">${this.renderOfficeFloor()}</div>
+        <div id="office-shop">${this.renderOfficeShop()}</div>
+      </div>`;
+  }
+
+  /** The animated floor: every desk as a tile, personas seated and typing. */
+  private renderOfficeFloor(): string {
+    const s = this.state;
+    // Same ordering as autoSeat: best desks first, so the layout mirrors seating.
+    const stations = [...s.workstations].sort(
+      (a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier,
+    );
+    const tiles = stations
+      .map((st) => {
+        const def = stationDefById(st.defId);
+        const worker = s.workers.find((w) => w.stationId === st.id);
+        if (worker) {
+          const tier = tierById(worker.tierId);
+          return `
+          <button class="desk-tile occupied" data-action="poke:${worker.id}"
+                  title="${worker.name} — ${tier.title}">
+            ${personaAtDesk(`w:${worker.id}:${worker.name}`, worker.specialization, worker.tierId)}
+            <span class="desk-name">${worker.name.split(' ')[0]}</span>
+            <span class="desk-info">${def.emoji} ×${def.multiplier}</span>
+          </button>`;
+        }
+        return `
+          <div class="desk-tile empty" title="${def.name} — empty">
+            <svg class="persona-desk" viewBox="0 0 64 56" aria-hidden="true">
+              <rect x="8" y="30" width="12" height="4" rx="2" fill="#1f2937"/>
+              <rect x="12" y="33" width="4" height="12" fill="#1f2937"/>
+              <rect x="30" y="33" width="30" height="3" rx="1.5" fill="#475569"/>
+              <rect x="42" y="36" width="4" height="10" fill="#334155"/>
+              <rect x="34" y="24" width="16" height="10" rx="1.2" fill="#0f172a"
+                    stroke="#334155" stroke-width="0.8"/>
+            </svg>
+            <span class="desk-name muted">empty</span>
+            <span class="desk-info">${def.emoji} ×${def.multiplier}</span>
+          </div>`;
+      })
+      .join('');
+
+    const standing = s.workers
+      .filter((w) => w.stationId === null)
+      .map(
+        (w) => `
+        <button class="stand-slot" data-action="poke:${w.id}" title="${w.name} — needs a desk!">
+          ${personaStanding(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}
+          <span class="desk-name">${w.name.split(' ')[0]}</span>
+        </button>`,
+      )
+      .join('');
+
+    return `
+      <div class="section-head"><h2>Your office</h2>
+        <span class="muted">${s.workstations.length} desks · ${s.workers.length} workers</span>
+      </div>
+      ${
+        stations.length || standing
+          ? `<div class="office-grid card">${tiles || ''}</div>`
+          : `<div class="empty-hint">No desks yet — buy your first one below! 🪑</div>`
+      }
+      ${
+        standing
+          ? `<div class="warning-banner">⚠️ Waiting for a desk (producing nothing):</div>
+             <div class="stand-row card">${standing}</div>`
+          : ''
+      }
+      <p class="hint">💡 Tap your people to hear from them. Seating is automatic:
+      strongest workers get the best desks.</p>`;
+  }
+
+  private renderOfficeShop(): string {
     const s = this.state;
     const shop = WORKSTATIONS.map((def) => {
       const owned = s.workstations.filter((w) => w.defId === def.id).length;
@@ -398,15 +501,10 @@ export class UI {
         </div>
       </div>`;
     }).join('');
-    const benched = s.workers.filter((w) => w.stationId === null).length;
     return `
       <div class="stack">
-        <div class="section-head"><h2>Workstations</h2>
-          <span class="muted">${s.workstations.length} desks · ${s.workers.length} workers</span>
-        </div>
-        ${benched > 0 ? `<div class="warning-banner">⚠️ ${benched} worker${benched > 1 ? 's' : ''} without a desk — they produce nothing!</div>` : ''}
+        <div class="section-head"><h2>Buy workstations</h2></div>
         ${shop}
-        <p class="hint">💡 Workers are automatically seated: your strongest people get the best desks.</p>
       </div>`;
   }
 
@@ -519,6 +617,17 @@ export class UI {
       case 'buy-station':
         error = buyWorkstation(s, arg);
         break;
+      case 'poke': {
+        // Pure fun: poked workers talk. No progress impact — core stays idle.
+        const bubble = document.createElement('span');
+        bubble.className = 'speech-bubble';
+        bubble.textContent = SPEECH_LINES[Math.floor(Math.random() * SPEECH_LINES.length)];
+        target.appendChild(bubble);
+        setTimeout(() => bubble.remove(), 2200);
+        this.fx.click();
+        structural = false;
+        break;
+      }
       case 'buy-upgrade':
         error = buyUpgrade(s, arg);
         break;
@@ -580,17 +689,30 @@ export class UI {
 
     if (error) {
       this.toast(error);
-    } else if (action !== 'tab') {
+    } else if (action !== 'tab' && action !== 'poke') {
       this.fx.click();
       saveGame(this.state);
     }
-    if (structural) this.rebuildTab();
+    if (structural) {
+      this.officeDirty = true;
+      this.rebuildTab();
+    }
+  }
+
+  /** Quick scale "pop" on the money display — called on payouts. */
+  moneyPulse(): void {
+    const el = document.getElementById('hud-money');
+    if (el && !el.classList.contains('pop')) {
+      el.classList.add('pop');
+      setTimeout(() => el.classList.remove('pop'), 320);
+    }
   }
 
   replaceState(next: GameState): void {
     this.state = next;
     this.fx.soundEnabled = next.settings.sound;
     this.fx.enabled = next.settings.particles;
+    this.officeDirty = true;
     this.rebuildTab();
   }
 

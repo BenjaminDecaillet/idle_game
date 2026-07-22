@@ -666,6 +666,251 @@ button.project-card {
   font-variant-numeric: tabular-nums;
 }
 
+/* --- Personas & office floor --------------------------------------------- */
+
+.persona-slot {
+  background: none;
+  padding: 0;
+}
+
+.persona-avatar {
+  display: block;
+  border-radius: 12px;
+}
+
+.office-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+  padding: 12px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025) 0 1px,
+      transparent 1px 28px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.025) 0 1px,
+      transparent 1px 28px
+    ),
+    var(--card);
+}
+
+.desk-tile {
+  position: relative;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 8px 6px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.08s;
+}
+
+.desk-tile.empty {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.desk-tile.occupied:active {
+  transform: scale(0.95);
+}
+
+.persona-desk {
+  width: 84px;
+  height: 74px;
+}
+
+.desk-name {
+  font-size: 0.68rem;
+  font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desk-info {
+  font-size: 0.6rem;
+  color: var(--muted);
+}
+
+/* typing animations */
+.persona-sit-head {
+  animation: head-bob 1.1s ease-in-out infinite;
+  transform-origin: 20px 22px;
+}
+
+.persona-sit-arms {
+  animation: typing 0.34s ease-in-out infinite alternate;
+}
+
+.persona-screen {
+  fill: #38bdf8;
+  animation: screen-glow 2.3s ease-in-out infinite;
+}
+
+@keyframes head-bob {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-3deg) translateY(0.6px);
+  }
+}
+
+@keyframes typing {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(1.6px);
+  }
+}
+
+@keyframes screen-glow {
+  0%,
+  100% {
+    fill: #38bdf8;
+    opacity: 0.85;
+  }
+  40% {
+    fill: #22d3ee;
+    opacity: 1;
+  }
+  70% {
+    fill: #818cf8;
+    opacity: 0.9;
+  }
+}
+
+.stand-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px;
+}
+
+.stand-slot {
+  position: relative;
+  background: none;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.persona-stand {
+  width: 40px;
+  height: 70px;
+}
+
+.persona-sway {
+  animation: sway 2.6s ease-in-out infinite;
+  transform-origin: 16px 48px;
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-2.5deg);
+  }
+  50% {
+    transform: rotate(2.5deg);
+  }
+}
+
+.speech-bubble {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  color: #0b0f1a;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 10px;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  animation: bubble-in 0.18s ease-out;
+  pointer-events: none;
+}
+
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #fff;
+  border-bottom: none;
+}
+
+@keyframes bubble-in {
+  from {
+    transform: translateX(-50%) translateY(4px) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* --- Golden briefcase & money pop ---------------------------------------- */
+
+.briefcase {
+  position: fixed;
+  z-index: 80;
+  font-size: 2.2rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.8));
+  animation: briefcase-float 1.4s ease-in-out infinite;
+  padding: 8px;
+}
+
+@keyframes briefcase-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-6deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(6deg);
+  }
+}
+
+.money.pop {
+  animation: money-pop 0.3s ease-out;
+}
+
+@keyframes money-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 /* --- Desktop tweaks ------------------------------------------------------ */
 
 @media (min-width: 720px) {

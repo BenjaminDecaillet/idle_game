@@ -53,8 +53,15 @@ export class Fx {
 
   /** Confetti + floating reward text at the given viewport position. */
   payoutBurst(x: number, y: number, reward: number): void {
+    if (!this.burst(x, y)) return;
+    this.texts.push({ x, y: y - 10, life: 0, text: `+${formatMoney(reward)}` });
+    this.ding();
+  }
+
+  /** Confetti only (no text) — returns false when throttled/disabled. */
+  burst(x: number, y: number): boolean {
     const now = performance.now();
-    if (!this.enabled || now - this.lastBurst < 120) return; // throttle heavy streams
+    if (!this.enabled || now - this.lastBurst < 120) return false; // throttle heavy streams
     this.lastBurst = now;
     const count = 14;
     for (let i = 0; i < count; i++) {
@@ -72,9 +79,8 @@ export class Fx {
         shape: Math.random() < 0.5 ? 'rect' : 'circle',
       });
     }
-    this.texts.push({ x, y: y - 10, life: 0, text: `+${formatMoney(reward)}` });
     if (this.particles.length > 400) this.particles.splice(0, this.particles.length - 400);
-    this.ding();
+    return true;
   }
 
   update(dt: number): void {

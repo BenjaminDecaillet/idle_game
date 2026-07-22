@@ -83,7 +83,9 @@ Returns `TickEvents` (completions, level-ups) that the UI turns into confetti/so
 
 - Layout: HUD (money, net income, salaries) → hero card (active project, animated progress bar, ETA) → tab content → fixed bottom tab bar (Projects, Team, Office, Upgrades, Stats). Max width 680 px, safe-area insets, works from small phones to desktop.
 - Rendering: hero/HUD update at 60 fps via `textContent` writes; the active tab re-renders at 2 Hz (innerHTML) to refresh costs/affordability. All clicks are delegated via `data-action="verb:arg"` attributes.
-- Effects: canvas confetti + floating `+$X` on payouts (throttled), WebAudio "cha-ching"/click synth. Both toggleable in Settings.
+- Effects: canvas confetti + floating `+$X` on payouts (throttled), money-counter pop, WebAudio "cha-ching"/click synth. Both toggleable in Settings.
+- **Personas** (`src/ui/persona.ts`): every worker/candidate gets a deterministic procedural SVG character (skin/hair/hairstyle from an FNV hash of their seed, shirt color from specialization, accessory from tier — cap/glasses/headphones/crown/halo). The Office tab renders an animated floor: seated personas typing at their desks (CSS keyframes; floor only re-renders on structural changes so animations don't reset), desk-less workers standing in a waiting row. Tapping a persona shows a speech bubble — cosmetic only, core progress never requires tapping.
+- **Golden briefcase**: rare optional spawn (first ~1 min, then every 3–7 min, in `main.ts`); tapping it grants `grantBoost(2, 60s, 'event')` + confetti. Optional juice, not core progress.
 
 ## Deployment
 
