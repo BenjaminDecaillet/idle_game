@@ -1,48 +1,90 @@
-# Specifications
+# Specifications — Idle Silicon Valley
 
-This document outlines the core specifications and structure of the game model. for `Idle Silicon Valley`.
+Technical specification of the game as implemented. Stack decision (2026-07): **TypeScript + Vite PWA** instead of Godot, so one codebase runs on phones (installable PWA) and the web, and can be built/tested headlessly in CI.
 
-# Table of Contents
+## Table of Contents
 
-- [Core Game Model](#core-game-model)
-  - [Project strructure](#project-structure)
-  - [Scenes](#scenes)
-  - [Scripts](#scripts)
-  - [ui](#ui)
-  - [assets](#assets)
+- [Project structure](#project-structure)
+- [Core game model](#core-game-model)
+- [Game rules](#game-rules)
+- [Persistence](#persistence)
+- [UI](#ui)
+- [Deployment](#deployment)
 
-## Core Game Model
+## Project structure
 
-Contains the main components and their relationships within the game, as well as the description of the file contents and structures.
-
-### Project structure
-
-```(bash)
-res://
-│
-├── scenes/
-│   ├── main.tscn
-│   ├── company/
-│   │   ├── company_view.tscn
-│   │   ├── project_card.tscn
-│   │   └── worker_card.tscn
-│
-├── scripts/
-│   ├── game_manager.gd
-│   ├── company.gd
-│   ├── project.gd
-│   ├── worker.gd
-│   └── save_manager.gd
-│
-├── ui/
-│   ├── hud.tscn
-│   └── dialogs/
-│
-├── data/
-│   ├── projects.json
-│   └── workers.json
-│
-└── assets/
-    └── icons/
+```
+idle_game/
+├── index.html                 # single page, PWA meta tags
+├── vite.config.ts             # base path + vite-plugin-pwa manifest
+├── public/                    # favicon.svg, icon-192/512.png
+├── scripts/gen-icons.mjs      # regenerates PNG icons from favicon.svg
+├── src/
+│   ├── main.ts                # bootstrap: load save, rAF game loop, autosave
+│   ├── style.css              # dark startup-dashboard theme
+│   ├── game/                  # PURE logic — no DOM access
+│   │   ├── types.ts           # all interfaces (GameState, WorkerState, …)
+│   │   ├── data.ts            # balance data: tiers, stations, projects, upgrades
+│   │   ├── engine.ts          # tick(), derived values, player actions, autoSeat
+│   │   ├── save.ts            # localStorage save/load, migrate, offline progress
+│   │   └── format.ts          # number/money/duration formatting (1.23M …)
+│   └── ui/
+│       ├── ui.ts              # HUD + hero + 5 tabs, event delegation
+│       └── fx.ts              # canvas confetti, floating "+$", WebAudio synth
+├── tests/                     # vitest unit tests for src/game
+└── .github/workflows/deploy.yml  # test + build + deploy to GitHub Pages
 ```
 
+## Core game model
+
+### Entities
+
+| Entity | State | Defined in |
+|---|---|---|
+| Company | `GameState` — money, totals, settings, entity lists | `types.ts` |
+| Worker | tier, specialization, skill level, experience, desk | `WorkerState` |
+| Workstation | instance of a workstation type | `WorkstationState` |
+| Project | unlocked, progress, completions, scaled work/reward | `ProjectState` |
+| Upgrade | level per upgrade id | `upgrades: Record<string, number>` |
+
+### The tick (single source of truth)
+
+`tick(state, dt)` in `engine.ts`, called every animation frame (dt clamped to 2 s) **and** by offline simulation in 60 s chunks:
+
+1. Pay salaries: `money = max(0, money − totalSalaries·dt)`
+2. Add work to the active project: `progress += Σ workerRate · dt`
+3. Grant experience to seated workers; handle level-ups
+4. Complete the project while `progress ≥ currentWork`: payout, `completions++`, `currentWork ×= workGrowth`, `currentReward ×= rewardGrowth`, progress rolls over (auto-repeat)
+
+Returns `TickEvents` (completions, level-ups) that the UI turns into confetti/sounds — logic never touches the DOM.
+
+## Game rules
+
+- **Worker output**: `baseRate × skillMult × stationMult × globalMult × specBonus`
+  - `skillMult = 1 + 0.1·(level−1)`; levels from experience (90 s × 1.5^level per level) or paid training
+  - `stationMult`: 0 without a desk; desk multiplier (1×–2.2×), amplified by the Chairs upgrade
+  - `globalMult`: Espresso (+10%/lvl) × Fiber (+15%/lvl)
+  - `specBonus = 1.5` when worker specialization matches the project
+- **Seating**: automatic — workers sorted by potential output take desks sorted by multiplier (`autoSeat`). Runs on hire/fire/buy/project-switch.
+- **Salaries**: per-second drain, reduced by HR upgrade (−6%/lvl, floor 40%).
+- **Costs**: workstations `base × 1.18–1.22^owned`; upgrades `base × 2.4–3^level` with level caps; training `150 × 4^tierIndex × level²`; candidate reroll ×1.5 each time.
+- **Candidates**: 3 rolled at a time, tier pool weighted by what the player can roughly afford.
+- **Projects**: 12 defs in `data.ts`, unlock with money; exactly one active; switching is free.
+
+## Persistence
+
+- Auto-save every 10 s + on tab hide/close (`visibilitychange`/`pagehide`) to `localStorage` under `idle-silicon-valley-save`.
+- **Offline progress**: on load, elapsed time (capped 24 h) is simulated through the real `tick`, so offline and online rules can never diverge. A "Welcome back" modal shows earnings.
+- `migrate()` merges old saves onto a fresh state: new fields get defaults, new projects appear automatically. Bump `SAVE_VERSION` on breaking changes.
+- Export/import: base64 save codes (Settings tab).
+
+## UI
+
+- Layout: HUD (money, net income, salaries) → hero card (active project, animated progress bar, ETA) → tab content → fixed bottom tab bar (Projects, Team, Office, Upgrades, Stats). Max width 680 px, safe-area insets, works from small phones to desktop.
+- Rendering: hero/HUD update at 60 fps via `textContent` writes; the active tab re-renders at 2 Hz (innerHTML) to refresh costs/affordability. All clicks are delegated via `data-action="verb:arg"` attributes.
+- Effects: canvas confetti + floating `+$X` on payouts (throttled), WebAudio "cha-ching"/click synth. Both toggleable in Settings.
+
+## Deployment
+
+- GitHub Actions (`deploy.yml`): on push to `master` → `npm ci` → vitest → build → deploy `dist/` to GitHub Pages. Base path `/idle_game/` (override with `VITE_BASE`).
+- PWA: `vite-plugin-pwa` generates the service worker (offline capable, auto-update) and manifest; installable on iOS/Android/desktop.
