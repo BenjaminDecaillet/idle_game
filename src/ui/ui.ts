@@ -1,15 +1,45 @@
 import {
+  COMPANY_SITES,
+  FLOOR_CAPACITY,
+  MAP_THEMES,
+  MARKETING_DURATION_SEC,
+  MARKETING_MULT,
+  MAX_FLOORS,
   PROJECTS,
+  TIME_SCALES,
+  TRAIN_DURATION_SEC,
   UPGRADES,
+  WALLPAPERS,
   WORKSTATIONS,
+  mapThemeById,
   projectDefById,
   stationDefById,
   tierById,
+  wallpaperById,
 } from '../game/data';
 import {
   activeBoost,
+  activeCompany,
+  buyCompany,
+  buyFloor,
+  buyMapTheme,
+  buyMarketingCampaign,
   buyUpgrade,
+  buyWallpaper,
   buyWorkstation,
+  companyAtSite,
+  companyIncome,
+  companySalaries,
+  companyWorkRate,
+  deskCapacity,
+  effectiveWallpaper,
+  floorCost,
+  marketingCost,
+  setActiveCompany,
+  setCompanyWallpaper,
+  setDefaultWallpaper,
+  setMapTheme,
+  setTimeScale,
   estimatedIncome,
   expToNextLevel,
   fireWorker,
@@ -22,6 +52,7 @@ import {
   totalSalaries,
   totalWorkRate,
   trainCost,
+  trainLevels,
   trainWorker,
   unlockProject,
   upgradeCost,
@@ -29,7 +60,7 @@ import {
 } from '../game/engine';
 import { formatDuration, formatMoney, formatNumber, formatRate } from '../game/format';
 import { exportSave, importSave, resetGame, saveGame } from '../game/save';
-import type { GameState, WorkerState } from '../game/types';
+import type { CompanyState, GameState, WorkerState } from '../game/types';
 import type { Fx } from './fx';
 import { personaAtDesk, personaAvatar, personaStanding } from './persona';
 
@@ -48,9 +79,10 @@ const SPEECH_LINES = [
   'TODO: fix later',
 ];
 
-type Tab = 'projects' | 'team' | 'office' | 'upgrades' | 'stats';
+type Tab = 'map' | 'projects' | 'team' | 'office' | 'upgrades' | 'stats';
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
+  { id: 'map', label: 'Map', emoji: '🗺️' },
   { id: 'projects', label: 'Projects', emoji: '📋' },
   { id: 'team', label: 'Team', emoji: '👥' },
   { id: 'office', label: 'Office', emoji: '🏢' },
@@ -153,7 +185,7 @@ export class UI {
       incomeEl.classList.toggle('negative', income < 0);
     }
     this.text('hud-salary', `salaries ${formatMoney(totalSalaries(s))}/s`);
-    this.text('company-name', s.companyName);
+    this.text('company-name', activeCompany(s).name);
 
     const boost = activeBoost(s);
     const boostEl = document.getElementById('hud-boost');
@@ -164,7 +196,8 @@ export class UI {
       }
     }
 
-    const project = getProject(s, s.activeProjectId);
+    const company = activeCompany(s);
+    const project = getProject(company, company.activeProjectId);
     const def = projectDefById(project.defId);
     const rate = totalWorkRate(s);
     this.text('hero-emoji', def.emoji);
@@ -239,6 +272,9 @@ export class UI {
       document.getElementById(`tab-btn-${t.id}`)?.classList.toggle('active', t.id === this.tab);
     }
     switch (this.tab) {
+      case 'map':
+        content.innerHTML = this.renderMap();
+        break;
       case 'projects':
         content.innerHTML = this.renderProjects();
         break;
@@ -268,16 +304,90 @@ export class UI {
     }
   }
 
+  /** The map: every site is either your company (manage/switch) or for sale. */
+  private renderMap(): string {
+    const s = this.state;
+    const cards = COMPANY_SITES.map((site) => {
+      const company = companyAtSite(s, site.id);
+      if (company) {
+        const active = company.id === s.activeCompanyId;
+        const income = companyIncome(s, company);
+        return `
+        <button class="card site-card owned ${active ? 'active-site' : ''}"
+                data-action="switch-company:${company.id}">
+          <div class="card-row">
+            <span class="card-emoji">${site.emoji}</span>
+            <div class="card-main">
+              <h3>${company.name}</h3>
+              <span class="muted">${site.name} · ×${site.outputBonus} output</span>
+              <span class="muted">👥 ${company.workers.length} ·
+                🧾 ${formatMoney(companySalaries(company))}/s ·
+                ⚡ ${formatRate(companyWorkRate(s, company))}</span>
+            </div>
+            <div class="card-right">
+              <strong class="${income < 0 ? 'negative' : ''}">${income >= 0 ? '▲' : '▼'} ${formatMoney(income)}/s</strong>
+              ${active ? '<span class="active-tag">MANAGING</span>' : '<span class="muted">tap to manage</span>'}
+            </div>
+          </div>
+        </button>`;
+      }
+      const affordable = s.money >= site.cost;
+      return `
+      <div class="card site-card locked">
+        <div class="card-row">
+          <span class="card-emoji">${site.emoji}</span>
+          <div class="card-main">
+            <h3>${site.name}</h3>
+            <span class="muted">${site.blurb}</span>
+            <span class="muted">×${site.outputBonus} output for every worker here</span>
+          </div>
+          <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
+                  data-action="found-company:${site.id}">
+            Found ${formatMoney(site.cost)}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+    const themes = MAP_THEMES.map((def) => {
+      const owned = s.ownedMapThemes.includes(def.id);
+      const active = s.mapThemeId === def.id;
+      const affordable = s.money >= def.cost;
+      if (owned) {
+        return `<button class="btn btn-small ${active ? 'btn-primary' : ''}"
+                        ${active ? 'disabled' : ''} data-action="set-map-theme:${def.id}">
+                  ${def.emoji} ${def.name}${active ? ' ✓' : ''}
+                </button>`;
+      }
+      return `<button class="btn btn-small" ${affordable ? '' : 'disabled'}
+                      data-action="buy-map-theme:${def.id}">
+                ${def.emoji} ${def.name} · ${formatMoney(def.cost)}
+              </button>`;
+    }).join('');
+
+    return `
+      <div class="stack map-screen" style="background:${mapThemeById(s.mapThemeId).css}">
+        <div class="section-head"><h2>Silicon Valley</h2>
+          <span class="muted">${s.companies.length}/${COMPANY_SITES.length} sites owned</span>
+        </div>
+        ${cards}
+        <div class="section-head"><h2>Map style</h2></div>
+        <div class="settings-row">${themes}</div>
+        <p class="hint">💡 Every company works and earns at the same time — even while
+        you're away. New companies start empty: hire a team and buy desks to get them shipping.</p>
+      </div>`;
+  }
+
   private renderProjects(): string {
     const s = this.state;
+    const c = activeCompany(s);
     const lastUnlockedIdx = PROJECTS.reduce(
-      (acc, def, i) => (getProject(s, def.id).unlocked ? i : acc),
+      (acc, def, i) => (getProject(c, def.id).unlocked ? i : acc),
       0,
     );
     const cards = PROJECTS.map((def, i) => {
-      const p = getProject(s, def.id);
+      const p = getProject(c, def.id);
       if (p.unlocked) {
-        const active = s.activeProjectId === def.id;
+        const active = c.activeProjectId === def.id;
         const pct = Math.min(100, (p.progress / p.currentWork) * 100);
         return `
         <button class="card project-card ${active ? 'active-project' : ''}"
@@ -321,7 +431,8 @@ export class UI {
 
   private renderTeam(): string {
     const s = this.state;
-    const candidates = s.candidates
+    const c = activeCompany(s);
+    const candidates = c.candidates
       .map((c, i) => {
         const tier = tierById(c.tierId);
         const affordable = s.money >= tier.hireCost;
@@ -341,9 +452,9 @@ export class UI {
       })
       .join('');
 
-    const seats = s.workstations.length;
-    const roster = s.workers.length
-      ? s.workers.map((w) => this.renderWorkerCard(w)).join('')
+    const seats = c.workstations.length;
+    const roster = c.workers.length
+      ? c.workers.map((w) => this.renderWorkerCard(w)).join('')
       : `<div class="empty-hint">No employees yet. Hire your first dev above! 👆</div>`;
 
     return `
@@ -351,14 +462,14 @@ export class UI {
         <div class="section-head">
           <h2>Candidates</h2>
           <button class="btn btn-ghost" data-action="reroll"
-                  ${s.money >= s.candidateRerollCost ? '' : 'disabled'}>
-            🎲 New batch ${formatMoney(s.candidateRerollCost)}
+                  ${s.money >= c.candidateRerollCost ? '' : 'disabled'}>
+            🎲 New batch ${formatMoney(c.candidateRerollCost)}
           </button>
         </div>
         ${candidates}
         <div class="section-head">
-          <h2>Your team (${s.workers.length})</h2>
-          <span class="muted">${Math.min(s.workers.length, seats)}/${seats} desks used</span>
+          <h2>Your team (${c.workers.length})</h2>
+          <span class="muted">${Math.min(c.workers.length, seats)}/${seats} desks used</span>
         </div>
         ${roster}
       </div>`;
@@ -366,23 +477,45 @@ export class UI {
 
   private renderWorkerCard(w: WorkerState): string {
     const s = this.state;
+    const c = activeCompany(s);
     const tier = tierById(w.tierId);
-    const rate = workerRate(s, w, s.activeProjectId);
+    const rate = workerRate(s, c, w, c.activeProjectId);
     const specMatch =
-      projectDefById(s.activeProjectId).specialization === w.specialization;
-    const station = s.workstations.find((st) => st.id === w.stationId);
+      projectDefById(c.activeProjectId).specialization === w.specialization;
+    const station = c.workstations.find((st) => st.id === w.stationId);
     const deskLabel = station
       ? `${stationDefById(station.defId).emoji} ${stationDefById(station.defId).name}`
       : '⚠️ No desk — idle!';
     const expPct = Math.min(100, (w.experience / expToNextLevel(w.skillLevel)) * 100);
     const cost = trainCost(w);
+    const training = w.training;
+    const trainPct = training
+      ? Math.min(100, (1 - training.remainingSec / training.totalSec) * 100)
+      : 0;
+    const statusLabel = training
+      ? `🎓 In training · +${training.levels} levels in ${formatDuration(training.remainingSec)}`
+      : `${tier.title} · ${deskLabel}`;
+    const progressBar = training
+      ? `<div class="progress mini training" title="Training progress">
+           <div class="progress-fill" style="width:${trainPct}%"></div>
+         </div>`
+      : `<div class="progress mini exp" title="Experience to next level">
+           <div class="progress-fill" style="width:${expPct}%"></div>
+         </div>`;
+    const trainBtn = training
+      ? ''
+      : `<button class="btn btn-small" ${s.money >= cost ? '' : 'disabled'}
+                 data-action="train:${w.id}"
+                 title="+${trainLevels(w)} levels, ${formatDuration(TRAIN_DURATION_SEC)} off the floor">
+           📚 Train ${formatMoney(cost)}
+         </button>`;
     return `
-      <div class="card worker-card ${station ? '' : 'benched'}">
+      <div class="card worker-card ${station || training ? '' : 'benched'} ${training ? 'training' : ''}">
         <div class="card-row">
           <span class="card-emoji persona-slot">${personaAvatar(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}</span>
           <div class="card-main">
             <h3>${w.name} <span class="lvl">Lv ${w.skillLevel}</span></h3>
-            <span class="muted">${tier.title} · ${deskLabel}</span>
+            <span class="muted">${statusLabel}</span>
             <span class="spec-badge spec-${w.specialization.replace(' ', '')}">
               ${w.specialization}${specMatch ? ' ★1.5x' : ''}
             </span>
@@ -392,14 +525,9 @@ export class UI {
             <span class="muted">-${formatMoney(tier.salary)}/s</span>
           </div>
         </div>
-        <div class="progress mini exp" title="Experience to next level">
-          <div class="progress-fill" style="width:${expPct}%"></div>
-        </div>
+        ${progressBar}
         <div class="card-actions">
-          <button class="btn btn-small ${s.money >= cost ? '' : ''}"
-                  ${s.money >= cost ? '' : 'disabled'} data-action="train:${w.id}">
-            📚 Train ${formatMoney(cost)}
-          </button>
+          ${trainBtn}
           <button class="btn btn-small btn-danger" data-action="fire:${w.id}">Fire</button>
         </div>
       </div>`;
@@ -413,45 +541,76 @@ export class UI {
       </div>`;
   }
 
-  /** The animated floor: every desk as a tile, personas seated and typing. */
+  /** One desk tile: occupied (persona typing), empty desk, or free slot. */
+  private renderDeskTile(
+    c: CompanyState,
+    st: { id: number; defId: string } | null,
+  ): string {
+    if (st === null) {
+      return `
+        <div class="desk-tile free" title="Free slot — buy a workstation">
+          <span class="free-slot">＋</span>
+          <span class="desk-name muted">free slot</span>
+        </div>`;
+    }
+    const def = stationDefById(st.defId);
+    const worker = c.workers.find((w) => w.stationId === st.id);
+    if (worker) {
+      const tier = tierById(worker.tierId);
+      return `
+        <button class="desk-tile occupied" data-action="poke:${worker.id}"
+                title="${worker.name} — ${tier.title}">
+          ${personaAtDesk(`w:${worker.id}:${worker.name}`, worker.specialization, worker.tierId)}
+          <span class="desk-name">${worker.name.split(' ')[0]}</span>
+          <span class="desk-info">${def.emoji} ×${def.multiplier}</span>
+        </button>`;
+    }
+    return `
+        <div class="desk-tile empty" title="${def.name} — empty">
+          <svg class="persona-desk" viewBox="0 0 64 56" aria-hidden="true">
+            <rect x="8" y="30" width="12" height="4" rx="2" fill="#1f2937"/>
+            <rect x="12" y="33" width="4" height="12" fill="#1f2937"/>
+            <rect x="30" y="33" width="30" height="3" rx="1.5" fill="#475569"/>
+            <rect x="42" y="36" width="4" height="10" fill="#334155"/>
+            <rect x="34" y="24" width="16" height="10" rx="1.2" fill="#0f172a"
+                  stroke="#334155" stroke-width="0.8"/>
+          </svg>
+          <span class="desk-name muted">empty</span>
+          <span class="desk-info">${def.emoji} ×${def.multiplier}</span>
+        </div>`;
+  }
+
+  /** The building: floors top-down, each holding FLOOR_CAPACITY desk slots. */
   private renderOfficeFloor(): string {
     const s = this.state;
-    // Same ordering as autoSeat: best desks first, so the layout mirrors seating.
-    const stations = [...s.workstations].sort(
+    const c = activeCompany(s);
+    // Same ordering as autoSeat: best desks first, so the layout mirrors
+    // seating. Desks fill the building from the ground floor up.
+    const stations: ({ id: number; defId: string } | null)[] = [...c.workstations].sort(
       (a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier,
     );
-    const tiles = stations
-      .map((st) => {
-        const def = stationDefById(st.defId);
-        const worker = s.workers.find((w) => w.stationId === st.id);
-        if (worker) {
-          const tier = tierById(worker.tierId);
-          return `
-          <button class="desk-tile occupied" data-action="poke:${worker.id}"
-                  title="${worker.name} — ${tier.title}">
-            ${personaAtDesk(`w:${worker.id}:${worker.name}`, worker.specialization, worker.tierId)}
-            <span class="desk-name">${worker.name.split(' ')[0]}</span>
-            <span class="desk-info">${def.emoji} ×${def.multiplier}</span>
-          </button>`;
-        }
-        return `
-          <div class="desk-tile empty" title="${def.name} — empty">
-            <svg class="persona-desk" viewBox="0 0 64 56" aria-hidden="true">
-              <rect x="8" y="30" width="12" height="4" rx="2" fill="#1f2937"/>
-              <rect x="12" y="33" width="4" height="12" fill="#1f2937"/>
-              <rect x="30" y="33" width="30" height="3" rx="1.5" fill="#475569"/>
-              <rect x="42" y="36" width="4" height="10" fill="#334155"/>
-              <rect x="34" y="24" width="16" height="10" rx="1.2" fill="#0f172a"
-                    stroke="#334155" stroke-width="0.8"/>
-            </svg>
-            <span class="desk-name muted">empty</span>
-            <span class="desk-info">${def.emoji} ×${def.multiplier}</span>
-          </div>`;
-      })
-      .join('');
+    const floorBlocks: string[] = [];
+    for (let f = c.floors; f >= 1; f--) {
+      const slots = stations.slice((f - 1) * FLOOR_CAPACITY, f * FLOOR_CAPACITY);
+      while (slots.length < FLOOR_CAPACITY) slots.push(null);
+      const tiles = slots.map((st) => this.renderDeskTile(c, st)).join('');
+      floorBlocks.push(`
+        <div class="floor-block">
+          <div class="floor-label">${f === 1 ? 'Ground floor' : `Floor ${f}`}</div>
+          <div class="office-grid">${tiles}</div>
+        </div>`);
+    }
+    const atMax = c.floors >= MAX_FLOORS;
+    const nextCost = floorCost(c);
+    const floorBtn = atMax
+      ? `<span class="muted">🏁 Max height reached</span>`
+      : `<button class="btn ${s.money >= nextCost ? 'btn-primary' : ''}"
+                 ${s.money >= nextCost ? '' : 'disabled'} data-action="buy-floor">
+           ⬆️ Add floor ${formatMoney(nextCost)}
+         </button>`;
 
-    const standing = s.workers
-      .filter((w) => w.stationId === null)
+    const standing = c.workers
+      .filter((w) => w.stationId === null && !w.training)
       .map(
         (w) => `
         <button class="stand-slot" data-action="poke:${w.id}" title="${w.name} — needs a desk!">
@@ -461,31 +620,50 @@ export class UI {
       )
       .join('');
 
+    const inTraining = c.workers
+      .filter((w) => w.training)
+      .map(
+        (w) => `
+        <button class="stand-slot training" data-action="poke:${w.id}"
+                title="${w.name} — back in ${formatDuration(w.training!.remainingSec)}">
+          ${personaStanding(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}
+          <span class="desk-name">🎓 ${w.name.split(' ')[0]}</span>
+        </button>`,
+      )
+      .join('');
+
     return `
-      <div class="section-head"><h2>Your office</h2>
-        <span class="muted">${s.workstations.length} desks · ${s.workers.length} workers</span>
+      <div class="section-head"><h2>Your building</h2>
+        <span class="muted">${c.workstations.length}/${deskCapacity(c)} desks ·
+          ${c.floors}/${MAX_FLOORS} floors</span>
       </div>
-      ${
-        stations.length || standing
-          ? `<div class="office-grid card">${tiles || ''}</div>`
-          : `<div class="empty-hint">No desks yet — buy your first one below! 🪑</div>`
-      }
+      <div class="floor-actions">${floorBtn}</div>
+      <div class="building card"
+           style="background:${wallpaperById(effectiveWallpaper(s, c)).css}">${floorBlocks.join('')}</div>
       ${
         standing
           ? `<div class="warning-banner">⚠️ Waiting for a desk (producing nothing):</div>
              <div class="stand-row card">${standing}</div>`
           : ''
       }
+      ${
+        inTraining
+          ? `<div class="section-head"><h2>🎓 Away at training</h2></div>
+             <div class="stand-row card">${inTraining}</div>`
+          : ''
+      }
       <p class="hint">💡 Tap your people to hear from them. Seating is automatic:
-      strongest workers get the best desks.</p>`;
+      strongest workers get the best desks. Each floor adds ${FLOOR_CAPACITY} desk slots.</p>`;
   }
 
   private renderOfficeShop(): string {
     const s = this.state;
+    const c = activeCompany(s);
+    const full = c.workstations.length >= deskCapacity(c);
     const shop = WORKSTATIONS.map((def) => {
-      const owned = s.workstations.filter((w) => w.defId === def.id).length;
-      const cost = stationCost(s, def.id);
-      const affordable = s.money >= cost;
+      const owned = c.workstations.filter((w) => w.defId === def.id).length;
+      const cost = stationCost(c, def.id);
+      const affordable = !full && s.money >= cost;
       return `
       <div class="card">
         <div class="card-row">
@@ -503,17 +681,89 @@ export class UI {
     }).join('');
     return `
       <div class="stack">
-        <div class="section-head"><h2>Buy workstations</h2></div>
+        <div class="section-head"><h2>Buy workstations</h2>
+          ${full ? '<span class="muted">🈵 Office full — add a floor</span>' : ''}
+        </div>
         ${shop}
+        ${this.renderDecorShop()}
       </div>`;
+  }
+
+  /** Wallpaper shop: buy once, then apply per company or as player default. */
+  private renderDecorShop(): string {
+    const s = this.state;
+    const c = activeCompany(s);
+    const applied = effectiveWallpaper(s, c);
+    const cards = WALLPAPERS.map((def) => {
+      const owned = s.ownedWallpapers.includes(def.id);
+      const isApplied = applied === def.id;
+      const isDefault = s.defaultWallpaperId === def.id;
+      const affordable = s.money >= def.cost;
+      const actions = owned
+        ? `
+          <button class="btn btn-small" ${isApplied ? 'disabled' : ''}
+                  data-action="apply-wallpaper:${def.id}">
+            ${isApplied ? '✓ Applied' : 'Apply here'}
+          </button>
+          <button class="btn btn-small btn-ghost" ${isDefault ? 'disabled' : ''}
+                  data-action="default-wallpaper:${def.id}">
+            ${isDefault ? '✓ Default' : 'Set default'}
+          </button>`
+        : `
+          <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
+                  data-action="buy-wallpaper:${def.id}">
+            Buy ${formatMoney(def.cost)}
+          </button>`;
+      return `
+      <div class="card decor-card ${isApplied ? 'applied' : ''}">
+        <div class="card-row">
+          <span class="decor-swatch" style="background:${def.css}">${def.emoji}</span>
+          <div class="card-main">
+            <h3>${def.name}</h3>
+            <span class="muted">${owned ? 'Owned — free to apply anywhere' : 'Unlocks for every company'}</span>
+          </div>
+          <div class="card-actions">${actions}</div>
+        </div>
+      </div>`;
+    }).join('');
+    return `
+      <div class="section-head"><h2>Wallpapers & decor</h2>
+        <span class="muted">this building follows ${c.wallpaperId === null ? 'your default' : 'its own pick'}</span>
+      </div>
+      ${cards}
+      ${
+        c.wallpaperId !== null
+          ? `<button class="btn btn-ghost" data-action="apply-wallpaper:default">
+               ↩️ Follow player default instead</button>`
+          : ''
+      }`;
   }
 
   private renderUpgrades(): string {
     const s = this.state;
+    const c = activeCompany(s);
+    const mkCost = marketingCost(s);
+    const mkAffordable = s.money >= mkCost;
+    const marketing = `
+      <div class="card">
+        <div class="card-row">
+          <span class="card-emoji">📣</span>
+          <div class="card-main">
+            <h3>Marketing Campaign</h3>
+            <span class="muted">×${MARKETING_MULT} output for
+              ${formatDuration(MARKETING_DURATION_SEC)}, all companies.
+              Buying again extends it.</span>
+          </div>
+          <button class="btn ${mkAffordable ? 'btn-primary' : ''}" ${mkAffordable ? '' : 'disabled'}
+                  data-action="buy-marketing">
+            Launch ${formatMoney(mkCost)}
+          </button>
+        </div>
+      </div>`;
     const cards = UPGRADES.map((def) => {
-      const level = s.upgrades[def.id] ?? 0;
+      const level = c.upgrades[def.id] ?? 0;
       const maxed = level >= def.maxLevel;
-      const cost = upgradeCost(s, def.id);
+      const cost = upgradeCost(c, def.id);
       const affordable = !maxed && s.money >= cost;
       return `
       <div class="card">
@@ -530,25 +780,29 @@ export class UI {
         </div>
       </div>`;
     }).join('');
-    return `<div class="stack">${cards}</div>`;
+    return `<div class="stack">${marketing}${cards}</div>`;
   }
 
   private renderStats(): string {
     const s = this.state;
+    const c = activeCompany(s);
+    const employees = s.companies.reduce((sum, co) => sum + co.workers.length, 0);
+    const desks = s.companies.reduce((sum, co) => sum + co.workstations.length, 0);
     const rows: [string, string][] = [
       ['💰 Total earned', formatMoney(s.totalEarned)],
       ['✅ Projects completed', formatNumber(s.projectsCompleted)],
-      ['👥 Employees', String(s.workers.length)],
-      ['🪑 Workstations', String(s.workstations.length)],
-      ['⚡ Team output', formatRate(totalWorkRate(s))],
-      ['🧾 Salaries', `${formatMoney(totalSalaries(s))}/s`],
+      ['🏢 Companies', String(s.companies.length)],
+      ['👥 Employees', String(employees)],
+      ['🪑 Workstations', String(desks)],
+      ['⚡ Team output (here)', formatRate(totalWorkRate(s))],
+      ['🧾 Salaries (all)', `${formatMoney(totalSalaries(s))}/s`],
       ['⏱️ Time played', formatDuration(s.playTimeSec)],
       ['🚀 Founded', new Date(s.startedAt).toLocaleDateString()],
     ];
     return `
       <div class="stack">
         <div class="card">
-          <h2 class="card-title">📊 ${s.companyName}</h2>
+          <h2 class="card-title">📊 ${c.name}</h2>
           <table class="stats-table">
             ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
           </table>
@@ -561,6 +815,9 @@ export class UI {
             </button>
             <button class="btn" data-action="toggle-particles">
               ${s.settings.particles ? '✨ Effects on' : '💤 Effects off'}
+            </button>
+            <button class="btn" data-action="cycle-speed" title="Live simulation speed">
+              ⏩ Speed ×${s.settings.timeScale}
             </button>
           </div>
           <div class="settings-row">
@@ -593,6 +850,15 @@ export class UI {
       case 'select-project':
         error = setActiveProject(s, arg);
         break;
+      case 'switch-company':
+        error = setActiveCompany(s, Number(arg));
+        break;
+      case 'found-company': {
+        const name = prompt('Name your new company:', '');
+        error = buyCompany(s, arg, name ?? undefined);
+        if (!error) this.toast('🏗️ New company founded!', 'info');
+        break;
+      }
       case 'unlock-project':
         error = unlockProject(s, arg);
         if (!error) this.toast('🎉 Project unlocked!', 'info');
@@ -606,9 +872,10 @@ export class UI {
         break;
       case 'train':
         error = trainWorker(s, Number(arg));
+        if (!error) this.toast('🎓 Off to the workshop!', 'info');
         break;
       case 'fire': {
-        const worker = s.workers.find((w) => w.id === Number(arg));
+        const worker = activeCompany(s).workers.find((w) => w.id === Number(arg));
         if (worker && confirm(`Fire ${worker.name}? There is no severance package.`)) {
           error = fireWorker(s, Number(arg));
         }
@@ -616,6 +883,27 @@ export class UI {
       }
       case 'buy-station':
         error = buyWorkstation(s, arg);
+        break;
+      case 'buy-floor':
+        error = buyFloor(s);
+        if (!error) this.toast('⬆️ New floor unlocked!', 'info');
+        break;
+      case 'buy-wallpaper':
+        error = buyWallpaper(s, arg);
+        if (!error) this.toast('🎨 Wallpaper unlocked!', 'info');
+        break;
+      case 'apply-wallpaper':
+        error = setCompanyWallpaper(s, arg === 'default' ? null : arg);
+        break;
+      case 'default-wallpaper':
+        error = setDefaultWallpaper(s, arg);
+        break;
+      case 'buy-map-theme':
+        error = buyMapTheme(s, arg);
+        if (!error) this.toast('🗺️ New map style!', 'info');
+        break;
+      case 'set-map-theme':
+        error = setMapTheme(s, arg);
         break;
       case 'poke': {
         // Pure fun: poked workers talk. No progress impact — core stays idle.
@@ -632,8 +920,17 @@ export class UI {
         error = buyUpgrade(s, arg);
         break;
       case 'rename-company': {
-        const name = prompt('Company name:', s.companyName);
+        const name = prompt('Company name:', activeCompany(s).name);
         if (name !== null) error = renameCompany(s, name);
+        break;
+      }
+      case 'buy-marketing':
+        error = buyMarketingCampaign(s);
+        if (!error) this.toast('📣 Campaign live — sales are calling!', 'info');
+        break;
+      case 'cycle-speed': {
+        const idx = TIME_SCALES.indexOf(s.settings.timeScale);
+        error = setTimeScale(s, TIME_SCALES[(idx + 1) % TIME_SCALES.length]);
         break;
       }
       case 'toggle-sound':
@@ -697,6 +994,11 @@ export class UI {
       this.officeDirty = true;
       this.rebuildTab();
     }
+  }
+
+  /** Force the office floor to rebuild (seating changed outside a click). */
+  officeNeedsRebuild(): void {
+    this.officeDirty = true;
   }
 
   /** Quick scale "pop" on the money display — called on payouts. */

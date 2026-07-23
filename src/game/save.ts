@@ -1,6 +1,15 @@
-import { OFFLINE_CAP_HOURS, PROJECTS } from './data';
-import { createInitialState, SAVE_VERSION, simulateOffline } from './engine';
-import type { GameState } from './types';
+import {
+  COMPANY_SITES,
+  FLOOR_CAPACITY,
+  MAP_THEMES,
+  MAX_FLOORS,
+  OFFLINE_CAP_HOURS,
+  PROJECTS,
+  TIME_SCALES,
+  WALLPAPERS,
+} from './data';
+import { createInitialState, newProjectState, SAVE_VERSION, simulateOffline } from './engine';
+import type { CompanyState, GameState } from './types';
 
 export const SAVE_KEY = 'idle-silicon-valley-save';
 
@@ -53,35 +62,120 @@ export function loadGame(storage: Storage = localStorage, now = Date.now()): Loa
   }
 }
 
+/**
+ * Pre-v3 saves kept a single company's fields flat on the game state.
+ * Only the fields the migration reads are listed.
+ */
+interface LegacyFlatSave {
+  companyName: string;
+  workers: CompanyState['workers'];
+  workstations: CompanyState['workstations'];
+  projects: CompanyState['projects'];
+  activeProjectId: string;
+  upgrades: Record<string, number>;
+  candidates: CompanyState['candidates'];
+  candidateRerollCost: number;
+}
+
 /** Merge a parsed save onto a fresh state so new fields/projects get defaults. */
-export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState {
+export function migrate(
+  parsed: Partial<GameState> & Partial<LegacyFlatSave>,
+  now = Date.now(),
+): GameState {
   const fresh = createInitialState(now);
   const state: GameState = {
     ...fresh,
     ...parsed,
     version: SAVE_VERSION,
     settings: { ...fresh.settings, ...(parsed.settings ?? {}) },
-    upgrades: { ...(parsed.upgrades ?? {}) },
     boosts: Array.isArray(parsed.boosts) ? parsed.boosts : [],
+    companies: Array.isArray(parsed.companies) && parsed.companies.length > 0
+      ? parsed.companies
+      : fresh.companies,
   };
-  // Ensure every project defined in data.ts has a state entry (new content
-  // added in updates appears automatically in old saves).
-  const byId = new Map(state.projects.map((p) => [p.defId, p]));
-  state.projects = PROJECTS.map(
-    (def) =>
-      byId.get(def.id) ?? {
-        defId: def.id,
-        unlocked: false,
-        progress: 0,
-        completions: 0,
-        currentWork: def.baseWork,
-        currentReward: def.baseReward,
-      },
-  );
-  if (!state.projects.some((p) => p.defId === state.activeProjectId && p.unlocked)) {
-    state.projects[0].unlocked = true;
-    state.activeProjectId = state.projects[0].defId;
+  // Strip legacy flat fields that the spread may have copied onto the state.
+  for (const key of [
+    'companyName', 'workers', 'workstations', 'activeProjectId',
+    'upgrades', 'candidates', 'candidateRerollCost', 'projects',
+  ]) {
+    delete (state as unknown as Record<string, unknown>)[key];
   }
+
+  // v2 → v3: fold the old flat single-company fields into company #1.
+  if (!Array.isArray(parsed.companies) || parsed.companies.length === 0) {
+    const home = state.companies[0];
+    if (typeof parsed.companyName === 'string') home.name = parsed.companyName;
+    if (Array.isArray(parsed.workers)) home.workers = parsed.workers;
+    if (Array.isArray(parsed.workstations)) home.workstations = parsed.workstations;
+    if (Array.isArray(parsed.projects)) home.projects = parsed.projects;
+    if (typeof parsed.activeProjectId === 'string') home.activeProjectId = parsed.activeProjectId;
+    if (parsed.upgrades) home.upgrades = { ...parsed.upgrades };
+    if (Array.isArray(parsed.candidates)) home.candidates = parsed.candidates;
+    if (typeof parsed.candidateRerollCost === 'number') {
+      home.candidateRerollCost = parsed.candidateRerollCost;
+    }
+    state.activeCompanyId = home.id;
+  }
+
+  // Per-company hygiene: fill defaults for fields added after a company was
+  // saved, sync project lists with data.ts, keep sites/active ids valid.
+  const template = fresh.companies[0];
+  const knownSites = new Set(COMPANY_SITES.map((s) => s.id));
+  state.companies = state.companies.map((c) => {
+    const company: CompanyState = { ...template, ...c, upgrades: { ...(c.upgrades ?? {}) } };
+    if (!knownSites.has(company.siteId)) company.siteId = 'garage';
+    // Fill in worker fields added after the save was written.
+    company.workers = (company.workers ?? []).map((w) => ({ ...w, training: w.training ?? null }));
+    // Saves that predate floors (or that own more desks than their floors
+    // hold) get enough floors for their desks, free of charge. Floor count
+    // is clamped to MAX_FLOORS unless the desks themselves require more.
+    const neededFloors = Math.ceil(company.workstations.length / FLOOR_CAPACITY);
+    const savedFloors = Math.max(1, Math.min(company.floors ?? 1, MAX_FLOORS));
+    company.floors = Math.max(savedFloors, neededFloors);
+    // Ensure every project defined in data.ts has a state entry (new content
+    // added in updates appears automatically in old saves).
+    const byId = new Map((company.projects ?? []).map((p) => [p.defId, p]));
+    company.projects = PROJECTS.map((def) => byId.get(def.id) ?? newProjectState(def));
+    if (!company.projects.some((p) => p.defId === company.activeProjectId && p.unlocked)) {
+      company.projects[0].unlocked = true;
+      company.activeProjectId = company.projects[0].defId;
+    }
+    return company;
+  });
+  if (!state.companies.some((c) => c.id === state.activeCompanyId)) {
+    state.activeCompanyId = state.companies[0].id;
+  }
+
+  // Cosmetics hygiene: drop unknown ids, keep the free defaults owned, and
+  // make sure the selected default/theme is actually owned.
+  const wallpaperIds = new Set(WALLPAPERS.map((w) => w.id));
+  state.ownedWallpapers = Array.from(
+    new Set(['concrete', ...(state.ownedWallpapers ?? []).filter((id) => wallpaperIds.has(id))]),
+  );
+  if (!state.ownedWallpapers.includes(state.defaultWallpaperId)) {
+    state.defaultWallpaperId = 'concrete';
+  }
+  for (const c of state.companies) {
+    if (c.wallpaperId !== null && !state.ownedWallpapers.includes(c.wallpaperId)) {
+      c.wallpaperId = null;
+    }
+  }
+  const themeIds = new Set(MAP_THEMES.map((t) => t.id));
+  state.ownedMapThemes = Array.from(
+    new Set(['daylight', ...(state.ownedMapThemes ?? []).filter((id) => themeIds.has(id))]),
+  );
+  if (!state.ownedMapThemes.includes(state.mapThemeId)) state.mapThemeId = 'daylight';
+  if (!TIME_SCALES.includes(state.settings.timeScale)) state.settings.timeScale = 1;
+
+  // nextEntityId must stay above every id in the save (workers, desks,
+  // companies) so freshly created entities never collide.
+  let maxId = 0;
+  for (const c of state.companies) {
+    maxId = Math.max(maxId, c.id);
+    for (const w of c.workers) maxId = Math.max(maxId, w.id);
+    for (const s of c.workstations) maxId = Math.max(maxId, s.id);
+  }
+  state.nextEntityId = Math.max(state.nextEntityId, maxId + 1);
   return state;
 }
 
@@ -100,8 +194,9 @@ export function exportSave(state: GameState): string {
 
 export function importSave(encoded: string, now = Date.now()): GameState {
   const json = decodeURIComponent(escape(atob(encoded.trim())));
-  const parsed = JSON.parse(json) as Partial<GameState>;
-  if (typeof parsed.money !== 'number' || !Array.isArray(parsed.workers)) {
+  const parsed = JSON.parse(json) as Partial<GameState> & Partial<LegacyFlatSave>;
+  const hasRoster = Array.isArray(parsed.companies) || Array.isArray(parsed.workers);
+  if (typeof parsed.money !== 'number' || !hasRoster) {
     throw new Error('Not a valid save');
   }
   return migrate(parsed, now);

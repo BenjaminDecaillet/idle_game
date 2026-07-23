@@ -25,6 +25,11 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [ ] **Playtest & balance tuning** — adjust `data.ts` values after real play sessions
 - [x] **Monetization groundwork** — timed boosts (`grantBoost`), `timeSkip`, HUD boost badge, save migration (v2), dev console API (`isv.boost/skip`)
 - [x] **Personas & interactivity** — procedural SVG characters (deterministic per worker), animated office floor (typing at desks, standing when desk-less), tap-to-poke speech bubbles, golden briefcase tap bonus (2× 60s via `grantBoost` 'event'), money pop on payouts
+- [x] **Multi-company map** (save v3) — found companies at map sites (shared wallet, all companies produce in parallel, per-company teams/projects/upgrades, site output bonus), Map tab to buy/switch
+- [x] **Buildings & floors** — 4 desk slots per floor, up to 8 floors per building, floor prices scale with site tier; office tab renders the building floor-by-floor
+- [x] **Employee training fix** — replaced the dead-end `150·4^tier·level²` instant training with a timed program (120 s off the floor, +3 levels) costing `baseRate·45·(1+0.15·(lvl−1))`; payback guard test keeps it worthwhile
+- [x] **Wallpapers & decor** — 7 wallpapers + 3 map themes bought once with project money, applied per company / player default / map
+- [x] **QoL & sinks** — free x1/x2/x4 live speed toggle, marketing campaign (paid 2× boost, extendable), per-company renaming
 - [ ] **Monetization Phase 0** — analytics (PostHog/Plausible) + privacy policy → see [monetization.md](monetization.md)
 - [ ] **Shop/Boost tab** — UI for boost & time-skip offers over the existing engine hooks (mock "ad" in dev)
 - [ ] **Rewarded ads** — portal SDK (CrazyGames/Poki) or H5 Games Ads + consent banner

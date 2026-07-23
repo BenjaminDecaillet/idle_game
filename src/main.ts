@@ -35,17 +35,27 @@ let saveTimer = 0;
 function loop(now: number): void {
   // Clamp dt: background tabs throttle rAF; big gaps are handled as "offline"
   // time by the same engine rules on the next visible frame.
-  const dt = Math.min((now - last) / 1000, 2);
+  // The free speed toggle scales live play only — offline stays wall-clock.
+  const dt = Math.min((now - last) / 1000, 2) * state.settings.timeScale;
   last = now;
 
   const events = tick(state, dt);
-  if (events.completions.length > 0) {
+  // Payout FX only for the company currently on screen; money still counts.
+  const visible = events.completions.filter((c) => c.companyId === state.activeCompanyId);
+  if (visible.length > 0) {
     const origin = ui.payoutOrigin();
-    for (const c of events.completions.slice(0, 3)) {
+    for (const c of visible.slice(0, 3)) {
       fx.payoutBurst(origin.x, origin.y, c.reward);
     }
     ui.moneyPulse();
   }
+  for (const t of events.trainingsDone) {
+    ui.officeNeedsRebuild();
+    if (t.companyId === state.activeCompanyId) {
+      ui.toast(`🎓 Training complete — now Lv ${t.newLevel}!`, 'info');
+    }
+  }
+
   ui.frame(dt);
   fx.update(dt);
 

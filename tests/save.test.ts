@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { PROJECTS } from '../src/game/data';
-import { createInitialState } from '../src/game/engine';
+import { activeCompany, createInitialState } from '../src/game/engine';
 import {
   SAVE_KEY,
   exportSave,
@@ -53,8 +53,9 @@ beforeEach(() => {
 describe('saveGame / loadGame round trip', () => {
   it('restores money/workers/projects', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 12_345;
-    state.workers.push({
+    c.workers.push({
       id: 1,
       name: 'Ada Lovelace',
       tierId: 'senior',
@@ -62,26 +63,29 @@ describe('saveGame / loadGame round trip', () => {
       skillLevel: 3,
       experience: 12,
       stationId: null,
+      training: null,
     });
-    state.projects[1].unlocked = true; // unlock 'todo'
+    c.projects[1].unlocked = true; // unlock 'todo'
 
     saveGame(state, storage, NOW);
     const result = loadGame(storage, NOW); // same instant => offlineSec = 0, no offline sim
 
     expect(result.isNewGame).toBe(false);
     expect(result.state.money).toBe(12_345);
-    expect(result.state.workers).toHaveLength(1);
-    expect(result.state.workers[0].name).toBe('Ada Lovelace');
-    expect(result.state.projects.find((p) => p.defId === 'todo')?.unlocked).toBe(true);
+    const rc = activeCompany(result.state);
+    expect(rc.workers).toHaveLength(1);
+    expect(rc.workers[0].name).toBe('Ada Lovelace');
+    expect(rc.projects.find((p) => p.defId === 'todo')?.unlocked).toBe(true);
     expect(result.offlineSec).toBe(0);
     expect(result.offlineEarnings).toBe(0);
   });
 
   it('applies offline progress when enough time passed, capped by OFFLINE_CAP_HOURS', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 1000;
-    state.workstations.push({ id: 1, defId: 'basic' });
-    state.workers.push({
+    c.workstations.push({ id: 1, defId: 'basic' });
+    c.workers.push({
       id: 1,
       name: 'W',
       tierId: 'mid',
@@ -89,6 +93,7 @@ describe('saveGame / loadGame round trip', () => {
       skillLevel: 1,
       experience: 0,
       stationId: 1,
+      training: null,
     });
     saveGame(state, storage, NOW);
 
@@ -110,7 +115,7 @@ describe('saveGame / loadGame round trip', () => {
     const result = loadGame(storage, NOW);
     expect(result.isNewGame).toBe(true);
     expect(result.state.money).toBe(50);
-    expect(result.state.activeProjectId).toBe('landing');
+    expect(activeCompany(result.state).activeProjectId).toBe('landing');
   });
 
   it('serialize produces valid JSON that round-trips', () => {
@@ -127,12 +132,14 @@ describe('migrate', () => {
     // Simulate an old save that predates the last project in PROJECTS.
     const missingDef = PROJECTS[PROJECTS.length - 1];
     const oldSave = JSON.parse(JSON.stringify(state)) as GameState;
-    oldSave.projects = oldSave.projects.filter((p) => p.defId !== missingDef.id);
-    expect(oldSave.projects).toHaveLength(PROJECTS.length - 1);
+    const oc = oldSave.companies[0];
+    oc.projects = oc.projects.filter((p) => p.defId !== missingDef.id);
+    expect(oc.projects).toHaveLength(PROJECTS.length - 1);
 
     const migrated = migrate(oldSave, NOW);
-    expect(migrated.projects).toHaveLength(PROJECTS.length);
-    const restored = migrated.projects.find((p) => p.defId === missingDef.id);
+    const mc = migrated.companies[0];
+    expect(mc.projects).toHaveLength(PROJECTS.length);
+    const restored = mc.projects.find((p) => p.defId === missingDef.id);
     expect(restored).toBeDefined();
     expect(restored?.unlocked).toBe(false);
     expect(restored?.progress).toBe(0);
@@ -143,25 +150,28 @@ describe('migrate', () => {
 
   it('preserves existing project progress for defs that already exist', () => {
     const state = createInitialState(NOW);
-    const landing = state.projects.find((p) => p.defId === 'landing')!;
+    const landing = activeCompany(state).projects.find((p) => p.defId === 'landing')!;
     landing.progress = 17;
     landing.completions = 4;
 
     const migrated = migrate(JSON.parse(JSON.stringify(state)), NOW);
-    const landingAfter = migrated.projects.find((p) => p.defId === 'landing')!;
+    const mc = migrated.companies[0];
+    const landingAfter = mc.projects.find((p) => p.defId === 'landing')!;
     expect(landingAfter.progress).toBe(17);
     expect(landingAfter.completions).toBe(4);
   });
 
   it('re-unlocks the first project if the active project ended up unlocked-less', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     // Corrupt save: active project points to something no longer unlocked.
-    state.activeProjectId = 'todo';
-    state.projects.forEach((p) => (p.unlocked = p.defId === 'landing' ? false : p.unlocked));
+    c.activeProjectId = 'todo';
+    c.projects.forEach((p) => (p.unlocked = p.defId === 'landing' ? false : p.unlocked));
 
     const migrated = migrate(JSON.parse(JSON.stringify(state)), NOW);
-    expect(migrated.projects[0].unlocked).toBe(true);
-    expect(migrated.activeProjectId).toBe(migrated.projects[0].defId);
+    const mc = migrated.companies[0];
+    expect(mc.projects[0].unlocked).toBe(true);
+    expect(mc.activeProjectId).toBe(mc.projects[0].defId);
   });
 });
 
@@ -174,15 +184,17 @@ describe('resetGame', () => {
     const fresh = resetGame(storage);
     expect(storage.getItem(SAVE_KEY)).toBeNull();
     expect(fresh.money).toBe(50);
+    expect(fresh.companies).toHaveLength(1);
   });
 });
 
 describe('exportSave / importSave', () => {
   it('round-trips a game state', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 777;
-    state.companyName = 'Café Corp';
-    state.workers.push({
+    c.name = 'Café Corp';
+    c.workers.push({
       id: 1,
       name: 'Grace Hopper',
       tierId: 'architect',
@@ -190,6 +202,7 @@ describe('exportSave / importSave', () => {
       skillLevel: 4,
       experience: 3,
       stationId: null,
+      training: null,
     });
 
     const encoded = exportSave(state);
@@ -197,9 +210,10 @@ describe('exportSave / importSave', () => {
     const imported = importSave(encoded, NOW);
 
     expect(imported.money).toBe(777);
-    expect(imported.companyName).toBe('Café Corp');
-    expect(imported.workers).toHaveLength(1);
-    expect(imported.workers[0].name).toBe('Grace Hopper');
+    const ic = activeCompany(imported);
+    expect(ic.name).toBe('Café Corp');
+    expect(ic.workers).toHaveLength(1);
+    expect(ic.workers[0].name).toBe('Grace Hopper');
   });
 
   it('rejects garbage input', () => {
