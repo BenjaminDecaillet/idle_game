@@ -48,6 +48,13 @@ function loop(now: number): void {
     }
     ui.moneyPulse();
   }
+  for (const t of events.trainingsDone) {
+    ui.officeNeedsRebuild();
+    if (t.companyId === state.activeCompanyId) {
+      ui.toast(`🎓 Training complete — now Lv ${t.newLevel}!`, 'info');
+    }
+  }
+
   ui.frame(dt);
   fx.update(dt);
 

@@ -35,8 +35,29 @@ export interface CompanySiteDef {
   name: string;
   cost: number; // 0 = free starting site
   outputBonus: number; // multiplier on all worker output at this site (1 = none)
+  floorCostFactor: number; // scales floor prices at this site
   emoji: string;
   blurb: string;
+}
+
+/** A purchasable office wallpaper/decor theme (pure cosmetics). */
+export interface WallpaperDef {
+  id: string;
+  name: string;
+  cost: number; // 0 = owned from the start
+  emoji: string;
+  /** CSS background value applied to the building interior. */
+  css: string;
+}
+
+/** A purchasable look for the map screen. */
+export interface MapThemeDef {
+  id: string;
+  name: string;
+  cost: number; // 0 = owned from the start
+  emoji: string;
+  /** CSS background value applied to the map. */
+  css: string;
 }
 
 export interface UpgradeDef {
@@ -49,6 +70,13 @@ export interface UpgradeDef {
   emoji: string;
 }
 
+/** An in-flight training program: the worker is away from their desk. */
+export interface TrainingState {
+  remainingSec: number;
+  totalSec: number;
+  levels: number; // skill levels granted on completion
+}
+
 export interface WorkerState {
   id: number;
   name: string;
@@ -57,6 +85,7 @@ export interface WorkerState {
   skillLevel: number;
   experience: number; // resets each level-up
   stationId: number | null; // assigned workstation instance
+  training: TrainingState | null;
 }
 
 export interface WorkstationState {
@@ -102,6 +131,8 @@ export interface CompanyState {
   id: number;
   name: string;
   siteId: string; // map location (CompanySiteDef)
+  floors: number; // unlocked floors; each adds FLOOR_CAPACITY desk slots
+  wallpaperId: string | null; // null = use the player's default wallpaper
   workers: WorkerState[];
   workstations: WorkstationState[];
   projects: ProjectState[];
@@ -121,6 +152,10 @@ export interface GameState {
   playTimeSec: number;
   companies: CompanyState[];
   activeCompanyId: number; // company currently shown/managed in the UI
+  ownedWallpapers: string[]; // bought once, usable in every company
+  defaultWallpaperId: string; // player-level default for companies without one
+  ownedMapThemes: string[];
+  mapThemeId: string;
   boosts: Boost[];
   settings: Settings;
   nextEntityId: number;
@@ -136,4 +171,5 @@ export interface Candidate {
 export interface TickEvents {
   completions: { companyId: number; projectId: string; reward: number }[];
   levelUps: { workerId: number; newLevel: number }[];
+  trainingsDone: { companyId: number; workerId: number; newLevel: number }[];
 }

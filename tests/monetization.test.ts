@@ -26,6 +26,7 @@ function stateWithTeam(): GameState {
     skillLevel: 1,
     experience: 0,
     stationId: null,
+    training: null,
   });
   buyWorkstation(state, 'basic');
   return state;

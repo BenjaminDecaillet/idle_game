@@ -28,16 +28,21 @@ Resume rule: read this file top-to-bottom, then continue at **Next up**.
 - Core save-v3 refactor written (`types.ts`, `engine.ts`, `save.ts`): `companies: CompanyState[]` + `activeCompanyId`, shared wallet, tick loops all companies, per-company upgrades, site output bonus, v2→v3 migration folds flat saves into company #1 ('garage'); `nextEntityId` re-derived from max id in save. Action functions kept their signatures (they act on the active company) to minimize churn.
 - Map tab UI: sites list, found-company (prompt for name), switch active company, per-company income readout. `src` typechecks clean.
 
+- Commit `8f3256f`: orchestration setup. Commit (pushed) multi-company map + save v3 + migrated tests (70 green).
+- Buildings/floors implemented: `floors` per company, `FLOOR_CAPACITY=4` desks/floor, `MAX_FLOORS=8`, cost `FLOOR_BASE_COST(400) * site.floorCostFactor * 6^(floors-1)`; desk purchases gated by capacity; office tab renders the building floor-by-floor with free-slot tiles + "Add floor" button; migration grandfathers old saves enough floors for their desks.
+- Training rework implemented (see findings below) with rewritten trainWorker tests incl. payback balance guard. 72 tests green locally.
+
+- Sub-agent delivered `tests/companies.test.ts` (14 tests) + `tests/floors.test.ts` (13 tests) — compile clean against the training-era types.
+- Wallpapers & map themes implemented: `WALLPAPERS` (7, 'concrete' free) + `MAP_THEMES` (3, 'daylight' free) in data.ts; buy once globally, apply per company (`wallpaperId`, null = follow player default `defaultWallpaperId`), map theme player-level; building/map backgrounds driven by data `css`; decor shop in Office tab, theme picker in Map tab; migration hygiene (unknown ids dropped, defaults ensured). `tests/customization.test.ts` (7 tests) written in main session.
+- Suite: 106 tests green, tsc clean, production build OK.
+
 ### In progress
-- Delegated (haiku sub-agent): migrating existing tests in `tests/` to the company API (mapping spec given; semantics unchanged). Commit refactor+map once green.
+- (nothing — committing floors+training+cosmetics batch)
 
 ### Next up (dependency order)
-1. Buildings/floors: capacity gate on desks, floor unlock purchase, office UI grouped by floor.
-2. Training rework: timed program + cost rebalance (document findings below).
-3. Wallpapers/customization: purchasable wallpapers, per-company apply + global default; map theme.
-4. QoL: x1/x2/x4 speed toggle, per-company renaming, marketing-campaign money sink (paid boost).
-5. Persona visual detail upgrade (delegate to sub-agent).
-6. Final docs pass (`docs/plan.md`), full test run, push.
+1. QoL: x1/x2/x4 speed toggle (settings.timeScale already in state; apply in main loop dt), marketing-campaign money sink (paid boost via grantBoost); company renaming already works per active company.
+2. Persona visual detail upgrade (delegate to sub-agent).
+3. Final docs pass (`docs/plan.md`), full test run, push.
 
 ## Findings: Employee Training bug (feature 3)
 
@@ -47,8 +52,22 @@ Why it's unusable: cost grows quadratically with level and 4x per tier while the
 is a flat +10% of base rate per level. Example: Architect (tier 4) level 1→2 costs
 150*256*1 = $38,400... payback takes hours; higher levels are effectively never worth it.
 Also redundant: passive XP levels workers for free, so paying should buy *time*, not levels.
-Fix direction (decision 3): timed training program with sharply rebalanced cost — see
-implementation notes once landed.
+Fix implemented:
+- Training is now a **timed program**: pay up front, the worker leaves their desk
+  (produces nothing, gains no XP) for `TRAIN_DURATION_SEC = 120`, then returns
+  `TRAIN_LEVELS = 3` skill levels stronger (capped at 100) and is auto-reseated.
+- New cost formula (`trainCost`): `baseRate * TRAIN_COST_RATE_FACTOR(45) *
+  (1 + 0.15 * (skillLevel - 1))`. Anchoring to the tier's output rate (not hire
+  cost) makes payback time uniform across tiers: the granted +30% base output
+  repays the cost in ~5 min at the conservative early reward/work ratio (0.5),
+  faster later. A regression test ("balance guard") asserts payback < 15 min for
+  every tier, so future data.ts tuning can't silently re-break the feature.
+  (First attempt anchored to hireCost — the guard test caught senior/principal
+  paybacks of 22-71 min; that's why it's rate-anchored.)
+- Opportunity cost (120 s off the floor) roughly doubles the effective price,
+  which keeps it an actual decision instead of a no-brainer.
+- Engine ordering: training countdown runs AFTER the seated-XP loop in tick()
+  so the graduating tick doesn't also grant a full tick of seated XP.
 
 ## Open issues
 

@@ -1,4 +1,12 @@
-import { COMPANY_SITES, OFFLINE_CAP_HOURS, PROJECTS } from './data';
+import {
+  COMPANY_SITES,
+  FLOOR_CAPACITY,
+  MAP_THEMES,
+  MAX_FLOORS,
+  OFFLINE_CAP_HOURS,
+  PROJECTS,
+  WALLPAPERS,
+} from './data';
 import { createInitialState, newProjectState, SAVE_VERSION, simulateOffline } from './engine';
 import type { CompanyState, GameState } from './types';
 
@@ -115,6 +123,14 @@ export function migrate(
   state.companies = state.companies.map((c) => {
     const company: CompanyState = { ...template, ...c, upgrades: { ...(c.upgrades ?? {}) } };
     if (!knownSites.has(company.siteId)) company.siteId = 'garage';
+    // Fill in worker fields added after the save was written.
+    company.workers = (company.workers ?? []).map((w) => ({ ...w, training: w.training ?? null }));
+    // Saves that predate floors (or that own more desks than their floors
+    // hold) get enough floors for their desks, free of charge. Floor count
+    // is clamped to MAX_FLOORS unless the desks themselves require more.
+    const neededFloors = Math.ceil(company.workstations.length / FLOOR_CAPACITY);
+    const savedFloors = Math.max(1, Math.min(company.floors ?? 1, MAX_FLOORS));
+    company.floors = Math.max(savedFloors, neededFloors);
     // Ensure every project defined in data.ts has a state entry (new content
     // added in updates appears automatically in old saves).
     const byId = new Map((company.projects ?? []).map((p) => [p.defId, p]));
@@ -128,6 +144,26 @@ export function migrate(
   if (!state.companies.some((c) => c.id === state.activeCompanyId)) {
     state.activeCompanyId = state.companies[0].id;
   }
+
+  // Cosmetics hygiene: drop unknown ids, keep the free defaults owned, and
+  // make sure the selected default/theme is actually owned.
+  const wallpaperIds = new Set(WALLPAPERS.map((w) => w.id));
+  state.ownedWallpapers = Array.from(
+    new Set(['concrete', ...(state.ownedWallpapers ?? []).filter((id) => wallpaperIds.has(id))]),
+  );
+  if (!state.ownedWallpapers.includes(state.defaultWallpaperId)) {
+    state.defaultWallpaperId = 'concrete';
+  }
+  for (const c of state.companies) {
+    if (c.wallpaperId !== null && !state.ownedWallpapers.includes(c.wallpaperId)) {
+      c.wallpaperId = null;
+    }
+  }
+  const themeIds = new Set(MAP_THEMES.map((t) => t.id));
+  state.ownedMapThemes = Array.from(
+    new Set(['daylight', ...(state.ownedMapThemes ?? []).filter((id) => themeIds.has(id))]),
+  );
+  if (!state.ownedMapThemes.includes(state.mapThemeId)) state.mapThemeId = 'daylight';
 
   // nextEntityId must stay above every id in the save (workers, desks,
   // companies) so freshly created entities never collide.

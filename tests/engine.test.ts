@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { PROJECTS, SPEC_MATCH_BONUS, WORKER_TIERS, WORKSTATIONS } from '../src/game/data';
+import {
+  PROJECTS,
+  SKILL_OUTPUT_PER_LEVEL,
+  SPEC_MATCH_BONUS,
+  TRAIN_DURATION_SEC,
+  TRAIN_LEVELS,
+  WORKER_TIERS,
+  WORKSTATIONS,
+} from '../src/game/data';
 import {
   activeCompany,
   autoSeat,
@@ -36,6 +44,7 @@ function makeWorker(overrides: Partial<WorkerState> = {}): WorkerState {
     skillLevel: 1,
     experience: 0,
     stationId: null,
+    training: null,
     ...overrides,
   };
 }
@@ -364,27 +373,66 @@ describe('unlockProject / setActiveProject error paths', () => {
   });
 });
 
-describe('trainWorker', () => {
-  it('cost formula is base * 4^tierIndex * level^2', () => {
+describe('trainWorker (timed program)', () => {
+  it('cost is anchored to base output rate with a mild per-level ramp', () => {
+    // cost = baseRate * TRAIN_COST_RATE_FACTOR * (1 + TRAIN_COST_LEVEL_RAMP*(level-1))
     const internWorker = makeWorker({ tierId: 'intern', skillLevel: 1 });
-    expect(trainCost(internWorker)).toBe(150); // 150 * 4^0 * 1^2
+    expect(trainCost(internWorker)).toBe(Math.round(0.5 * 45)); // $23
 
     const juniorWorker = makeWorker({ tierId: 'junior', skillLevel: 3 });
-    expect(trainCost(juniorWorker)).toBe(Math.round(150 * 4 * 9)); // tierIndex=1 -> 4^1=4
+    expect(trainCost(juniorWorker)).toBe(Math.round(1 * 45 * 1.3)); // $59
   });
 
-  it('deducts cost, increments skillLevel, resets experience', () => {
+  it('deducts cost, starts a program, frees the desk, then grants levels via tick', () => {
     const state = createInitialState(NOW);
     const c = activeCompany(state);
+    state.money = 10_000;
+    buyWorkstation(state, 'basic');
     const worker = makeWorker({ tierId: 'intern', skillLevel: 1, experience: 42 });
     c.workers.push(worker);
-    state.money = trainCost(worker);
+    autoSeat(c);
+    expect(worker.stationId).not.toBeNull();
 
+    state.money = trainCost(worker);
     const err = trainWorker(state, worker.id);
     expect(err).toBeNull();
     expect(state.money).toBe(0);
-    expect(worker.skillLevel).toBe(2);
+    expect(worker.training).not.toBeNull();
+    expect(worker.stationId).toBeNull(); // off the floor while training
+    expect(worker.skillLevel).toBe(1); // not yet — program must finish
+
+    const events = tick(state, TRAIN_DURATION_SEC);
+    expect(worker.training).toBeNull();
+    expect(worker.skillLevel).toBe(1 + TRAIN_LEVELS);
     expect(worker.experience).toBe(0);
+    expect(worker.stationId).not.toBeNull(); // reseated after graduating
+    expect(events.trainingsDone).toEqual([
+      { companyId: c.id, workerId: worker.id, newLevel: 1 + TRAIN_LEVELS },
+    ]);
+  });
+
+  it('rejects a second program while one is running', () => {
+    const state = createInitialState(NOW);
+    const c = activeCompany(state);
+    const worker = makeWorker({ tierId: 'intern', skillLevel: 1 });
+    c.workers.push(worker);
+    state.money = 100_000;
+    expect(trainWorker(state, worker.id)).toBeNull();
+    expect(trainWorker(state, worker.id)).toBe('Already in training');
+  });
+
+  it('training pays for itself in bounded time (balance guard)', () => {
+    // For every tier: the extra money/sec from TRAIN_LEVELS skill levels on a
+    // basic desk must repay the training cost within 15 minutes of work.
+    for (const tier of WORKER_TIERS) {
+      const worker = makeWorker({ tierId: tier.id, skillLevel: 1 });
+      const cost = trainCost(worker);
+      // Reward/work ratio is ~1 for mid/late projects; use the conservative
+      // early-game 'landing' ratio of 0.5 for the payback bound.
+      const gainPerSec = tier.baseRate * SKILL_OUTPUT_PER_LEVEL * TRAIN_LEVELS * 0.5;
+      const paybackSec = cost / gainPerSec;
+      expect(paybackSec, `${tier.id} payback`).toBeLessThan(15 * 60);
+    }
   });
 
   it('refuses when broke', () => {

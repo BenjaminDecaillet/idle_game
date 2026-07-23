@@ -63,6 +63,7 @@ describe('saveGame / loadGame round trip', () => {
       skillLevel: 3,
       experience: 12,
       stationId: null,
+      training: null,
     });
     c.projects[1].unlocked = true; // unlock 'todo'
 
@@ -92,6 +93,7 @@ describe('saveGame / loadGame round trip', () => {
       skillLevel: 1,
       experience: 0,
       stationId: 1,
+      training: null,
     });
     saveGame(state, storage, NOW);
 
@@ -200,6 +202,7 @@ describe('exportSave / importSave', () => {
       skillLevel: 4,
       experience: 3,
       stationId: null,
+      training: null,
     });
 
     const encoded = exportSave(state);

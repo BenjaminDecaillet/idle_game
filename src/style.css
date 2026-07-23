@@ -746,6 +746,93 @@ button.site-card {
   transform: scale(0.95);
 }
 
+.desk-tile.free {
+  opacity: 0.35;
+  cursor: default;
+  border-style: dashed;
+  justify-content: center;
+  min-height: 96px;
+}
+
+.free-slot {
+  font-size: 1.6rem;
+  color: var(--muted);
+  line-height: 1;
+}
+
+/* --- Building & floors ---------------------------------------------------- */
+
+.building {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+}
+
+.floor-block + .floor-block {
+  border-top: 2px solid rgba(255, 255, 255, 0.08);
+  margin-top: 6px;
+  padding-top: 6px;
+}
+
+.floor-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 2px 4px;
+}
+
+.floor-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* --- Training ------------------------------------------------------------- */
+
+.progress.training .progress-fill {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.worker-card.training {
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.stand-slot.training {
+  filter: saturate(0.8);
+}
+
+/* --- Decor shop & map themes ---------------------------------------------- */
+
+.decor-swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.decor-card.applied {
+  border-color: rgba(34, 211, 238, 0.5);
+}
+
+.decor-card .card-actions {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.map-screen {
+  border-radius: 16px;
+  padding: 12px;
+  margin: -12px;
+}
+
 .persona-desk {
   width: 84px;
   height: 74px;
