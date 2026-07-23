@@ -36,13 +36,15 @@ Resume rule: read this file top-to-bottom, then continue at **Next up**.
 - Wallpapers & map themes implemented: `WALLPAPERS` (7, 'concrete' free) + `MAP_THEMES` (3, 'daylight' free) in data.ts; buy once globally, apply per company (`wallpaperId`, null = follow player default `defaultWallpaperId`), map theme player-level; building/map backgrounds driven by data `css`; decor shop in Office tab, theme picker in Map tab; migration hygiene (unknown ids dropped, defaults ensured). `tests/customization.test.ts` (7 tests) written in main session.
 - Suite: 106 tests green, tsc clean, production build OK.
 
+- Committed + pushed: floors/training/cosmetics batch (106 tests), then QoL batch (110 tests): free x1/x2/x4 speed toggle (live loop only, `settings.timeScale`, migration-validated) and marketing campaign sink (`marketingCost` ≈ 300 s of gross income, min $500, 2×/10 min extendable boost, source 'marketing'). `tests/qol.test.ts` added.
+- `docs/plan.md` roadmap updated with all shipped features.
+
 ### In progress
-- (nothing — committing floors+training+cosmetics batch)
+- Delegated (sonnet sub-agent): persona visual detail upgrade in `src/ui/persona.ts` (+ style.css if needed) — more deterministic traits (hairstyles, facial detail, eyes, shirt patterns, seniority grey-hair bias), signatures unchanged. On completion: review diff, verify tsc+tests, document trait system here, commit.
 
 ### Next up (dependency order)
-1. QoL: x1/x2/x4 speed toggle (settings.timeScale already in state; apply in main loop dt), marketing-campaign money sink (paid boost via grantBoost); company renaming already works per active company.
-2. Persona visual detail upgrade (delegate to sub-agent).
-3. Final docs pass (`docs/plan.md`), full test run, push.
+1. Review + commit persona upgrade.
+2. Final pass: full test run + build, PROGRESS.md wrap-up, push.
 
 ## Findings: Employee Training bug (feature 3)
 
