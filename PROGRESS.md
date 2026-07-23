@@ -39,12 +39,25 @@ Resume rule: read this file top-to-bottom, then continue at **Next up**.
 - Committed + pushed: floors/training/cosmetics batch (106 tests), then QoL batch (110 tests): free x1/x2/x4 speed toggle (live loop only, `settings.timeScale`, migration-validated) and marketing campaign sink (`marketingCost` ≈ 300 s of gross income, min $500, 2×/10 min extendable boost, source 'marketing'). `tests/qol.test.ts` added.
 - `docs/plan.md` roadmap updated with all shipped features.
 
-### In progress
-- Delegated (sonnet sub-agent): persona visual detail upgrade in `src/ui/persona.ts` (+ style.css if needed) — more deterministic traits (hairstyles, facial detail, eyes, shirt patterns, seniority grey-hair bias), signatures unchanged. On completion: review diff, verify tsc+tests, document trait system here, commit.
+- Persona visual upgrade landed (sonnet sub-agent, reviewed): personas now derive
+  12 independent traits from the seed hash — 9 skin tones, 11 hair colors (+3 grey
+  shades with a ~50% seniority bias for senior/architect/principal), 8 hairstyles,
+  3 eye styles, 3 eyebrow styles, 4 mouths, 4 facial-hair options, freckles/blush,
+  and ~50% shirt details (collar/tie/zip/pocket/hoodie strings). One shared
+  `facialFeatures()` helper keeps the face identical across avatar/desk/standing
+  renderers. Approach: still 100% procedural SVG, no assets — matches repo art style.
+  BONUS BUG FIX found during this work: `personaLook` used signed `>>` on the
+  32-bit hash; for ~half of all seeds the index went negative → `fill="undefined"`.
+  All shifts now `>>>`. Render signatures unchanged.
 
-### Next up (dependency order)
-1. Review + commit persona upgrade.
-2. Final pass: full test run + build, PROGRESS.md wrap-up, push.
+### In progress
+- (nothing)
+
+### Next up
+- All scoped features complete. Remaining ideas live in docs/plan.md roadmap
+  (prestige, achievements, shop tab, i18n, ...). Next session: start from that
+  roadmap or Benjamin's feedback; balance pass after real playtests is the top
+  candidate.
 
 ## Findings: Employee Training bug (feature 3)
 
