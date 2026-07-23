@@ -39,9 +39,11 @@ function loop(now: number): void {
   last = now;
 
   const events = tick(state, dt);
-  if (events.completions.length > 0) {
+  // Payout FX only for the company currently on screen; money still counts.
+  const visible = events.completions.filter((c) => c.companyId === state.activeCompanyId);
+  if (visible.length > 0) {
     const origin = ui.payoutOrigin();
-    for (const c of events.completions.slice(0, 3)) {
+    for (const c of visible.slice(0, 3)) {
       fx.payoutBurst(origin.x, origin.y, c.reward);
     }
     ui.moneyPulse();

@@ -30,6 +30,15 @@ export interface ProjectDef {
   emoji: string;
 }
 
+export interface CompanySiteDef {
+  id: string;
+  name: string;
+  cost: number; // 0 = free starting site
+  outputBonus: number; // multiplier on all worker output at this site (1 = none)
+  emoji: string;
+  blurb: string;
+}
+
 export interface UpgradeDef {
   id: string;
   name: string;
@@ -67,6 +76,8 @@ export interface ProjectState {
 export interface Settings {
   sound: boolean;
   particles: boolean;
+  /** Free simulation speed toggle for the live loop: 1, 2 or 4. */
+  timeScale: number;
 }
 
 /**
@@ -82,15 +93,15 @@ export interface Boost {
   source: string;
 }
 
-export interface GameState {
-  version: number;
-  companyName: string;
-  money: number;
-  totalEarned: number;
-  projectsCompleted: number;
-  startedAt: number;
-  lastSeen: number; // wall-clock ms, for offline progress
-  playTimeSec: number;
+/**
+ * One company on the map. Each company runs independently — its own team,
+ * desks, projects and upgrades — but all money flows through the shared
+ * player wallet on GameState.
+ */
+export interface CompanyState {
+  id: number;
+  name: string;
+  siteId: string; // map location (CompanySiteDef)
   workers: WorkerState[];
   workstations: WorkstationState[];
   projects: ProjectState[];
@@ -98,6 +109,18 @@ export interface GameState {
   upgrades: Record<string, number>;
   candidates: Candidate[];
   candidateRerollCost: number;
+}
+
+export interface GameState {
+  version: number;
+  money: number; // shared wallet across all companies
+  totalEarned: number;
+  projectsCompleted: number;
+  startedAt: number;
+  lastSeen: number; // wall-clock ms, for offline progress
+  playTimeSec: number;
+  companies: CompanyState[];
+  activeCompanyId: number; // company currently shown/managed in the UI
   boosts: Boost[];
   settings: Settings;
   nextEntityId: number;
@@ -111,6 +134,6 @@ export interface Candidate {
 
 /** Events emitted by a tick, consumed by the UI for effects. */
 export interface TickEvents {
-  completions: { projectId: string; reward: number }[];
+  completions: { companyId: number; projectId: string; reward: number }[];
   levelUps: { workerId: number; newLevel: number }[];
 }

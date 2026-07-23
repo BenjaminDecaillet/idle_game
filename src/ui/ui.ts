@@ -1,4 +1,5 @@
 import {
+  COMPANY_SITES,
   PROJECTS,
   UPGRADES,
   WORKSTATIONS,
@@ -8,8 +9,15 @@ import {
 } from '../game/data';
 import {
   activeBoost,
+  activeCompany,
+  buyCompany,
   buyUpgrade,
   buyWorkstation,
+  companyAtSite,
+  companyIncome,
+  companySalaries,
+  companyWorkRate,
+  setActiveCompany,
   estimatedIncome,
   expToNextLevel,
   fireWorker,
@@ -48,9 +56,10 @@ const SPEECH_LINES = [
   'TODO: fix later',
 ];
 
-type Tab = 'projects' | 'team' | 'office' | 'upgrades' | 'stats';
+type Tab = 'map' | 'projects' | 'team' | 'office' | 'upgrades' | 'stats';
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
+  { id: 'map', label: 'Map', emoji: '🗺️' },
   { id: 'projects', label: 'Projects', emoji: '📋' },
   { id: 'team', label: 'Team', emoji: '👥' },
   { id: 'office', label: 'Office', emoji: '🏢' },
@@ -153,7 +162,7 @@ export class UI {
       incomeEl.classList.toggle('negative', income < 0);
     }
     this.text('hud-salary', `salaries ${formatMoney(totalSalaries(s))}/s`);
-    this.text('company-name', s.companyName);
+    this.text('company-name', activeCompany(s).name);
 
     const boost = activeBoost(s);
     const boostEl = document.getElementById('hud-boost');
@@ -164,7 +173,8 @@ export class UI {
       }
     }
 
-    const project = getProject(s, s.activeProjectId);
+    const company = activeCompany(s);
+    const project = getProject(company, company.activeProjectId);
     const def = projectDefById(project.defId);
     const rate = totalWorkRate(s);
     this.text('hero-emoji', def.emoji);
@@ -239,6 +249,9 @@ export class UI {
       document.getElementById(`tab-btn-${t.id}`)?.classList.toggle('active', t.id === this.tab);
     }
     switch (this.tab) {
+      case 'map':
+        content.innerHTML = this.renderMap();
+        break;
       case 'projects':
         content.innerHTML = this.renderProjects();
         break;
@@ -268,16 +281,72 @@ export class UI {
     }
   }
 
+  /** The map: every site is either your company (manage/switch) or for sale. */
+  private renderMap(): string {
+    const s = this.state;
+    const cards = COMPANY_SITES.map((site) => {
+      const company = companyAtSite(s, site.id);
+      if (company) {
+        const active = company.id === s.activeCompanyId;
+        const income = companyIncome(s, company);
+        return `
+        <button class="card site-card owned ${active ? 'active-site' : ''}"
+                data-action="switch-company:${company.id}">
+          <div class="card-row">
+            <span class="card-emoji">${site.emoji}</span>
+            <div class="card-main">
+              <h3>${company.name}</h3>
+              <span class="muted">${site.name} · ×${site.outputBonus} output</span>
+              <span class="muted">👥 ${company.workers.length} ·
+                🧾 ${formatMoney(companySalaries(company))}/s ·
+                ⚡ ${formatRate(companyWorkRate(s, company))}</span>
+            </div>
+            <div class="card-right">
+              <strong class="${income < 0 ? 'negative' : ''}">${income >= 0 ? '▲' : '▼'} ${formatMoney(income)}/s</strong>
+              ${active ? '<span class="active-tag">MANAGING</span>' : '<span class="muted">tap to manage</span>'}
+            </div>
+          </div>
+        </button>`;
+      }
+      const affordable = s.money >= site.cost;
+      return `
+      <div class="card site-card locked">
+        <div class="card-row">
+          <span class="card-emoji">${site.emoji}</span>
+          <div class="card-main">
+            <h3>${site.name}</h3>
+            <span class="muted">${site.blurb}</span>
+            <span class="muted">×${site.outputBonus} output for every worker here</span>
+          </div>
+          <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
+                  data-action="found-company:${site.id}">
+            Found ${formatMoney(site.cost)}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+    return `
+      <div class="stack">
+        <div class="section-head"><h2>Silicon Valley</h2>
+          <span class="muted">${s.companies.length}/${COMPANY_SITES.length} sites owned</span>
+        </div>
+        ${cards}
+        <p class="hint">💡 Every company works and earns at the same time — even while
+        you're away. New companies start empty: hire a team and buy desks to get them shipping.</p>
+      </div>`;
+  }
+
   private renderProjects(): string {
     const s = this.state;
+    const c = activeCompany(s);
     const lastUnlockedIdx = PROJECTS.reduce(
-      (acc, def, i) => (getProject(s, def.id).unlocked ? i : acc),
+      (acc, def, i) => (getProject(c, def.id).unlocked ? i : acc),
       0,
     );
     const cards = PROJECTS.map((def, i) => {
-      const p = getProject(s, def.id);
+      const p = getProject(c, def.id);
       if (p.unlocked) {
-        const active = s.activeProjectId === def.id;
+        const active = c.activeProjectId === def.id;
         const pct = Math.min(100, (p.progress / p.currentWork) * 100);
         return `
         <button class="card project-card ${active ? 'active-project' : ''}"
@@ -321,7 +390,8 @@ export class UI {
 
   private renderTeam(): string {
     const s = this.state;
-    const candidates = s.candidates
+    const c = activeCompany(s);
+    const candidates = c.candidates
       .map((c, i) => {
         const tier = tierById(c.tierId);
         const affordable = s.money >= tier.hireCost;
@@ -341,9 +411,9 @@ export class UI {
       })
       .join('');
 
-    const seats = s.workstations.length;
-    const roster = s.workers.length
-      ? s.workers.map((w) => this.renderWorkerCard(w)).join('')
+    const seats = c.workstations.length;
+    const roster = c.workers.length
+      ? c.workers.map((w) => this.renderWorkerCard(w)).join('')
       : `<div class="empty-hint">No employees yet. Hire your first dev above! 👆</div>`;
 
     return `
@@ -351,14 +421,14 @@ export class UI {
         <div class="section-head">
           <h2>Candidates</h2>
           <button class="btn btn-ghost" data-action="reroll"
-                  ${s.money >= s.candidateRerollCost ? '' : 'disabled'}>
-            🎲 New batch ${formatMoney(s.candidateRerollCost)}
+                  ${s.money >= c.candidateRerollCost ? '' : 'disabled'}>
+            🎲 New batch ${formatMoney(c.candidateRerollCost)}
           </button>
         </div>
         ${candidates}
         <div class="section-head">
-          <h2>Your team (${s.workers.length})</h2>
-          <span class="muted">${Math.min(s.workers.length, seats)}/${seats} desks used</span>
+          <h2>Your team (${c.workers.length})</h2>
+          <span class="muted">${Math.min(c.workers.length, seats)}/${seats} desks used</span>
         </div>
         ${roster}
       </div>`;
@@ -366,11 +436,12 @@ export class UI {
 
   private renderWorkerCard(w: WorkerState): string {
     const s = this.state;
+    const c = activeCompany(s);
     const tier = tierById(w.tierId);
-    const rate = workerRate(s, w, s.activeProjectId);
+    const rate = workerRate(s, c, w, c.activeProjectId);
     const specMatch =
-      projectDefById(s.activeProjectId).specialization === w.specialization;
-    const station = s.workstations.find((st) => st.id === w.stationId);
+      projectDefById(c.activeProjectId).specialization === w.specialization;
+    const station = c.workstations.find((st) => st.id === w.stationId);
     const deskLabel = station
       ? `${stationDefById(station.defId).emoji} ${stationDefById(station.defId).name}`
       : '⚠️ No desk — idle!';
@@ -416,14 +487,15 @@ export class UI {
   /** The animated floor: every desk as a tile, personas seated and typing. */
   private renderOfficeFloor(): string {
     const s = this.state;
+    const c = activeCompany(s);
     // Same ordering as autoSeat: best desks first, so the layout mirrors seating.
-    const stations = [...s.workstations].sort(
+    const stations = [...c.workstations].sort(
       (a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier,
     );
     const tiles = stations
       .map((st) => {
         const def = stationDefById(st.defId);
-        const worker = s.workers.find((w) => w.stationId === st.id);
+        const worker = c.workers.find((w) => w.stationId === st.id);
         if (worker) {
           const tier = tierById(worker.tierId);
           return `
@@ -450,7 +522,7 @@ export class UI {
       })
       .join('');
 
-    const standing = s.workers
+    const standing = c.workers
       .filter((w) => w.stationId === null)
       .map(
         (w) => `
@@ -463,7 +535,7 @@ export class UI {
 
     return `
       <div class="section-head"><h2>Your office</h2>
-        <span class="muted">${s.workstations.length} desks · ${s.workers.length} workers</span>
+        <span class="muted">${c.workstations.length} desks · ${c.workers.length} workers</span>
       </div>
       ${
         stations.length || standing
@@ -482,9 +554,10 @@ export class UI {
 
   private renderOfficeShop(): string {
     const s = this.state;
+    const c = activeCompany(s);
     const shop = WORKSTATIONS.map((def) => {
-      const owned = s.workstations.filter((w) => w.defId === def.id).length;
-      const cost = stationCost(s, def.id);
+      const owned = c.workstations.filter((w) => w.defId === def.id).length;
+      const cost = stationCost(c, def.id);
       const affordable = s.money >= cost;
       return `
       <div class="card">
@@ -510,10 +583,11 @@ export class UI {
 
   private renderUpgrades(): string {
     const s = this.state;
+    const c = activeCompany(s);
     const cards = UPGRADES.map((def) => {
-      const level = s.upgrades[def.id] ?? 0;
+      const level = c.upgrades[def.id] ?? 0;
       const maxed = level >= def.maxLevel;
-      const cost = upgradeCost(s, def.id);
+      const cost = upgradeCost(c, def.id);
       const affordable = !maxed && s.money >= cost;
       return `
       <div class="card">
@@ -535,20 +609,24 @@ export class UI {
 
   private renderStats(): string {
     const s = this.state;
+    const c = activeCompany(s);
+    const employees = s.companies.reduce((sum, co) => sum + co.workers.length, 0);
+    const desks = s.companies.reduce((sum, co) => sum + co.workstations.length, 0);
     const rows: [string, string][] = [
       ['💰 Total earned', formatMoney(s.totalEarned)],
       ['✅ Projects completed', formatNumber(s.projectsCompleted)],
-      ['👥 Employees', String(s.workers.length)],
-      ['🪑 Workstations', String(s.workstations.length)],
-      ['⚡ Team output', formatRate(totalWorkRate(s))],
-      ['🧾 Salaries', `${formatMoney(totalSalaries(s))}/s`],
+      ['🏢 Companies', String(s.companies.length)],
+      ['👥 Employees', String(employees)],
+      ['🪑 Workstations', String(desks)],
+      ['⚡ Team output (here)', formatRate(totalWorkRate(s))],
+      ['🧾 Salaries (all)', `${formatMoney(totalSalaries(s))}/s`],
       ['⏱️ Time played', formatDuration(s.playTimeSec)],
       ['🚀 Founded', new Date(s.startedAt).toLocaleDateString()],
     ];
     return `
       <div class="stack">
         <div class="card">
-          <h2 class="card-title">📊 ${s.companyName}</h2>
+          <h2 class="card-title">📊 ${c.name}</h2>
           <table class="stats-table">
             ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
           </table>
@@ -593,6 +671,15 @@ export class UI {
       case 'select-project':
         error = setActiveProject(s, arg);
         break;
+      case 'switch-company':
+        error = setActiveCompany(s, Number(arg));
+        break;
+      case 'found-company': {
+        const name = prompt('Name your new company:', '');
+        error = buyCompany(s, arg, name ?? undefined);
+        if (!error) this.toast('🏗️ New company founded!', 'info');
+        break;
+      }
       case 'unlock-project':
         error = unlockProject(s, arg);
         if (!error) this.toast('🎉 Project unlocked!', 'info');
@@ -608,7 +695,7 @@ export class UI {
         error = trainWorker(s, Number(arg));
         break;
       case 'fire': {
-        const worker = s.workers.find((w) => w.id === Number(arg));
+        const worker = activeCompany(s).workers.find((w) => w.id === Number(arg));
         if (worker && confirm(`Fire ${worker.name}? There is no severance package.`)) {
           error = fireWorker(s, Number(arg));
         }
@@ -632,7 +719,7 @@ export class UI {
         error = buyUpgrade(s, arg);
         break;
       case 'rename-company': {
-        const name = prompt('Company name:', s.companyName);
+        const name = prompt('Company name:', activeCompany(s).name);
         if (name !== null) error = renameCompany(s, name);
         break;
       }

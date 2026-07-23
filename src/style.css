@@ -438,6 +438,30 @@ button.project-card {
   opacity: 0.75;
 }
 
+/* --- Map / company sites -------------------------------------------------- */
+
+button.site-card {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  position: relative;
+}
+
+.site-card.active-site {
+  border-color: rgba(34, 211, 238, 0.5);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.12), rgba(99, 102, 241, 0.08));
+}
+
+.site-card.locked {
+  opacity: 0.8;
+}
+
+.site-card .negative {
+  color: var(--red);
+}
+
 /* --- Badges & misc ------------------------------------------------------- */
 
 .spec-badge {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PROJECTS, SPEC_MATCH_BONUS, WORKER_TIERS, WORKSTATIONS } from '../src/game/data';
 import {
+  activeCompany,
   autoSeat,
   buyUpgrade,
   buyWorkstation,
@@ -42,27 +43,29 @@ function makeWorker(overrides: Partial<WorkerState> = {}): WorkerState {
 describe('createInitialState', () => {
   it('starts with $50, landing unlocked+active, 3 candidates, no workers', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     expect(state.money).toBe(50);
-    expect(state.activeProjectId).toBe('landing');
-    expect(state.workers).toHaveLength(0);
-    expect(state.candidates).toHaveLength(3);
+    expect(c.activeProjectId).toBe('landing');
+    expect(c.workers).toHaveLength(0);
+    expect(c.candidates).toHaveLength(3);
 
-    const landing = getProject(state, 'landing');
+    const landing = getProject(c, 'landing');
     expect(landing.unlocked).toBe(true);
 
-    for (const p of state.projects) {
+    for (const p of c.projects) {
       if (p.defId !== 'landing') expect(p.unlocked).toBe(false);
     }
-    expect(state.projects).toHaveLength(PROJECTS.length);
+    expect(c.projects).toHaveLength(PROJECTS.length);
   });
 });
 
 describe('tick — no workers', () => {
   it('accrues no progress and does not touch money', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     const before = state.money;
     const events = tick(state, 10);
-    const landing = getProject(state, 'landing');
+    const landing = getProject(c, 'landing');
     expect(landing.progress).toBe(0);
     expect(state.money).toBe(before);
     expect(events.completions).toHaveLength(0);
@@ -71,9 +74,10 @@ describe('tick — no workers', () => {
 
   it('money floors at 0 when salaries exceed funds', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 1;
     const worker = makeWorker({ id: state.nextEntityId++, tierId: 'senior' }); // salary 1.2/s
-    state.workers.push(worker);
+    c.workers.push(worker);
     // no workstation bought, so worker produces no work, but salary is still paid.
     tick(state, 10); // would need 12 to pay off; money should floor at 0, not go negative
     expect(state.money).toBe(0);
@@ -83,11 +87,12 @@ describe('tick — no workers', () => {
 describe('tick — with hired worker + workstation', () => {
   it('accrues progress at the expected rate and drains salary', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 1000;
     expect(buyWorkstation(state, 'basic')).toBeNull(); // cost 20
     const worker = makeWorker({ id: state.nextEntityId++, tierId: 'junior', specialization: 'Backend' });
-    state.workers.push(worker);
-    autoSeat(state);
+    c.workers.push(worker);
+    autoSeat(c);
     expect(worker.stationId).not.toBeNull();
 
     const moneyBeforeTick = state.money;
@@ -98,21 +103,22 @@ describe('tick — with hired worker + workstation', () => {
     // junior baseRate=1, skillLevel1 multiplier=1, basic desk multiplier=1,
     // no global upgrades=1, specialization mismatch (Backend vs Frontend)=1x.
     const expectedRate = tier.baseRate * 1 * 1 * 1 * 1;
-    const landing = getProject(state, 'landing');
+    const landing = getProject(c, 'landing');
     expect(landing.progress).toBeCloseTo(expectedRate * dt, 10);
     expect(state.money).toBeCloseTo(moneyBeforeTick - tier.salary * dt, 10);
   });
 
   it('completes the project, scales work/reward, rewards money, and rolls over progress', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 1000;
     buyWorkstation(state, 'basic');
     const worker = makeWorker({ id: state.nextEntityId++, tierId: 'junior', specialization: 'Backend' });
-    state.workers.push(worker);
-    autoSeat(state);
+    c.workers.push(worker);
+    autoSeat(c);
 
     const landingDef = PROJECTS.find((p) => p.id === 'landing')!;
-    const before = getProject(state, 'landing');
+    const before = getProject(c, 'landing');
     const initialWork = before.currentWork; // 30
     const initialReward = before.currentReward; // 15
     expect(initialWork).toBeCloseTo(landingDef.baseWork);
@@ -125,10 +131,10 @@ describe('tick — with hired worker + workstation', () => {
     const events = tick(state, 35);
 
     expect(events.completions).toHaveLength(1);
-    expect(events.completions[0]).toEqual({ projectId: 'landing', reward: initialReward });
+    expect(events.completions[0]).toEqual({ companyId: c.id, projectId: 'landing', reward: initialReward });
     expect(state.projectsCompleted).toBe(1);
 
-    const after = getProject(state, 'landing');
+    const after = getProject(c, 'landing');
     expect(after.completions).toBe(1);
     expect(after.progress).toBeCloseTo(5, 10);
     expect(after.currentWork).toBeCloseTo(initialWork * landingDef.workGrowth, 10);
@@ -140,11 +146,12 @@ describe('tick — with hired worker + workstation', () => {
 
   it('handles multiple completions within one long tick (loop guard)', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 1000;
     buyWorkstation(state, 'basic');
     const worker = makeWorker({ id: state.nextEntityId++, tierId: 'junior', specialization: 'Frontend' }); // spec match
-    state.workers.push(worker);
-    autoSeat(state);
+    c.workers.push(worker);
+    autoSeat(c);
 
     const totalEarnedBefore = state.totalEarned;
     const events = tick(state, 500);
@@ -155,7 +162,7 @@ describe('tick — with hired worker + workstation', () => {
     const rewardSum = events.completions.reduce((sum, c) => sum + c.reward, 0);
     expect(state.totalEarned - totalEarnedBefore).toBeCloseTo(rewardSum, 6);
 
-    const project = getProject(state, 'landing');
+    const project = getProject(c, 'landing');
     expect(project.progress).toBeGreaterThanOrEqual(0);
     expect(project.progress).toBeLessThan(project.currentWork);
   });
@@ -164,13 +171,14 @@ describe('tick — with hired worker + workstation', () => {
 describe('specialization match bonus', () => {
   it('gives exactly 1.5x rate when worker specialization matches the project', () => {
     const state = createInitialState(NOW);
-    state.workstations.push({ id: 1, defId: 'basic' });
+    const c = activeCompany(state);
+    c.workstations.push({ id: 1, defId: 'basic' });
 
     const matched = makeWorker({ specialization: 'Frontend', stationId: 1 });
     const mismatched = makeWorker({ specialization: 'Backend', stationId: 1 });
 
-    const rateMatched = workerRate(state, matched, 'landing'); // landing spec = Frontend
-    const rateMismatched = workerRate(state, mismatched, 'landing');
+    const rateMatched = workerRate(state, c, matched, 'landing'); // landing spec = Frontend
+    const rateMismatched = workerRate(state, c, mismatched, 'landing');
 
     expect(rateMatched / rateMismatched).toBeCloseTo(SPEC_MATCH_BONUS, 10);
     expect(SPEC_MATCH_BONUS).toBe(1.5);
@@ -180,10 +188,11 @@ describe('specialization match bonus', () => {
 describe('worker with no workstation', () => {
   it('produces 0 rate and gains no experience', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     const worker = makeWorker({ stationId: null });
-    state.workers.push(worker);
+    c.workers.push(worker);
 
-    expect(workerRate(state, worker, state.activeProjectId)).toBe(0);
+    expect(workerRate(state, c, worker, c.activeProjectId)).toBe(0);
 
     const expBefore = worker.experience;
     const events = tick(state, 50);
@@ -195,9 +204,10 @@ describe('worker with no workstation', () => {
 describe('experience / level-ups', () => {
   it('levels up a worker after enough assigned seconds and reports it in events', () => {
     const state = createInitialState(NOW);
-    state.workstations.push({ id: 1, defId: 'basic' });
+    const c = activeCompany(state);
+    c.workstations.push({ id: 1, defId: 'basic' });
     const worker = makeWorker({ stationId: 1, skillLevel: 1, experience: 0 });
-    state.workers.push(worker);
+    c.workers.push(worker);
 
     const need = expToNextLevel(1); // 90 seconds with no agile upgrade
     expect(need).toBeCloseTo(90);
@@ -218,15 +228,16 @@ describe('experience / level-ups', () => {
 describe('hireWorker', () => {
   it('deducts hireCost and adds a worker', () => {
     const state = createInitialState(NOW);
-    const candidate = state.candidates[0];
+    const c = activeCompany(state);
+    const candidate = c.candidates[0];
     const tier = WORKER_TIERS.find((t) => t.id === candidate.tierId)!;
     state.money = tier.hireCost;
 
     const err = hireWorker(state, 0);
     expect(err).toBeNull();
     expect(state.money).toBe(0);
-    expect(state.workers).toHaveLength(1);
-    expect(state.workers[0].name).toBe(candidate.name);
+    expect(c.workers).toHaveLength(1);
+    expect(c.workers[0].name).toBe(candidate.name);
   });
 
   it('refuses when broke', () => {
@@ -234,7 +245,7 @@ describe('hireWorker', () => {
     state.money = 0;
     const err = hireWorker(state, 0);
     expect(err).toBe('Not enough money');
-    expect(state.workers).toHaveLength(0);
+    expect(activeCompany(state).workers).toHaveLength(0);
   });
 
   it('returns an error for an invalid candidate index', () => {
@@ -247,17 +258,18 @@ describe('hireWorker', () => {
 describe('buyWorkstation', () => {
   it('scales cost as baseCost * costGrowth^owned, rounded', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 100_000;
     const def = WORKSTATIONS.find((w) => w.id === 'basic')!;
 
-    const cost0 = stationCost(state, 'basic');
+    const cost0 = stationCost(c, 'basic');
     expect(cost0).toBe(Math.round(def.baseCost * Math.pow(def.costGrowth, 0)));
 
     const before = state.money;
     buyWorkstation(state, 'basic');
     expect(state.money).toBe(before - cost0);
 
-    const cost1 = stationCost(state, 'basic');
+    const cost1 = stationCost(c, 'basic');
     expect(cost1).toBe(Math.round(def.baseCost * Math.pow(def.costGrowth, 1)));
     expect(cost1).toBeGreaterThan(cost0);
   });
@@ -267,38 +279,41 @@ describe('buyWorkstation', () => {
     state.money = 0;
     const err = buyWorkstation(state, 'basic');
     expect(err).toBe('Not enough money');
-    expect(state.workstations).toHaveLength(0);
+    expect(activeCompany(state).workstations).toHaveLength(0);
   });
 });
 
 describe('buyUpgrade', () => {
   it('cost grows by costGrowth^level and rejects insufficient funds', () => {
     const state = createInitialState(NOW);
-    const cost0 = upgradeCost(state, 'coffee');
+    const c = activeCompany(state);
+    const cost0 = upgradeCost(c, 'coffee');
     expect(cost0).toBe(200); // baseCost * 2.4^0
 
-    state.upgrades['coffee'] = 1;
-    const cost1 = upgradeCost(state, 'coffee');
+    c.upgrades['coffee'] = 1;
+    const cost1 = upgradeCost(c, 'coffee');
     expect(cost1).toBe(Math.round(200 * Math.pow(2.4, 1)));
   });
 
   it('enforces the max level cap', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 10_000_000;
-    state.upgrades['agile'] = 12; // maxLevel for agile
+    c.upgrades['agile'] = 12; // maxLevel for agile
     const err = buyUpgrade(state, 'agile');
     expect(err).toBe('Already at max level');
-    expect(state.upgrades['agile']).toBe(12);
+    expect(c.upgrades['agile']).toBe(12);
   });
 
   it('succeeds below the cap and deducts money', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 10_000;
     const before = state.money;
-    const cost = upgradeCost(state, 'coffee');
+    const cost = upgradeCost(c, 'coffee');
     const err = buyUpgrade(state, 'coffee');
     expect(err).toBeNull();
-    expect(state.upgrades['coffee']).toBe(1);
+    expect(c.upgrades['coffee']).toBe(1);
     expect(state.money).toBe(before - cost);
   });
 });
@@ -312,36 +327,40 @@ describe('unlockProject / setActiveProject error paths', () => {
 
   it('unlockProject refuses when broke', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 0;
     const err = unlockProject(state, 'todo');
     expect(err).toBe('Not enough money');
-    expect(getProject(state, 'todo').unlocked).toBe(false);
+    expect(getProject(c, 'todo').unlocked).toBe(false);
   });
 
   it('unlockProject succeeds and deducts unlockCost', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     const todoDef = PROJECTS.find((p) => p.id === 'todo')!;
     state.money = todoDef.unlockCost;
     const err = unlockProject(state, 'todo');
     expect(err).toBeNull();
     expect(state.money).toBe(0);
-    expect(getProject(state, 'todo').unlocked).toBe(true);
+    expect(getProject(c, 'todo').unlocked).toBe(true);
   });
 
   it('setActiveProject refuses a locked project', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     const err = setActiveProject(state, 'todo');
     expect(err).toBe('Project is locked');
-    expect(state.activeProjectId).toBe('landing');
+    expect(c.activeProjectId).toBe('landing');
   });
 
   it('setActiveProject succeeds on an unlocked project', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 1_000_000;
     unlockProject(state, 'todo');
     const err = setActiveProject(state, 'todo');
     expect(err).toBeNull();
-    expect(state.activeProjectId).toBe('todo');
+    expect(c.activeProjectId).toBe('todo');
   });
 });
 
@@ -356,8 +375,9 @@ describe('trainWorker', () => {
 
   it('deducts cost, increments skillLevel, resets experience', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     const worker = makeWorker({ tierId: 'intern', skillLevel: 1, experience: 42 });
-    state.workers.push(worker);
+    c.workers.push(worker);
     state.money = trainCost(worker);
 
     const err = trainWorker(state, worker.id);
@@ -369,8 +389,9 @@ describe('trainWorker', () => {
 
   it('refuses when broke', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     const worker = makeWorker({ tierId: 'senior', skillLevel: 5 });
-    state.workers.push(worker);
+    c.workers.push(worker);
     state.money = 0;
     const err = trainWorker(state, worker.id);
     expect(err).toBe('Not enough money');
@@ -384,8 +405,9 @@ describe('trainWorker', () => {
 
   it('does not exceed the level-100 cap enforced by tick()', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     const worker = makeWorker({ tierId: 'principal', skillLevel: 100, experience: 0 });
-    state.workers.push(worker);
+    c.workers.push(worker);
     state.money = trainCost(worker);
 
     expect(trainWorker(state, worker.id)).toBe('Already at max skill level');
@@ -396,16 +418,17 @@ describe('trainWorker', () => {
 describe('rerollCandidates', () => {
   it('increases cost by 1.5x each time and refuses when broke', () => {
     const state = createInitialState(NOW);
-    expect(state.candidateRerollCost).toBe(10);
+    const c = activeCompany(state);
+    expect(c.candidateRerollCost).toBe(10);
     state.money = 1000;
 
     let err = rerollCandidates(state);
     expect(err).toBeNull();
-    expect(state.candidateRerollCost).toBe(Math.round(10 * 1.5)); // 15
+    expect(c.candidateRerollCost).toBe(Math.round(10 * 1.5)); // 15
 
     err = rerollCandidates(state);
     expect(err).toBeNull();
-    expect(state.candidateRerollCost).toBe(Math.round(15 * 1.5)); // 23
+    expect(c.candidateRerollCost).toBe(Math.round(15 * 1.5)); // 23
 
     state.money = 0;
     err = rerollCandidates(state);
@@ -416,19 +439,20 @@ describe('rerollCandidates', () => {
 describe('fireWorker', () => {
   it('removes the worker and re-seats remaining workers', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     state.money = 100_000;
     buyWorkstation(state, 'basic');
     const w1 = makeWorker({ id: state.nextEntityId++, tierId: 'senior' });
     const w2 = makeWorker({ id: state.nextEntityId++, tierId: 'intern' });
-    state.workers.push(w1, w2);
-    autoSeat(state);
+    c.workers.push(w1, w2);
+    autoSeat(c);
     // Only one desk: the stronger worker (senior) should be seated.
     expect(w1.stationId).not.toBeNull();
     expect(w2.stationId).toBeNull();
 
     const err = fireWorker(state, w1.id);
     expect(err).toBeNull();
-    expect(state.workers).toHaveLength(1);
+    expect(c.workers).toHaveLength(1);
     // w2 should now take the freed desk.
     expect(w2.stationId).not.toBeNull();
   });
@@ -442,7 +466,8 @@ describe('fireWorker', () => {
 describe('autoSeat', () => {
   it('gives the best workers the highest-multiplier desks; excess get null', () => {
     const state = createInitialState(NOW);
-    state.workstations.push(
+    const c = activeCompany(state);
+    c.workstations.push(
       { id: 1, defId: 'basic' }, // multiplier 1
       { id: 2, defId: 'standing' }, // multiplier 1.25
     );
@@ -450,9 +475,9 @@ describe('autoSeat', () => {
     const weak = makeWorker({ id: 1, tierId: 'intern', specialization: 'DevOps' }); // baseRate 0.5
     const mid = makeWorker({ id: 2, tierId: 'mid', specialization: 'DevOps' }); // baseRate 2.5
     const strong = makeWorker({ id: 3, tierId: 'senior', specialization: 'DevOps' }); // baseRate 5
-    state.workers.push(weak, mid, strong);
+    c.workers.push(weak, mid, strong);
 
-    autoSeat(state);
+    autoSeat(c);
 
     expect(strong.stationId).toBe(2); // best worker -> best desk (standing)
     expect(mid.stationId).toBe(1); // second best -> basic desk
@@ -486,11 +511,12 @@ describe('simulateOffline', () => {
   }
 
   function seatWorker(state: GameState) {
+    const c = activeCompany(state);
     state.money = 1000;
     buyWorkstation(state, 'basic');
     const worker = makeWorker({ id: state.nextEntityId++, tierId: 'mid', specialization: 'Frontend' });
-    state.workers.push(worker);
-    autoSeat(state);
+    c.workers.push(worker);
+    autoSeat(c);
   }
 
   it('earns the same total as an equivalent sequence of 60s ticks', () => {

@@ -24,20 +24,20 @@ Resume rule: read this file top-to-bottom, then continue at **Next up**.
 
 ### Done
 - Baseline verified green: 70 tests, 4 files (pre-existing).
-- Sub-agent configs created: `.claude/agents/test-writer.md`, `.claude/agents/mechanic.md` (haiku-powered, for delegated mechanical work).
+- Sub-agent configs created: `.claude/agents/test-writer.md`, `.claude/agents/mechanic.md` (haiku-powered, for delegated mechanical work). NOTE: configs created mid-session aren't picked up by the Agent tool until a new session; workaround used this session: `general-purpose` agent + `model: haiku` override with the same instructions inlined.
+- Core save-v3 refactor written (`types.ts`, `engine.ts`, `save.ts`): `companies: CompanyState[]` + `activeCompanyId`, shared wallet, tick loops all companies, per-company upgrades, site output bonus, v2→v3 migration folds flat saves into company #1 ('garage'); `nextEntityId` re-derived from max id in save. Action functions kept their signatures (they act on the active company) to minimize churn.
+- Map tab UI: sites list, found-company (prompt for name), switch active company, per-company income readout. `src` typechecks clean.
 
 ### In progress
-- Core save-v3 multi-company refactor (engine/types/save + UI adaptation).
+- Delegated (haiku sub-agent): migrating existing tests in `tests/` to the company API (mapping spec given; semantics unchanged). Commit refactor+map once green.
 
 ### Next up (dependency order)
-1. Core refactor: companies[] in state, tick over all companies, migration v2→v3, adapt UI to active company, update existing tests.
-2. Map tab: view sites, buy company, switch active company.
-3. Buildings/floors: capacity gate on desks, floor unlock purchase, office UI grouped by floor.
-4. Training rework: timed program + cost rebalance (document findings below).
-5. Wallpapers/customization: purchasable wallpapers, per-company apply + global default; map theme.
-6. QoL: x1/x2/x4 speed toggle, per-company renaming, marketing-campaign money sink (paid boost).
-7. Persona visual detail upgrade (delegate to sub-agent).
-8. Final docs pass (`docs/plan.md`), full test run, push.
+1. Buildings/floors: capacity gate on desks, floor unlock purchase, office UI grouped by floor.
+2. Training rework: timed program + cost rebalance (document findings below).
+3. Wallpapers/customization: purchasable wallpapers, per-company apply + global default; map theme.
+4. QoL: x1/x2/x4 speed toggle, per-company renaming, marketing-campaign money sink (paid boost).
+5. Persona visual detail upgrade (delegate to sub-agent).
+6. Final docs pass (`docs/plan.md`), full test run, push.
 
 ## Findings: Employee Training bug (feature 3)
 

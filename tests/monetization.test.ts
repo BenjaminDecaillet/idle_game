@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   activeBoost,
+  activeCompany,
   buyWorkstation,
   createInitialState,
   globalOutputMultiplier,
@@ -15,8 +16,9 @@ const NOW = 1_700_000_000_000;
 
 function stateWithTeam(): GameState {
   const state = createInitialState(NOW);
+  const c = activeCompany(state);
   state.money = 1_000;
-  state.workers.push({
+  c.workers.push({
     id: state.nextEntityId++,
     name: 'Test Dev',
     tierId: 'junior',
@@ -32,19 +34,21 @@ function stateWithTeam(): GameState {
 describe('boosts (monetization groundwork)', () => {
   it('grantBoost multiplies global output and shows in activeBoost', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     expect(activeBoost(state)).toBeNull();
     expect(grantBoost(state, 2, 60, 'ad')).toBeNull();
-    expect(globalOutputMultiplier(state)).toBe(2);
+    expect(globalOutputMultiplier(state, c)).toBe(2);
     expect(activeBoost(state)).toEqual({ mult: 2, remainingSec: 60 });
   });
 
   it('re-granting from the same source extends instead of stacking', () => {
     const state = createInitialState(NOW);
+    const c = activeCompany(state);
     grantBoost(state, 2, 60, 'ad');
     grantBoost(state, 2, 60, 'ad');
     expect(state.boosts).toHaveLength(1);
     expect(state.boosts[0].remainingSec).toBe(120);
-    expect(globalOutputMultiplier(state)).toBe(2);
+    expect(globalOutputMultiplier(state, c)).toBe(2);
   });
 
   it('rejects invalid boosts and caps the number of concurrent sources', () => {
@@ -62,14 +66,16 @@ describe('boosts (monetization groundwork)', () => {
 
     tick(plain, 10);
     tick(boosted, 10);
-    const progressPlain = plain.projects[0].progress;
-    const progressBoosted = boosted.projects[0].progress;
+    const plainC = activeCompany(plain);
+    const boostedC = activeCompany(boosted);
+    const progressPlain = plainC.projects[0].progress;
+    const progressBoosted = boostedC.projects[0].progress;
     expect(progressBoosted).toBeCloseTo(progressPlain * 2, 6);
     expect(boosted.boosts[0].remainingSec).toBeCloseTo(90, 6);
 
     tick(boosted, 100);
     expect(boosted.boosts).toHaveLength(0);
-    expect(globalOutputMultiplier(boosted)).toBe(1);
+    expect(globalOutputMultiplier(boosted, boostedC)).toBe(1);
   });
 
   it('a boost expiring mid-tick only covers its remaining fraction', () => {
@@ -80,7 +86,9 @@ describe('boosts (monetization groundwork)', () => {
     tick(plain, 10);
     tick(boosted, 10);
     // 5s at 3x + 5s at 1x = 20 rate-seconds vs 10 plain.
-    expect(boosted.projects[0].progress).toBeCloseTo(plain.projects[0].progress * 2, 6);
+    const plainC = activeCompany(plain);
+    const boostedC = activeCompany(boosted);
+    expect(boostedC.projects[0].progress).toBeCloseTo(plainC.projects[0].progress * 2, 6);
     expect(boosted.boosts).toHaveLength(0);
   });
 

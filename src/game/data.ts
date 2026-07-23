@@ -1,4 +1,5 @@
 import type {
+  CompanySiteDef,
   ProjectDef,
   Specialization,
   UpgradeDef,
@@ -32,6 +33,19 @@ export const WORKSTATIONS: WorkstationDef[] = [
   { id: 'standing', name: 'Standing Desk', multiplier: 1.25, baseCost: 250, costGrowth: 1.18, emoji: '🦵' },
   { id: 'dual', name: 'Dual-Monitor Rig', multiplier: 1.6, baseCost: 2_000, costGrowth: 1.2, emoji: '🖥️' },
   { id: 'corner', name: 'Corner Office', multiplier: 2.2, baseCost: 20_000, costGrowth: 1.22, emoji: '🏙️' },
+];
+
+/**
+ * Map locations. Buying a site founds a new, independent company there.
+ * One company per site; the Garage is where every player starts for free.
+ * outputBonus rewards later, pricier sites so a fresh company can catch up.
+ */
+export const COMPANY_SITES: CompanySiteDef[] = [
+  { id: 'garage', name: 'The Garage', cost: 0, outputBonus: 1, emoji: '🏚️', blurb: 'Every empire starts between a lawnmower and a surfboard.' },
+  { id: 'loft', name: 'SoMa Loft', cost: 200_000, outputBonus: 1.1, emoji: '🏬', blurb: 'Exposed brick, cold brew on tap, rent that hurts.' },
+  { id: 'paloalto', name: 'Palo Alto Office', cost: 3_000_000, outputBonus: 1.25, emoji: '🏢', blurb: 'Walking distance from three VC firms and a Nobel laureate.' },
+  { id: 'campus', name: 'Mountain View Campus', cost: 40_000_000, outputBonus: 1.5, emoji: '🏛️', blurb: 'Free lunches, nap pods, and a climbing wall nobody uses.' },
+  { id: 'tower', name: 'SF Skyline Tower', cost: 500_000_000, outputBonus: 2, emoji: '🌆', blurb: 'Your logo, visible from two bridges.' },
 ];
 
 export const PROJECTS: ProjectDef[] = [
@@ -118,6 +132,12 @@ export function tierById(id: string): WorkerTierDef {
 export function stationDefById(id: string): WorkstationDef {
   const s = WORKSTATIONS.find((s) => s.id === id);
   if (!s) throw new Error(`Unknown workstation: ${id}`);
+  return s;
+}
+
+export function siteById(id: string): CompanySiteDef {
+  const s = COMPANY_SITES.find((s) => s.id === id);
+  if (!s) throw new Error(`Unknown company site: ${id}`);
   return s;
 }
 
