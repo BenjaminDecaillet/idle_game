@@ -4,7 +4,12 @@ import {
   FLOOR_BASE_COST,
   FLOOR_CAPACITY,
   FLOOR_COST_GROWTH,
+  MARKETING_COST_SEC,
+  MARKETING_DURATION_SEC,
+  MARKETING_MIN_COST,
+  MARKETING_MULT,
   MAX_FLOORS,
+  TIME_SCALES,
   LAST_NAMES,
   PROJECTS,
   SKILL_OUTPUT_PER_LEVEL,
@@ -578,6 +583,42 @@ export function grantBoost(
 export function timeSkip(state: GameState, seconds: number): number {
   if (seconds <= 0) return 0;
   return simulateOffline(state, seconds, seconds);
+}
+
+/** Gross reward rate across all companies in $/sec (before salaries). */
+export function grossRewardRate(state: GameState): number {
+  let sum = 0;
+  for (const c of state.companies) {
+    const project = getProject(c, c.activeProjectId);
+    const rate = companyWorkRate(state, c);
+    if (rate > 0) sum += (project.currentReward / project.currentWork) * rate;
+  }
+  return sum;
+}
+
+/** Price of a marketing campaign: ~MARKETING_COST_SEC of gross income. */
+export function marketingCost(state: GameState): number {
+  return Math.max(MARKETING_MIN_COST, Math.round(grossRewardRate(state) * MARKETING_COST_SEC));
+}
+
+/**
+ * Buy a marketing campaign: a MARKETING_MULT x output boost for
+ * MARKETING_DURATION_SEC, paid with project money. Re-buying extends it.
+ */
+export function buyMarketingCampaign(state: GameState): string | null {
+  const cost = marketingCost(state);
+  if (state.money < cost) return 'Not enough money';
+  const err = grantBoost(state, MARKETING_MULT, MARKETING_DURATION_SEC, 'marketing');
+  if (err) return err;
+  state.money -= cost;
+  return null;
+}
+
+/** Set the free live-play simulation speed (1, 2 or 4). */
+export function setTimeScale(state: GameState, scale: number): string | null {
+  if (!TIME_SCALES.includes(scale)) return 'Invalid speed';
+  state.settings.timeScale = scale;
+  return null;
 }
 
 // ---------------------------------------------------------------------------

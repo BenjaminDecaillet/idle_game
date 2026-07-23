@@ -2,8 +2,11 @@ import {
   COMPANY_SITES,
   FLOOR_CAPACITY,
   MAP_THEMES,
+  MARKETING_DURATION_SEC,
+  MARKETING_MULT,
   MAX_FLOORS,
   PROJECTS,
+  TIME_SCALES,
   TRAIN_DURATION_SEC,
   UPGRADES,
   WALLPAPERS,
@@ -20,6 +23,7 @@ import {
   buyCompany,
   buyFloor,
   buyMapTheme,
+  buyMarketingCampaign,
   buyUpgrade,
   buyWallpaper,
   buyWorkstation,
@@ -30,10 +34,12 @@ import {
   deskCapacity,
   effectiveWallpaper,
   floorCost,
+  marketingCost,
   setActiveCompany,
   setCompanyWallpaper,
   setDefaultWallpaper,
   setMapTheme,
+  setTimeScale,
   estimatedIncome,
   expToNextLevel,
   fireWorker,
@@ -736,6 +742,24 @@ export class UI {
   private renderUpgrades(): string {
     const s = this.state;
     const c = activeCompany(s);
+    const mkCost = marketingCost(s);
+    const mkAffordable = s.money >= mkCost;
+    const marketing = `
+      <div class="card">
+        <div class="card-row">
+          <span class="card-emoji">📣</span>
+          <div class="card-main">
+            <h3>Marketing Campaign</h3>
+            <span class="muted">×${MARKETING_MULT} output for
+              ${formatDuration(MARKETING_DURATION_SEC)}, all companies.
+              Buying again extends it.</span>
+          </div>
+          <button class="btn ${mkAffordable ? 'btn-primary' : ''}" ${mkAffordable ? '' : 'disabled'}
+                  data-action="buy-marketing">
+            Launch ${formatMoney(mkCost)}
+          </button>
+        </div>
+      </div>`;
     const cards = UPGRADES.map((def) => {
       const level = c.upgrades[def.id] ?? 0;
       const maxed = level >= def.maxLevel;
@@ -756,7 +780,7 @@ export class UI {
         </div>
       </div>`;
     }).join('');
-    return `<div class="stack">${cards}</div>`;
+    return `<div class="stack">${marketing}${cards}</div>`;
   }
 
   private renderStats(): string {
@@ -791,6 +815,9 @@ export class UI {
             </button>
             <button class="btn" data-action="toggle-particles">
               ${s.settings.particles ? '✨ Effects on' : '💤 Effects off'}
+            </button>
+            <button class="btn" data-action="cycle-speed" title="Live simulation speed">
+              ⏩ Speed ×${s.settings.timeScale}
             </button>
           </div>
           <div class="settings-row">
@@ -895,6 +922,15 @@ export class UI {
       case 'rename-company': {
         const name = prompt('Company name:', activeCompany(s).name);
         if (name !== null) error = renameCompany(s, name);
+        break;
+      }
+      case 'buy-marketing':
+        error = buyMarketingCampaign(s);
+        if (!error) this.toast('📣 Campaign live — sales are calling!', 'info');
+        break;
+      case 'cycle-speed': {
+        const idx = TIME_SCALES.indexOf(s.settings.timeScale);
+        error = setTimeScale(s, TIME_SCALES[(idx + 1) % TIME_SCALES.length]);
         break;
       }
       case 'toggle-sound':

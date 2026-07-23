@@ -5,6 +5,7 @@ import {
   MAX_FLOORS,
   OFFLINE_CAP_HOURS,
   PROJECTS,
+  TIME_SCALES,
   WALLPAPERS,
 } from './data';
 import { createInitialState, newProjectState, SAVE_VERSION, simulateOffline } from './engine';
@@ -164,6 +165,7 @@ export function migrate(
     new Set(['daylight', ...(state.ownedMapThemes ?? []).filter((id) => themeIds.has(id))]),
   );
   if (!state.ownedMapThemes.includes(state.mapThemeId)) state.mapThemeId = 'daylight';
+  if (!TIME_SCALES.includes(state.settings.timeScale)) state.settings.timeScale = 1;
 
   // nextEntityId must stay above every id in the save (workers, desks,
   // companies) so freshly created entities never collide.

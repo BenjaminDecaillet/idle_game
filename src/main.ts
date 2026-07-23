@@ -35,7 +35,8 @@ let saveTimer = 0;
 function loop(now: number): void {
   // Clamp dt: background tabs throttle rAF; big gaps are handled as "offline"
   // time by the same engine rules on the next visible frame.
-  const dt = Math.min((now - last) / 1000, 2);
+  // The free speed toggle scales live play only — offline stays wall-clock.
+  const dt = Math.min((now - last) / 1000, 2) * state.settings.timeScale;
   last = now;
 
   const events = tick(state, dt);

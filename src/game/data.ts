@@ -23,6 +23,17 @@ export const TRAIN_DURATION_SEC = 120;
 export const TRAIN_COST_RATE_FACTOR = 45;
 export const TRAIN_COST_LEVEL_RAMP = 0.15;
 
+// Free simulation-speed toggle (live play only, offline stays wall-clock).
+export const TIME_SCALES = [1, 2, 4];
+
+// Marketing campaign: a purchasable output boost — the money sink twin of
+// the ad/IAP boosts. Cost is ~MARKETING_COST_SEC seconds of current gross
+// income, for MARKETING_DURATION_SEC seconds of MARKETING_MULT x output.
+export const MARKETING_MULT = 2;
+export const MARKETING_DURATION_SEC = 600;
+export const MARKETING_COST_SEC = 300;
+export const MARKETING_MIN_COST = 500;
+
 // Buildings: every company building starts with 1 floor; each floor holds
 // FLOOR_CAPACITY desks. floor cost = base * site.floorCostFactor * growth^(floors-1)
 export const FLOOR_CAPACITY = 4;
