@@ -145,7 +145,17 @@ body {
 .money-row {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 8px;
+}
+
+.money-coin {
+  align-self: center;
+  display: block;
+  filter: drop-shadow(0 2px 0 rgba(45, 36, 64, 0.2));
+}
+
+.money-coin svg {
+  display: block;
 }
 
 .money {
@@ -309,6 +319,32 @@ body {
   font-size: 0.82rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.hstat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Inline icons inside buttons, badges and labels sit on the text baseline. */
+.btn .icon,
+.badge .icon,
+.company .icon,
+.card-title .icon {
+  vertical-align: -0.22em;
+}
+
+.badge-boost {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 
 /* --- Progress bars ------------------------------------------------------- */
@@ -887,9 +923,15 @@ button.site-card {
     background 0.15s;
 }
 
-.tab-emoji {
-  font-size: 1.25rem;
+.tab-icon {
+  display: block;
+  height: 24px;
   transition: transform 0.15s;
+  filter: saturate(0.35) opacity(0.75);
+}
+
+.tab-icon svg {
+  display: block;
 }
 
 .tab-btn.active {
@@ -899,8 +941,9 @@ button.site-card {
   box-shadow: 0 2px 0 var(--ink-faint);
 }
 
-.tab-btn.active .tab-emoji {
+.tab-btn.active .tab-icon {
   transform: translateY(-2px) scale(1.15);
+  filter: none;
 }
 
 /* --- Toasts & modal ------------------------------------------------------ */

@@ -62,6 +62,7 @@ import { exportSave, importSave, resetGame, saveGame } from '../game/save';
 import type { CompanyState, GameState, WorkerState } from '../game/types';
 import type { Fx } from './fx';
 import { cityMapSvg, type SiteView } from './cityMap';
+import { icon } from './icons';
 import { lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
 import { projectArt, stationArt, upgradeArt, upgradeProp } from './itemArt';
 import { emptyDeskSvg, personaAtDesk, personaAvatar, personaStanding } from './persona';
@@ -83,13 +84,13 @@ const SPEECH_LINES = [
 
 type Tab = 'map' | 'projects' | 'team' | 'office' | 'upgrades' | 'stats';
 
-const TABS: { id: Tab; label: string; emoji: string }[] = [
-  { id: 'map', label: 'Map', emoji: '🗺️' },
-  { id: 'projects', label: 'Projects', emoji: '📋' },
-  { id: 'team', label: 'Team', emoji: '👥' },
-  { id: 'office', label: 'Office', emoji: '🏢' },
-  { id: 'upgrades', label: 'Upgrades', emoji: '🧪' },
-  { id: 'stats', label: 'Stats', emoji: '📊' },
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'map', label: 'Map' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'team', label: 'Team' },
+  { id: 'office', label: 'Office' },
+  { id: 'upgrades', label: 'Upgrades' },
+  { id: 'stats', label: 'Stats' },
 ];
 
 export class UI {
@@ -126,14 +127,17 @@ export class UI {
       <header class="hud">
         <div class="hud-row">
           <button class="company" data-action="rename-company" title="Rename company">
-            🏢 <span id="company-name"></span>
+            ${icon('office', 16)} <span id="company-name"></span>
           </button>
           <div class="hud-badges">
-            <span class="badge badge-boost" id="hud-boost" hidden title="Active boost"></span>
+            <span class="badge badge-boost" id="hud-boost" hidden title="Active boost">
+              ${icon('boost', 13)}<span id="hud-boost-text"></span>
+            </span>
             <span class="badge badge-income" id="hud-income" title="Estimated net income"></span>
           </div>
         </div>
         <div class="money-row">
+          <span class="money-coin">${icon('coin', 30)}</span>
           <div class="money" id="hud-money">$0</div>
           <div class="money-sub" id="hud-salary"></div>
         </div>
@@ -155,9 +159,9 @@ export class UI {
           <span class="progress-label" id="hero-label"></span>
         </div>
         <div class="hero-stats">
-          <span id="hero-rate"></span>
-          <span id="hero-eta"></span>
-          <span id="hero-completions"></span>
+          <span class="hstat">${icon('energy', 15)}<span id="hero-rate"></span></span>
+          <span class="hstat">${icon('clock', 15)}<span id="hero-eta"></span></span>
+          <span class="hstat">${icon('check', 15)}<span id="hero-completions"></span></span>
         </div>
       </section>
       <main id="tab-content"></main>
@@ -165,7 +169,7 @@ export class UI {
         ${TABS.map(
           (t) => `
           <button class="tab-btn" data-action="tab:${t.id}" id="tab-btn-${t.id}">
-            <span class="tab-emoji">${t.emoji}</span><span>${t.label}</span>
+            <span class="tab-icon">${icon(t.id, 24)}</span><span>${t.label}</span>
           </button>`,
         ).join('')}
       </nav>
@@ -196,7 +200,7 @@ export class UI {
     if (boostEl) {
       boostEl.hidden = boost === null;
       if (boost) {
-        boostEl.textContent = `🚀 ×${boost.mult} ${formatDuration(boost.remainingSec)}`;
+        this.text('hud-boost-text', `×${boost.mult} ${formatDuration(boost.remainingSec)}`);
       }
     }
 
@@ -219,12 +223,12 @@ export class UI {
       'hero-label',
       `${formatNumber(project.progress)} / ${formatNumber(project.currentWork)}`,
     );
-    this.text('hero-rate', `⚡ ${formatRate(rate)}`);
+    this.text('hero-rate', formatRate(rate));
     this.text(
       'hero-eta',
-      rate > 0 ? `⏱️ ${formatDuration((project.currentWork - project.progress) / rate)}` : '⏱️ —',
+      rate > 0 ? formatDuration((project.currentWork - project.progress) / rate) : '—',
     );
-    this.text('hero-completions', `✅ ×${project.completions}`);
+    this.text('hero-completions', `×${project.completions}`);
 
     // Rebuild the active tab a couple of times per second to refresh costs,
     // affordability and progress details without redoing it every frame.
@@ -381,7 +385,7 @@ export class UI {
         <div class="sheet-actions">
           ${
             active
-              ? `<button class="btn" data-action="rename-company">✏️ Rename</button>
+              ? `<button class="btn" data-action="rename-company">${icon('pencil', 15)} Rename</button>
                  <button class="btn btn-primary" disabled>✓ Managing</button>`
               : `<button class="btn btn-primary" data-action="switch-company:${company.id}">
                    Manage this company</button>`
@@ -515,7 +519,7 @@ export class UI {
           <h2>Candidates</h2>
           <button class="btn btn-ghost" data-action="reroll"
                   ${s.money >= c.candidateRerollCost ? '' : 'disabled'}>
-            🎲 New batch ${formatMoney(c.candidateRerollCost)}
+            ${icon('dice', 16)} New batch ${formatMoney(c.candidateRerollCost)}
           </button>
         </div>
         ${candidates}
@@ -559,7 +563,7 @@ export class UI {
       : `<button class="btn btn-small" ${s.money >= cost ? '' : 'disabled'}
                  data-action="train:${w.id}"
                  title="+${trainLevels(w)} levels, ${formatDuration(TRAIN_DURATION_SEC)} off the floor">
-           📚 Train ${formatMoney(cost)}
+           ${icon('train', 15)} Train ${formatMoney(cost)}
          </button>`;
     return `
       <div class="card worker-card ${station || training ? '' : 'benched'} ${training ? 'training' : ''}">
@@ -660,7 +664,7 @@ export class UI {
       ? `<span class="muted">🏁 Max height reached</span>`
       : `<button class="btn ${s.money >= nextCost ? 'btn-primary' : ''}"
                  ${s.money >= nextCost ? '' : 'disabled'} data-action="buy-floor">
-           ⬆️ Add floor ${formatMoney(nextCost)}
+           ${icon('floor-up', 16)} Add floor ${formatMoney(nextCost)}
          </button>`;
 
     const standing = c.workers
@@ -845,42 +849,47 @@ export class UI {
     const c = activeCompany(s);
     const employees = s.companies.reduce((sum, co) => sum + co.workers.length, 0);
     const desks = s.companies.reduce((sum, co) => sum + co.workstations.length, 0);
-    const rows: [string, string][] = [
-      ['💰 Total earned', formatMoney(s.totalEarned)],
-      ['✅ Projects completed', formatNumber(s.projectsCompleted)],
-      ['🏢 Companies', String(s.companies.length)],
-      ['👥 Employees', String(employees)],
-      ['🪑 Workstations', String(desks)],
-      ['⚡ Team output (here)', formatRate(totalWorkRate(s))],
-      ['🧾 Salaries (all)', `${formatMoney(totalSalaries(s))}/s`],
-      ['⏱️ Time played', formatDuration(s.playTimeSec)],
-      ['🚀 Founded', new Date(s.startedAt).toLocaleDateString()],
+    const rows: [string, string, string][] = [
+      [icon('coin', 16), 'Total earned', formatMoney(s.totalEarned)],
+      [icon('check', 16), 'Projects completed', formatNumber(s.projectsCompleted)],
+      [icon('office', 16), 'Companies', String(s.companies.length)],
+      [icon('team', 16), 'Employees', String(employees)],
+      [icon('star', 16), 'Workstations', String(desks)],
+      [icon('energy', 16), 'Team output (here)', formatRate(totalWorkRate(s))],
+      [icon('salary', 16), 'Salaries (all)', `${formatMoney(totalSalaries(s))}/s`],
+      [icon('clock', 16), 'Time played', formatDuration(s.playTimeSec)],
+      [icon('boost', 16), 'Founded', new Date(s.startedAt).toLocaleDateString()],
     ];
     return `
       <div class="stack">
         <div class="card">
-          <h2 class="card-title">📊 ${c.name}</h2>
+          <h2 class="card-title">${icon('stats', 18)} ${c.name}</h2>
           <table class="stats-table">
-            ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
+            ${rows
+              .map(
+                ([i, k, v]) =>
+                  `<tr><td><span class="stat-label">${i}${k}</span></td><td>${v}</td></tr>`,
+              )
+              .join('')}
           </table>
         </div>
         <div class="card">
-          <h2 class="card-title">⚙️ Settings</h2>
+          <h2 class="card-title">Settings</h2>
           <div class="settings-row">
             <button class="btn" data-action="toggle-sound">
-              ${s.settings.sound ? '🔊 Sound on' : '🔇 Sound off'}
+              ${s.settings.sound ? `${icon('sound-on', 16)} Sound on` : `${icon('sound-off', 16)} Sound off`}
             </button>
             <button class="btn" data-action="toggle-particles">
-              ${s.settings.particles ? '✨ Effects on' : '💤 Effects off'}
+              ${icon('sparkles', 16)} Effects ${s.settings.particles ? 'on' : 'off'}
             </button>
             <button class="btn" data-action="cycle-speed" title="Live simulation speed">
-              ⏩ Speed ×${s.settings.timeScale}
+              ${icon('speed', 16)} Speed ×${s.settings.timeScale}
             </button>
           </div>
           <div class="settings-row">
-            <button class="btn" data-action="export-save">📤 Export save</button>
-            <button class="btn" data-action="import-save">📥 Import save</button>
-            <button class="btn btn-danger" data-action="reset-game">🗑️ Reset game</button>
+            <button class="btn" data-action="export-save">${icon('save-export', 16)} Export save</button>
+            <button class="btn" data-action="import-save">${icon('save-import', 16)} Import save</button>
+            <button class="btn btn-danger" data-action="reset-game">${icon('trash', 16)} Reset game</button>
           </div>
           <p class="hint">Progress is saved automatically every 10 seconds and when you close the
           app. Your team keeps working while you're away (up to 24h).</p>
