@@ -24,6 +24,23 @@ export const en = {
   'ui.confirm': 'That’s it!',
   'ui.tutorialStep': 'Step {step} / {total}',
 
+  // --- Missions & VsCoin ---------------------------------------------------
+  'ui.missions': 'Missions',
+  'ui.claim': 'Claim',
+  'ui.claimed': 'VsCoin earned!',
+  'ui.vsCoinShop': 'VsCoin Shop',
+  'ui.vsCoinShopHint':
+    'VsCoin is earned by completing missions and living your story — spend it on exclusives.',
+  'ui.vsCoinBoost': 'Golden Sprint — ×{mult} output for {duration}',
+  'ui.vsCoinBoostBought': 'Golden Sprint activated!',
+  'ui.buyFor': 'Buy for {price}',
+  'mission.projectsCompleted': 'Complete {target} projects',
+  'mission.totalEarned': 'Earn {target} in total',
+  'mission.workers': 'Employ {target} people',
+  'mission.companies': 'Own {target} companies',
+  'mission.upgradeLevels': 'Buy {target} upgrade levels',
+  'mission.desks': 'Own {target} workstations',
+
   // --- Tutorial (Gabriel speaking) ----------------------------------------
   'tutorial.welcome.text':
     'Hi! I’m Gabriel, your very own angel investor — the guardian kind. You dream of building an AI that helps everyone, and I’m here to get you from this garage to the stars. Ready?',

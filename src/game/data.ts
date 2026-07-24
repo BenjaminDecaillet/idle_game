@@ -1,6 +1,7 @@
 import type {
   CompanySiteDef,
   MapThemeDef,
+  MissionDef,
   ProjectDef,
   Specialization,
   UpgradeDef,
@@ -29,6 +30,18 @@ export const TIME_SCALES = [1, 2, 4];
 // Gabriel's one-time seed-money gift, paid when the tutorial's upgrade step
 // starts so a fresh player can afford their first upgrade right away.
 export const TUTORIAL_ANGEL_GIFT = 250;
+
+// VsCoin — the premium second currency. Earned only through gameplay for
+// now (missions + story milestones); the grantVsCoin() ledger API is the
+// future hook for real-money purchases (see docs/monetization.md).
+export const VSCOIN_PER_STORY_BEAT = 2;
+export const VSCOIN_LEDGER_CAP = 200;
+// Premium boost sold for VsCoin in the Missions tab.
+export const VSCOIN_BOOST_COST = 3;
+export const VSCOIN_BOOST_MULT = 3;
+export const VSCOIN_BOOST_DURATION_SEC = 3_600;
+// Founder's Aura premium upgrade effect.
+export const AURA_OUTPUT_PER_LEVEL = 0.25;
 
 // Marketing campaign: a purchasable output boost — the money sink twin of
 // the ad/IAP boosts. Cost is ~MARKETING_COST_SEC seconds of current gross
@@ -129,6 +142,7 @@ export const WALLPAPERS: WallpaperDef[] = [
   { id: 'neon', name: 'Neon Arcade', cost: 1_000_000, emoji: '🕹️', css: 'linear-gradient(160deg, #1a1038, #2a0f2e)' },
   { id: 'zen', name: 'Zen Garden', cost: 5_000_000, emoji: '🎋', css: 'linear-gradient(160deg, #1e2b23, #26221a)' },
   { id: 'gold', name: 'Gold Executive', cost: 50_000_000, emoji: '🏆', css: 'linear-gradient(160deg, #33270e, #241a08)' },
+  { id: 'diamond', name: 'Diamond Penthouse', cost: 0, vsCoinCost: 8, emoji: '💎', css: 'linear-gradient(160deg, #14273a, #1d1a38)' },
 ];
 
 /** Looks for the map screen (player-level, purchasable). */
@@ -225,7 +239,55 @@ export const UPGRADES: UpgradeDef[] = [
     emoji: '🌙',
     requiresCompanies: 7,
   },
+  // --- Premium (VsCoin) upgrade: exclusive, gameplay-earned currency ------
+  {
+    id: 'aura',
+    name: "Founder's Aura",
+    description: '+25% output from all workers per level',
+    baseCost: 0,
+    costGrowth: 2,
+    maxLevel: 4,
+    emoji: '💎',
+    vsCoinCost: 2,
+  },
 ];
+
+/**
+ * Missions: concrete objectives rewarding VsCoin. Grouped in chains per
+ * metric; the UI shows the first unclaimed mission of each chain. Progress
+ * is always derived from durable state counters — no extra bookkeeping.
+ */
+export const MISSIONS: MissionDef[] = [
+  { id: 'ship-10', metric: 'projectsCompleted', target: 10, reward: 1, emoji: '📦' },
+  { id: 'ship-100', metric: 'projectsCompleted', target: 100, reward: 2, emoji: '📦' },
+  { id: 'ship-1000', metric: 'projectsCompleted', target: 1_000, reward: 4, emoji: '📦' },
+  { id: 'ship-10000', metric: 'projectsCompleted', target: 10_000, reward: 8, emoji: '📦' },
+  { id: 'earn-1k', metric: 'totalEarned', target: 1_000, reward: 1, emoji: '💰' },
+  { id: 'earn-100k', metric: 'totalEarned', target: 100_000, reward: 2, emoji: '💰' },
+  { id: 'earn-10m', metric: 'totalEarned', target: 10_000_000, reward: 4, emoji: '💰' },
+  { id: 'earn-1b', metric: 'totalEarned', target: 1_000_000_000, reward: 6, emoji: '💰' },
+  { id: 'earn-100b', metric: 'totalEarned', target: 100_000_000_000, reward: 10, emoji: '💰' },
+  { id: 'team-3', metric: 'workers', target: 3, reward: 1, emoji: '🧑‍💻' },
+  { id: 'team-5', metric: 'workers', target: 5, reward: 2, emoji: '🧑‍💻' },
+  { id: 'team-12', metric: 'workers', target: 12, reward: 3, emoji: '🧑‍💻' },
+  { id: 'team-30', metric: 'workers', target: 30, reward: 6, emoji: '🧑‍💻' },
+  { id: 'company-2', metric: 'companies', target: 2, reward: 2, emoji: '🏬' },
+  { id: 'company-3', metric: 'companies', target: 3, reward: 3, emoji: '🏢' },
+  { id: 'company-5', metric: 'companies', target: 5, reward: 5, emoji: '🌆' },
+  { id: 'company-8', metric: 'companies', target: 8, reward: 12, emoji: '🛰️' },
+  { id: 'upgrade-5', metric: 'upgradeLevels', target: 5, reward: 1, emoji: '⚙️' },
+  { id: 'upgrade-20', metric: 'upgradeLevels', target: 20, reward: 3, emoji: '⚙️' },
+  { id: 'upgrade-50', metric: 'upgradeLevels', target: 50, reward: 6, emoji: '⚙️' },
+  { id: 'desk-8', metric: 'desks', target: 8, reward: 1, emoji: '🪑' },
+  { id: 'desk-20', metric: 'desks', target: 20, reward: 3, emoji: '🪑' },
+  { id: 'desk-48', metric: 'desks', target: 48, reward: 6, emoji: '🪑' },
+];
+
+export function missionById(id: string): MissionDef {
+  const m = MISSIONS.find((m) => m.id === id);
+  if (!m) throw new Error(`Unknown mission: ${id}`);
+  return m;
+}
 
 export const FIRST_NAMES = [
   'Ada', 'Linus', 'Grace', 'Alan', 'Margaret', 'Elon', 'Sundar', 'Satya',

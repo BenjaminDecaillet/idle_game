@@ -51,7 +51,9 @@ export interface CompanySiteDef {
 export interface WallpaperDef {
   id: string;
   name: string;
-  cost: number; // 0 = owned from the start
+  cost: number; // 0 = owned from the start (unless vsCoinCost is set)
+  /** Premium cosmetic: bought with VsCoin instead of money. */
+  vsCoinCost?: number;
   emoji: string;
   /** CSS background value applied to the building interior. */
   css: string;
@@ -77,6 +79,39 @@ export interface UpgradeDef {
   emoji: string;
   /** Hidden until the player owns this many companies (undefined = always). */
   requiresCompanies?: number;
+  /**
+   * Premium upgrade: levels are paid in VsCoin instead of money.
+   * Cost per level = vsCoinCost * costGrowth^level (baseCost is ignored).
+   */
+  vsCoinCost?: number;
+}
+
+/** Metrics a mission can track — all derived from durable state counters. */
+export type MissionMetric =
+  | 'projectsCompleted'
+  | 'totalEarned'
+  | 'workers'
+  | 'companies'
+  | 'upgradeLevels'
+  | 'desks';
+
+export interface MissionDef {
+  id: string;
+  metric: MissionMetric;
+  target: number;
+  /** VsCoin granted on claim. */
+  reward: number;
+  emoji: string;
+}
+
+/**
+ * One VsCoin grant or spend. `source` tags where it came from/went
+ * ('mission:<id>', 'story:<id>', 'shop:<sku>', later 'iap:<sku>') so a
+ * future real-money flow and analytics can plug in without refactoring.
+ */
+export interface VsCoinLedgerEntry {
+  amount: number; // positive = grant, negative = spend
+  source: string;
 }
 
 /** An in-flight training program: the worker is away from their desk. */
@@ -195,6 +230,12 @@ export interface GameState {
   story: StoryState;
   tutorial: TutorialState;
   player: PlayerState;
+  /** Premium currency, earned through gameplay (missions, story milestones). */
+  vsCoin: number;
+  /** Audit trail of every VsCoin movement (kept bounded by migrate()). */
+  vsCoinLedger: VsCoinLedgerEntry[];
+  /** Mission ids whose reward has been collected. */
+  missionsClaimed: string[];
   nextEntityId: number;
 }
 

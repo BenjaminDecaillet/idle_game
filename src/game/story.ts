@@ -1,4 +1,5 @@
-import { companyAtSite, getProject } from './engine';
+import { VSCOIN_PER_STORY_BEAT } from './data';
+import { companyAtSite, getProject, grantVsCoin } from './engine';
 import type { GameState } from './types';
 
 /**
@@ -78,6 +79,7 @@ export function advanceStory(state: GameState): string[] {
     if (!beat.trigger(state)) continue;
     state.story.seen.push(beat.id);
     state.story.queue.push(beat.id);
+    grantVsCoin(state, VSCOIN_PER_STORY_BEAT, `story:${beat.id}`);
     fired.push(beat.id);
   }
   return fired;

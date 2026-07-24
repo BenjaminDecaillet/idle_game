@@ -1,4 +1,5 @@
 import {
+  AURA_OUTPUT_PER_LEVEL,
   COMPANY_COST_GROWTH,
   COMPANY_SITES,
   FIRST_NAMES,
@@ -21,6 +22,10 @@ import {
   SPECIALIZATIONS,
   SYNERGY_OUTPUT_PER_COMPANY,
   TALENT_HIRE_DISCOUNT,
+  VSCOIN_BOOST_COST,
+  VSCOIN_BOOST_DURATION_SEC,
+  VSCOIN_BOOST_MULT,
+  VSCOIN_LEDGER_CAP,
   TRAIN_COST_LEVEL_RAMP,
   TRAIN_COST_RATE_FACTOR,
   TRAIN_DURATION_SEC,
@@ -45,7 +50,8 @@ import type {
 
 // v3: multiple companies on a map (shared wallet)
 // v4: story beats, Gabriel tutorial, player identity, language setting
-export const SAVE_VERSION = 4;
+// v5: missions + VsCoin premium currency with ledger
+export const SAVE_VERSION = 5;
 
 // ---------------------------------------------------------------------------
 // State creation
@@ -71,6 +77,9 @@ export function createInitialState(now = Date.now()): GameState {
     story: { seen: [], queue: [] },
     tutorial: { step: 0, done: false, giftGiven: false },
     player: { name: 'Founder' },
+    vsCoin: 0,
+    vsCoinLedger: [],
+    missionsClaimed: [],
     nextEntityId: 1,
   };
   const company = createCompany(state, 'garage', 'My Startup');
@@ -156,9 +165,10 @@ export function globalOutputMultiplier(state: GameState, company: CompanyState):
   const synergy =
     1 + SYNERGY_OUTPUT_PER_COMPANY * (company.upgrades['synergy'] ?? 0) * state.companies.length;
   const moonshot = 1 + MOONSHOT_OUTPUT_PER_LEVEL * (company.upgrades['moonshot'] ?? 0);
+  const aura = 1 + AURA_OUTPUT_PER_LEVEL * (company.upgrades['aura'] ?? 0);
   let boost = 1;
   for (const b of state.boosts) boost *= b.mult;
-  return coffee * fiber * synergy * moonshot * boost * siteById(company.siteId).outputBonus;
+  return coffee * fiber * synergy * moonshot * aura * boost * siteById(company.siteId).outputBonus;
 }
 
 /** Strongest currently-active boost, for HUD display. Null if none. */
@@ -582,9 +592,14 @@ export function buyUpgrade(state: GameState, upgradeId: string): string | null {
   }
   const level = company.upgrades[upgradeId] ?? 0;
   if (level >= def.maxLevel) return 'Already at max level';
-  const cost = upgradeCost(company, upgradeId);
-  if (state.money < cost) return 'Not enough money';
-  state.money -= cost;
+  if (def.vsCoinCost !== undefined) {
+    const err = spendVsCoin(state, upgradeVsCoinCost(company, upgradeId)!, `shop:${upgradeId}`);
+    if (err) return err;
+  } else {
+    const cost = upgradeCost(company, upgradeId);
+    if (state.money < cost) return 'Not enough money';
+    state.money -= cost;
+  }
   company.upgrades[upgradeId] = level + 1;
   return null;
 }
@@ -618,6 +633,56 @@ export function setActiveCompany(state: GameState, companyId: number): string | 
   if (!companyById(state, companyId)) return 'Company not found';
   state.activeCompanyId = companyId;
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// VsCoin — the premium second currency (earned in-game; monetization-ready)
+// ---------------------------------------------------------------------------
+
+/**
+ * Grant VsCoin from any source. THE entry point for every future
+ * monetization flow too (source 'iap:<sku>' / 'ad:<placement>') — new
+ * flows plug in here without touching anything else. Every movement is
+ * recorded in the ledger for restore/debug/analytics.
+ */
+export function grantVsCoin(state: GameState, amount: number, source: string): string | null {
+  if (!Number.isFinite(amount) || amount <= 0) return 'Invalid amount';
+  state.vsCoin += amount;
+  pushLedger(state, { amount, source });
+  return null;
+}
+
+/** Spend VsCoin on a sink (premium upgrades, cosmetics, boosts). */
+export function spendVsCoin(state: GameState, amount: number, sink: string): string | null {
+  if (!Number.isFinite(amount) || amount <= 0) return 'Invalid amount';
+  if (state.vsCoin < amount) return 'Not enough VsCoin';
+  state.vsCoin -= amount;
+  pushLedger(state, { amount: -amount, source: sink });
+  return null;
+}
+
+function pushLedger(state: GameState, entry: { amount: number; source: string }): void {
+  state.vsCoinLedger.push(entry);
+  if (state.vsCoinLedger.length > VSCOIN_LEDGER_CAP) {
+    state.vsCoinLedger.splice(0, state.vsCoinLedger.length - VSCOIN_LEDGER_CAP);
+  }
+}
+
+/** VsCoin price of the next level of a premium upgrade (null = money one). */
+export function upgradeVsCoinCost(company: CompanyState, upgradeId: string): number | null {
+  const def = upgradeDefById(upgradeId);
+  if (def.vsCoinCost === undefined) return null;
+  const level = company.upgrades[upgradeId] ?? 0;
+  return Math.round(def.vsCoinCost * Math.pow(def.costGrowth, level));
+}
+
+/** Buy the premium output boost with VsCoin. */
+export function buyVsCoinBoost(state: GameState): string | null {
+  const existing = state.boosts.find((b) => b.source === 'vscoin');
+  if (!existing && state.boosts.length >= 5) return 'Too many active boosts';
+  const err = spendVsCoin(state, VSCOIN_BOOST_COST, 'shop:boost');
+  if (err) return err;
+  return grantBoost(state, VSCOIN_BOOST_MULT, VSCOIN_BOOST_DURATION_SEC, 'vscoin');
 }
 
 /**
@@ -710,8 +775,13 @@ export function effectiveWallpaper(state: GameState, company: CompanyState): str
 export function buyWallpaper(state: GameState, wallpaperId: string): string | null {
   const def = wallpaperById(wallpaperId);
   if (state.ownedWallpapers.includes(wallpaperId)) return 'Already owned';
-  if (state.money < def.cost) return 'Not enough money';
-  state.money -= def.cost;
+  if (def.vsCoinCost !== undefined) {
+    const err = spendVsCoin(state, def.vsCoinCost, `shop:wallpaper-${wallpaperId}`);
+    if (err) return err;
+  } else {
+    if (state.money < def.cost) return 'Not enough money';
+    state.money -= def.cost;
+  }
   state.ownedWallpapers.push(wallpaperId);
   return null;
 }

@@ -3,6 +3,7 @@ import {
   FLOOR_CAPACITY,
   MAP_THEMES,
   MAX_FLOORS,
+  MISSIONS,
   OFFLINE_CAP_HOURS,
   PROJECTS,
   TIME_SCALES,
@@ -98,6 +99,12 @@ export function migrate(
     },
     tutorial: { ...fresh.tutorial, ...(parsed.tutorial ?? {}) },
     player: { ...fresh.player, ...(parsed.player ?? {}) },
+    vsCoin:
+      typeof parsed.vsCoin === 'number' && Number.isFinite(parsed.vsCoin) && parsed.vsCoin >= 0
+        ? parsed.vsCoin
+        : 0,
+    vsCoinLedger: Array.isArray(parsed.vsCoinLedger) ? parsed.vsCoinLedger : [],
+    missionsClaimed: Array.isArray(parsed.missionsClaimed) ? parsed.missionsClaimed : [],
     companies: Array.isArray(parsed.companies) && parsed.companies.length > 0
       ? parsed.companies
       : fresh.companies,
@@ -188,6 +195,10 @@ export function migrate(
 
   // Story hygiene: drop unknown beat ids (content may change between
   // versions), and backfill milestones a pre-story save already passed.
+  // Mission hygiene: drop claims for missions that no longer exist.
+  const knownMissions = new Set(MISSIONS.map((m) => m.id));
+  state.missionsClaimed = state.missionsClaimed.filter((id) => knownMissions.has(id));
+
   const knownBeats = new Set(STORY_BEATS.map((b) => b.id));
   state.story.seen = state.story.seen.filter((id) => knownBeats.has(id));
   state.story.queue = state.story.queue.filter((id) => knownBeats.has(id));

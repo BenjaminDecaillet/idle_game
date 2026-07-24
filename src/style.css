@@ -672,6 +672,39 @@ button.project-card {
   .gabriel-float, .gabriel-halo, .tab-btn.tab-attention { animation: none; }
 }
 
+/* --- Missions & VsCoin --------------------------------------------------- */
+
+.badge-vscoin {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #d9f6ff, #aee9fb);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mission-card .progress.mini { margin-top: 8px; }
+
+.mission-card.mission-done {
+  background: linear-gradient(160deg, #fff8ec, #eafaf0);
+  border-color: var(--green);
+}
+
+.mission-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
 /* On project cards the tag sits as a ribbon on the top edge so it never
    covers the reward column; in the sheet header it flows inline. */
 .project-card .active-tag {

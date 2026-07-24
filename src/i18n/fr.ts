@@ -20,6 +20,23 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.confirm': 'C’est parti !',
   'ui.tutorialStep': 'Étape {step} / {total}',
 
+  // --- Missions & VsCoin ---------------------------------------------------
+  'ui.missions': 'Missions',
+  'ui.claim': 'Réclamer',
+  'ui.claimed': 'VsCoin gagnés !',
+  'ui.vsCoinShop': 'Boutique VsCoin',
+  'ui.vsCoinShopHint':
+    'Les VsCoin se gagnent en accomplissant des missions et en vivant votre histoire — dépensez-les en exclusivités.',
+  'ui.vsCoinBoost': 'Sprint doré — production ×{mult} pendant {duration}',
+  'ui.vsCoinBoostBought': 'Sprint doré activé !',
+  'ui.buyFor': 'Acheter pour {price}',
+  'mission.projectsCompleted': 'Terminez {target} projets',
+  'mission.totalEarned': 'Gagnez {target} au total',
+  'mission.workers': 'Employez {target} personnes',
+  'mission.companies': 'Possédez {target} sociétés',
+  'mission.upgradeLevels': 'Achetez {target} niveaux d’amélioration',
+  'mission.desks': 'Possédez {target} postes de travail',
+
   // --- Tutoriel (Gabriel parle) -------------------------------------------
   'tutorial.welcome.text':
     'Salut ! Moi c’est Gabriel, ton investisseur providentiel — au sens littéral. Tu rêves d’une IA qui aide tout le monde, et je suis là pour te mener de ce garage jusqu’aux étoiles. On y va ?',

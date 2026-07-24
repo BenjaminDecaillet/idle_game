@@ -10,6 +10,9 @@ import {
   TRAIN_DURATION_SEC,
   TUTORIAL_ANGEL_GIFT,
   UPGRADES,
+  VSCOIN_BOOST_COST,
+  VSCOIN_BOOST_DURATION_SEC,
+  VSCOIN_BOOST_MULT,
   WALLPAPERS,
   WORKSTATIONS,
   projectDefById,
@@ -50,9 +53,11 @@ import {
   rerollCandidates,
   setActiveProject,
   stationCost,
+  buyVsCoinBoost,
   companyCost,
   hireCost,
   projectUnlockCost,
+  upgradeVsCoinCost,
   totalSalaries,
   totalWorkRate,
   trainCost,
@@ -63,6 +68,12 @@ import {
   workerRate,
 } from '../game/engine';
 import { formatDuration, formatMoney, formatNumber, formatRate } from '../game/format';
+import {
+  claimMission,
+  missionCompleted,
+  missionProgress,
+  visibleMissions,
+} from '../game/missions';
 import { exportSave, importSave, resetGame, saveGame } from '../game/save';
 import {
   advanceStory,
@@ -103,7 +114,7 @@ const SPEECH_LINES = [
   'TODO: fix later',
 ];
 
-type Tab = 'map' | 'projects' | 'team' | 'office' | 'upgrades' | 'stats';
+type Tab = 'map' | 'projects' | 'team' | 'office' | 'upgrades' | 'missions' | 'stats';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'map', label: 'Map' },
@@ -111,6 +122,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'team', label: 'Team' },
   { id: 'office', label: 'Office' },
   { id: 'upgrades', label: 'Upgrades' },
+  { id: 'missions', label: 'Missions' },
   { id: 'stats', label: 'Stats' },
 ];
 
@@ -157,6 +169,9 @@ export class UI {
               ${icon('boost', 13)}<span id="hud-boost-text"></span>
             </span>
             <span class="badge badge-income" id="hud-income" title="Estimated net income"></span>
+            <button class="badge badge-vscoin" id="hud-vscoin" data-action="tab:missions" title="VsCoin">
+              ${icon('vscoin', 13)}<span id="hud-vscoin-text">0</span>
+            </button>
           </div>
         </div>
         <div class="money-row">
@@ -218,6 +233,7 @@ export class UI {
     }
     this.text('hud-salary', `salaries ${formatMoney(totalSalaries(s))}/s`);
     this.text('company-name', activeCompany(s).name);
+    this.text('hud-vscoin-text', formatNumber(s.vsCoin));
 
     const boost = activeBoost(s);
     const boostEl = document.getElementById('hud-boost');
@@ -407,6 +423,9 @@ export class UI {
         break;
       case 'projects':
         content.innerHTML = this.renderProjects();
+        break;
+      case 'missions':
+        content.innerHTML = this.renderMissions();
         break;
       case 'team':
         content.innerHTML = this.renderTeam();
@@ -880,7 +899,12 @@ export class UI {
       const owned = s.ownedWallpapers.includes(def.id);
       const isApplied = applied === def.id;
       const isDefault = s.defaultWallpaperId === def.id;
-      const affordable = s.money >= def.cost;
+      const affordable =
+        def.vsCoinCost !== undefined ? s.vsCoin >= def.vsCoinCost : s.money >= def.cost;
+      const priceLabel =
+        def.vsCoinCost !== undefined
+          ? `${icon('vscoin', 14)} ${def.vsCoinCost}`
+          : formatMoney(def.cost);
       const actions = owned
         ? `
           <button class="btn btn-small" ${isApplied ? 'disabled' : ''}
@@ -894,7 +918,7 @@ export class UI {
         : `
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                   data-action="buy-wallpaper:${def.id}">
-            Buy ${formatMoney(def.cost)}
+            Buy ${priceLabel}
           </button>`;
       return `
       <div class="card decor-card ${isApplied ? 'applied' : ''}">
@@ -960,8 +984,12 @@ export class UI {
       }
       const level = c.upgrades[def.id] ?? 0;
       const maxed = level >= def.maxLevel;
-      const cost = upgradeCost(c, def.id);
-      const affordable = !maxed && s.money >= cost;
+      const premiumCost = upgradeVsCoinCost(c, def.id);
+      const cost = premiumCost ?? upgradeCost(c, def.id);
+      const affordable =
+        !maxed && (premiumCost !== null ? s.vsCoin >= premiumCost : s.money >= cost);
+      const priceLabel =
+        premiumCost !== null ? `${icon('vscoin', 14)} ${premiumCost}` : formatMoney(cost);
       return `
       <div class="card">
         <div class="card-row">
@@ -972,12 +1000,68 @@ export class UI {
           </div>
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                   data-action="buy-upgrade:${def.id}">
-            ${maxed ? 'MAX' : `Buy ${formatMoney(cost)}`}
+            ${maxed ? 'MAX' : `Buy ${priceLabel}`}
           </button>
         </div>
       </div>`;
     }).join('');
     return `<div class="stack">${marketing}${cards}</div>`;
+  }
+
+  private renderMissions(): string {
+    const s = this.state;
+    const cards = visibleMissions(s)
+      .map((def) => {
+        const progress = missionProgress(s, def);
+        const done = missionCompleted(s, def);
+        const pct = Math.min(100, (progress / def.target) * 100);
+        const label = t(`mission.${def.metric}`, {
+          target: def.metric === 'totalEarned' ? formatMoney(def.target) : formatNumber(def.target),
+        });
+        const progressText =
+          def.metric === 'totalEarned'
+            ? `${formatMoney(progress)} / ${formatMoney(def.target)}`
+            : `${formatNumber(progress)} / ${formatNumber(def.target)}`;
+        return `
+        <div class="card mission-card ${done ? 'mission-done' : ''}">
+          <div class="card-row">
+            <span class="card-emoji">${def.emoji}</span>
+            <div class="card-main">
+              <h3>${label}</h3>
+              <span class="muted">${progressText}</span>
+            </div>
+            ${
+              done
+                ? `<button class="btn btn-primary" data-action="claim-mission:${def.id}">
+                     ${icon('vscoin', 15)} +${def.reward} ${t('ui.claim')}
+                   </button>`
+                : `<span class="mission-reward">${icon('vscoin', 15)} +${def.reward}</span>`
+            }
+          </div>
+          <div class="progress mini"><div class="progress-fill" style="width:${pct}%"></div></div>
+        </div>`;
+      })
+      .join('');
+    const boostAffordable = s.vsCoin >= VSCOIN_BOOST_COST;
+    const shop = `
+      <div class="card">
+        <h2 class="card-title">${icon('vscoin', 18)} ${t('ui.vsCoinShop')}</h2>
+        <p class="hint">${t('ui.vsCoinShopHint')}</p>
+        <div class="card-row">
+          <span class="card-emoji">🚀</span>
+          <div class="card-main">
+            <h3>${t('ui.vsCoinBoost', {
+              mult: VSCOIN_BOOST_MULT,
+              duration: formatDuration(VSCOIN_BOOST_DURATION_SEC),
+            })}</h3>
+          </div>
+          <button class="btn ${boostAffordable ? 'btn-primary' : ''}"
+                  ${boostAffordable ? '' : 'disabled'} data-action="buy-vscoin-boost">
+            ${icon('vscoin', 15)} ${VSCOIN_BOOST_COST}
+          </button>
+        </div>
+      </div>`;
+    return `<div class="stack">${shop}${cards}</div>`;
   }
 
   private renderStats(): string {
@@ -1143,6 +1227,14 @@ export class UI {
       }
       case 'buy-upgrade':
         error = buyUpgrade(s, arg);
+        break;
+      case 'claim-mission':
+        error = claimMission(s, arg);
+        if (!error) this.toast(`💎 ${t('ui.claimed')}`, 'info');
+        break;
+      case 'buy-vscoin-boost':
+        error = buyVsCoinBoost(s);
+        if (!error) this.toast(`🚀 ${t('ui.vsCoinBoostBought')}`, 'info');
         break;
       case 'rename-company': {
         const name = prompt('Company name:', activeCompany(s).name);
