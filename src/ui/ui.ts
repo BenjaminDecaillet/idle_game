@@ -63,7 +63,8 @@ import type { CompanyState, GameState, WorkerState } from '../game/types';
 import type { Fx } from './fx';
 import { cityMapSvg, type SiteView } from './cityMap';
 import { lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
-import { personaAtDesk, personaAvatar, personaStanding } from './persona';
+import { projectArt, stationArt, upgradeArt, upgradeProp } from './itemArt';
+import { emptyDeskSvg, personaAtDesk, personaAvatar, personaStanding } from './persona';
 
 const SPEECH_LINES = [
   'Shipping it! 🚀',
@@ -203,7 +204,11 @@ export class UI {
     const project = getProject(company, company.activeProjectId);
     const def = projectDefById(project.defId);
     const rate = totalWorkRate(s);
-    this.text('hero-emoji', def.emoji);
+    const heroArt = document.getElementById('hero-emoji');
+    if (heroArt && heroArt.dataset.art !== def.id) {
+      heroArt.dataset.art = def.id;
+      heroArt.innerHTML = projectArt(def.id, 42);
+    }
     this.text('hero-name', def.name);
     this.text('hero-spec', def.specialization);
     this.text('hero-reward', formatMoney(project.currentReward));
@@ -440,7 +445,7 @@ export class UI {
         <button class="card project-card ${active ? 'active-project' : ''}"
                 data-action="select-project:${def.id}">
           <div class="card-row">
-            <span class="card-emoji">${def.emoji}</span>
+            <span class="card-emoji">${projectArt(def.id, 38)}</span>
             <div class="card-main">
               <h3>${def.name}</h3>
               <span class="spec-badge spec-${def.specialization.replace(' ', '')}">${def.specialization}</span>
@@ -459,7 +464,7 @@ export class UI {
         return `
         <div class="card project-card locked">
           <div class="card-row">
-            <span class="card-emoji">🔒</span>
+            <span class="card-emoji locked-art">${projectArt(def.id, 38)}</span>
             <div class="card-main">
               <h3>${def.name}</h3>
               <span class="spec-badge">${def.specialization}</span>
@@ -606,24 +611,17 @@ export class UI {
       const tier = tierById(worker.tierId);
       return `
         <button class="desk-tile occupied" data-action="poke:${worker.id}"
-                title="${worker.name} — ${tier.title}">
-          ${personaAtDesk(`w:${worker.id}:${worker.name}`, worker.specialization, worker.tierId)}
+                title="${worker.name} — ${tier.title} at a ${def.name}">
+          ${personaAtDesk(`w:${worker.id}:${worker.name}`, worker.specialization, worker.tierId, def.id)}
           <span class="desk-name">${worker.name.split(' ')[0]}</span>
-          <span class="desk-info">${def.emoji} ×${def.multiplier}</span>
+          <span class="desk-info">×${def.multiplier}</span>
         </button>`;
     }
     return `
         <div class="desk-tile empty" title="${def.name} — empty">
-          <svg class="persona-desk" viewBox="0 0 64 56" aria-hidden="true">
-            <rect x="8" y="30" width="12" height="4" rx="2" fill="#1f2937"/>
-            <rect x="12" y="33" width="4" height="12" fill="#1f2937"/>
-            <rect x="30" y="33" width="30" height="3" rx="1.5" fill="#475569"/>
-            <rect x="42" y="36" width="4" height="10" fill="#334155"/>
-            <rect x="34" y="24" width="16" height="10" rx="1.2" fill="#0f172a"
-                  stroke="#334155" stroke-width="0.8"/>
-          </svg>
+          ${emptyDeskSvg(def.id)}
           <span class="desk-name muted">empty</span>
-          <span class="desk-info">${def.emoji} ×${def.multiplier}</span>
+          <span class="desk-info">×${def.multiplier}</span>
         </div>`;
   }
 
@@ -637,16 +635,21 @@ export class UI {
       (a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier,
     );
     const wpId = effectiveWallpaper(s, c);
+    // Bought upgrades show up as real props on the ground floor ("perks floor").
+    const perks = UPGRADES.filter((u) => (c.upgrades[u.id] ?? 0) > 0)
+      .map((u) => upgradeProp(u.id))
+      .join('');
     const floorBlocks: string[] = [];
     for (let f = c.floors; f >= 1; f--) {
       const slots = stations.slice((f - 1) * FLOOR_CAPACITY, f * FLOOR_CAPACITY);
       while (slots.length < FLOOR_CAPACITY) slots.push(null);
       const tiles = slots.map((st) => this.renderDeskTile(c, st)).join('');
+      const wall = f === 1 && perks ? perks : wallDecor(wpId, f - 1);
       floorBlocks.push(`
         <div class="floor-block">
           <div class="floor-wall">
             <span class="floor-label">${f === 1 ? 'Ground floor' : `Floor ${f}`}</span>
-            ${wallDecor(wpId, f - 1)}
+            ${wall}
           </div>
           <div class="office-grid">${tiles}</div>
         </div>`);
@@ -721,7 +724,7 @@ export class UI {
       return `
       <div class="card">
         <div class="card-row">
-          <span class="card-emoji">${def.emoji}</span>
+          <span class="card-emoji">${stationArt(def.id, 38)}</span>
           <div class="card-main">
             <h3>${def.name}</h3>
             <span class="muted">×${def.multiplier} output · owned ${owned}</span>
@@ -801,7 +804,7 @@ export class UI {
     const marketing = `
       <div class="card">
         <div class="card-row">
-          <span class="card-emoji">📣</span>
+          <span class="card-emoji">${upgradeArt('marketing', 38)}</span>
           <div class="card-main">
             <h3>Marketing Campaign</h3>
             <span class="muted">×${MARKETING_MULT} output for
@@ -822,7 +825,7 @@ export class UI {
       return `
       <div class="card">
         <div class="card-row">
-          <span class="card-emoji">${def.emoji}</span>
+          <span class="card-emoji">${upgradeArt(def.id, 38)}</span>
           <div class="card-main">
             <h3>${def.name} <span class="lvl">Lv ${level}${maxed ? ' MAX' : ''}</span></h3>
             <span class="muted">${def.description}</span>

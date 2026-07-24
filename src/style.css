@@ -204,6 +204,16 @@ body {
   flex-shrink: 0;
 }
 
+.card-emoji svg,
+.hero-emoji svg {
+  display: block;
+}
+
+.locked-art svg {
+  filter: grayscale(0.85);
+  opacity: 0.6;
+}
+
 .card-main {
   flex: 1;
   min-width: 0;

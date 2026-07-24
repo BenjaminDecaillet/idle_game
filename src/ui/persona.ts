@@ -300,21 +300,113 @@ export function personaAvatar(
 }
 
 /**
- * Full-body seated-at-desk scene for the office floor: desk, glowing
- * monitor, and the persona typing away (animation via CSS classes
- * .persona-sit-head / .persona-sit-arms).
+ * Per-workstation desk rigs (the furniture half of the seated scene).
+ * Each rig defines its furniture art and where the typing hand rests, so
+ * buying a better desk visibly upgrades the scene in the office.
+ */
+const INK = '#2d2440';
+
+interface DeskRig {
+  /** Furniture drawn behind/over the person (desk, screens, props). */
+  furniture: string;
+  /** Typing arm path + hand position (desk heights differ per rig). */
+  arm: string;
+  handX: number;
+  handY: number;
+}
+
+function deskRig(stationId: string): DeskRig {
+  switch (stationId) {
+    case 'standing':
+      return {
+        furniture: `
+          <rect x="29" y="29.8" width="31" height="3.2" rx="1.6" fill="#e8d9b8" stroke="${INK}" stroke-width="0.9"/>
+          <rect x="42.6" y="33" width="3.8" height="11" rx="1" fill="#9aa0a8" stroke="${INK}" stroke-width="0.8"/>
+          <rect x="41" y="36.6" width="7" height="2.6" rx="0.8" fill="#6b7280" stroke="${INK}" stroke-width="0.7"/>
+          <rect x="37" y="44" width="15" height="2.2" rx="1.1" fill="#6b7280" stroke="${INK}" stroke-width="0.7"/>
+          <rect x="40.5" y="19" width="14" height="9" rx="1.1" fill="#0f172a" stroke="${INK}" stroke-width="0.9"/>
+          <rect x="41.7" y="20.2" width="11.6" height="6.6" rx="0.5" class="persona-screen"/>
+          <rect x="46.6" y="28" width="2" height="1.9" fill="#334155"/>
+          <rect x="44.4" y="29.6" width="6.4" height="1" rx="0.5" fill="#334155"/>
+          <path d="M56.2 27.4 q0.8 -2.6 2.2 0 q1.4 -1.8 1.4 0.6 q0 1.8 -2.5 1.8 q-2.1 0 -1.1 -2.4 z" fill="#2fbf7f" stroke="${INK}" stroke-width="0.6"/>
+          <rect x="55.6" y="29.4" width="4.2" height="2.4" rx="0.6" fill="#c2410c" stroke="${INK}" stroke-width="0.6"/>
+          <rect x="31" y="27.9" width="10" height="1.4" rx="0.7" fill="#1e293b"/>`,
+        arm: 'M24 25.8 q5 0.2 8 2.4',
+        handX: 33,
+        handY: 28.4,
+      };
+    case 'dual':
+      return {
+        furniture: `
+          <rect x="28.5" y="32.6" width="31.5" height="3.4" rx="1.6" fill="#3a3f52" stroke="${INK}" stroke-width="0.9"/>
+          <rect x="30" y="36.2" width="28.5" height="1.1" rx="0.55" fill="#22d3ee" opacity="0.85"/>
+          <rect x="42" y="37.6" width="4" height="8.6" fill="#2b2f40" stroke="${INK}" stroke-width="0.7"/>
+          <rect x="31.6" y="22.4" width="12.6" height="8.8" rx="1" fill="#0f172a" stroke="${INK}" stroke-width="0.9"/>
+          <rect x="32.7" y="23.5" width="10.4" height="6.6" rx="0.5" class="persona-screen"/>
+          <rect x="45.4" y="22.4" width="12.6" height="8.8" rx="1" fill="#0f172a" stroke="${INK}" stroke-width="0.9"/>
+          <rect x="46.5" y="23.5" width="10.4" height="6.6" rx="0.5" class="persona-screen"/>
+          <rect x="43.2" y="31.2" width="3.2" height="1.6" fill="#2b2f40"/>
+          <rect x="31.5" y="33.1" width="15" height="1.5" rx="0.75" fill="#111827"/>
+          <circle cx="55" cy="34" r="1.2" fill="#111827"/>`,
+        arm: 'M24 27 q5 2 8 4',
+        handX: 33,
+        handY: 31.4,
+      };
+    case 'corner':
+      return {
+        furniture: `
+          <rect x="28" y="32.4" width="33" height="3.6" rx="1.6" fill="#7a4426" stroke="${INK}" stroke-width="0.9"/>
+          <rect x="28.6" y="33.1" width="31.8" height="0.9" rx="0.45" fill="#ffc93c" opacity="0.7"/>
+          <rect x="30" y="36" width="29" height="9.6" rx="1" fill="#5e3319" stroke="${INK}" stroke-width="0.9"/>
+          <rect x="33" y="39.6" width="23" height="2.2" rx="1.1" fill="#7a4426"/>
+          <path d="M35 21.8 q7.5 -2.2 15 0 l-0.9 9.4 q-6.6 -1.8 -13.2 0 z" fill="#0f172a" stroke="${INK}" stroke-width="0.9"/>
+          <path d="M36.3 23 q6.2 -1.7 12.4 0 l-0.7 7 q-5.5 -1.4 -11 0 z" class="persona-screen"/>
+          <rect x="41" y="31.2" width="3" height="1.6" fill="#334155"/>
+          <path d="M54.4 25.4 l3.4 0 q1.7 0 1.7 1.7 l-4.2 0 q-1.7 0 -0.9 -1.7 z" fill="#2fbf7f" stroke="${INK}" stroke-width="0.7"/>
+          <rect x="56.2" y="27" width="1.2" height="4.4" fill="#b8860b" stroke="${INK}" stroke-width="0.5"/>
+          <path d="M31.4 27.2 h3 l-0.5 2 q-1 0.6 -2 0 z" fill="#ffc93c" stroke="${INK}" stroke-width="0.6"/>
+          <rect x="31.9" y="29.6" width="2" height="2.8" rx="0.5" fill="#d99a06" stroke="${INK}" stroke-width="0.5"/>`,
+        arm: 'M24 27 q5 2 8 4',
+        handX: 33,
+        handY: 31.4,
+      };
+    default: // basic — honest wooden desk + laptop + mug
+      return {
+        furniture: `
+          <rect x="30" y="32.6" width="30" height="3.4" rx="1.6" fill="#b07a3f" stroke="${INK}" stroke-width="0.9"/>
+          <rect x="42" y="36.2" width="4" height="9.8" fill="#8a5a2b" stroke="${INK}" stroke-width="0.7"/>
+          <rect x="34" y="24" width="16" height="10" rx="1.2" fill="#0f172a" stroke="${INK}" stroke-width="0.9"/>
+          <rect x="35.4" y="25.4" width="13.2" height="7.2" rx="0.6" class="persona-screen"/>
+          <rect x="33" y="33" width="18" height="1.6" rx="0.8" fill="#1e293b"/>
+          <rect x="54" y="29.2" width="4" height="3.6" rx="0.8" fill="#ff5d55" stroke="${INK}" stroke-width="0.7"/>
+          <path d="M58 30 q1.8 0.6 0 2.2" fill="none" stroke="${INK}" stroke-width="0.7"/>`,
+        arm: 'M24 27 q5 2 8 4',
+        handX: 33,
+        handY: 31.6,
+      };
+  }
+}
+
+const CHAIR = `
+  <rect x="8" y="30" width="12" height="4" rx="2" fill="#1f2937" stroke="${INK}" stroke-width="0.7"/>
+  <rect x="12" y="33" width="4" height="12" fill="#1f2937" stroke="${INK}" stroke-width="0.7"/>
+  <rect x="8" y="18" width="3.4" height="13" rx="1.7" fill="#1f2937" stroke="${INK}" stroke-width="0.7"/>`;
+
+/**
+ * Full-body seated-at-desk scene for the office floor: station-specific
+ * desk rig, glowing monitor, and the persona typing away (animation via
+ * CSS classes .persona-sit-head / .persona-sit-arms).
  */
 export function personaAtDesk(
   seed: string,
   specialization: Specialization,
   tierId: string,
+  stationId = 'basic',
 ): string {
   const look = personaLook(seed, specialization, tierId);
+  const rig = deskRig(stationId);
   return `<svg class="persona-desk" viewBox="0 0 64 56" aria-hidden="true">
-    <!-- chair -->
-    <rect x="8" y="30" width="12" height="4" rx="2" fill="#1f2937"/>
-    <rect x="12" y="33" width="4" height="12" fill="#1f2937"/>
-    <!-- person -->
+    ${CHAIR}
     <g class="persona-sit-head">
       <circle cx="20" cy="16" r="6.4" fill="${look.skin}"/>
       <g transform="translate(4.8,2.6) scale(0.92)">${hairPath(look.hairstyle, look.hair)}</g>
@@ -324,16 +416,19 @@ export function personaAtDesk(
     <path d="M13 34 q0 -12 8 -11 q6 0.6 8 6 l3 5 z" fill="${look.shirt}"/>
     ${shirtDetailPath(look.shirtDetail, 20, 27)}
     <g class="persona-sit-arms">
-      <path d="M24 27 q5 2 8 4" stroke="${look.shirt}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
-      <circle cx="33" cy="31.6" r="1.7" fill="${look.skin}"/>
+      <path d="${rig.arm}" stroke="${look.shirt}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+      <circle cx="${rig.handX}" cy="${rig.handY}" r="1.7" fill="${look.skin}"/>
     </g>
-    <!-- desk -->
-    <rect x="30" y="33" width="30" height="3" rx="1.5" fill="#475569"/>
-    <rect x="42" y="36" width="4" height="10" fill="#334155"/>
-    <!-- laptop -->
-    <rect x="34" y="24" width="16" height="10" rx="1.2" fill="#0f172a" stroke="#334155" stroke-width="0.8"/>
-    <rect x="35.4" y="25.4" width="13.2" height="7.2" rx="0.6" class="persona-screen"/>
-    <rect x="33" y="33.4" width="18" height="1.6" rx="0.8" fill="#1e293b"/>
+    ${rig.furniture}
+  </svg>`;
+}
+
+/** An unoccupied workstation tile: the station-specific rig, empty chair. */
+export function emptyDeskSvg(stationId: string): string {
+  const rig = deskRig(stationId);
+  return `<svg class="persona-desk" viewBox="0 0 64 56" aria-hidden="true">
+    ${CHAIR}
+    ${rig.furniture}
   </svg>`;
 }
 
