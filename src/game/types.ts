@@ -173,9 +173,26 @@ export interface TutorialState {
   giftGiven: boolean;
 }
 
-/** The player themself (named in the tutorial; look added by customization). */
+/**
+ * The player avatar's appearance — every field is an index into the art
+ * option lists (counts in PLAYER_LOOK_OPTIONS in data.ts). Unlike employee
+ * personas (hash-derived), this is explicit player choice.
+ */
+export interface PlayerLook {
+  skin: number;
+  hair: number;
+  hairstyle: number;
+  eyeStyle: number;
+  mouthStyle: number;
+  facialHair: number;
+  outfit: number;
+  accessory: number;
+}
+
+/** The player themself (named in the tutorial; look fully customizable). */
 export interface PlayerState {
   name: string;
+  look: PlayerLook;
 }
 
 /**

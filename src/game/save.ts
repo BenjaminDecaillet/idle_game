@@ -1,9 +1,11 @@
 import {
   COMPANY_SITES,
+  DEFAULT_PLAYER_LOOK,
   FLOOR_CAPACITY,
   MAP_THEMES,
   MAX_FLOORS,
   MISSIONS,
+  PLAYER_LOOK_OPTIONS,
   OFFLINE_CAP_HOURS,
   PROJECTS,
   TIME_SCALES,
@@ -13,7 +15,7 @@ import {
 import { createInitialState, newProjectState, SAVE_VERSION, simulateOffline } from './engine';
 import { backfillStory, STORY_BEATS } from './story';
 import { TUTORIAL_STEPS } from './tutorial';
-import type { CompanyState, GameState } from './types';
+import type { CompanyState, GameState, PlayerLook } from './types';
 
 export const SAVE_KEY = 'idle-silicon-valley-save';
 
@@ -98,7 +100,11 @@ export function migrate(
       queue: Array.isArray(parsed.story?.queue) ? parsed.story.queue : [],
     },
     tutorial: { ...fresh.tutorial, ...(parsed.tutorial ?? {}) },
-    player: { ...fresh.player, ...(parsed.player ?? {}) },
+    player: {
+      ...fresh.player,
+      ...(parsed.player ?? {}),
+      look: { ...fresh.player.look, ...(parsed.player?.look ?? {}) },
+    },
     vsCoin:
       typeof parsed.vsCoin === 'number' && Number.isFinite(parsed.vsCoin) && parsed.vsCoin >= 0
         ? parsed.vsCoin
@@ -195,6 +201,15 @@ export function migrate(
 
   // Story hygiene: drop unknown beat ids (content may change between
   // versions), and backfill milestones a pre-story save already passed.
+  // Player look hygiene: any out-of-range/corrupt index falls back to the
+  // default so the avatar renderers always get valid data.
+  for (const field of Object.keys(PLAYER_LOOK_OPTIONS) as (keyof PlayerLook)[]) {
+    const value = state.player.look[field];
+    if (!Number.isInteger(value) || value < 0 || value >= PLAYER_LOOK_OPTIONS[field]) {
+      state.player.look[field] = DEFAULT_PLAYER_LOOK[field];
+    }
+  }
+
   // Mission hygiene: drop claims for missions that no longer exist.
   const knownMissions = new Set(MISSIONS.map((m) => m.id));
   state.missionsClaimed = state.missionsClaimed.filter((id) => knownMissions.has(id));

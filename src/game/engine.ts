@@ -1,6 +1,7 @@
 import {
   AURA_OUTPUT_PER_LEVEL,
   COMPANY_COST_GROWTH,
+  DEFAULT_PLAYER_LOOK,
   COMPANY_SITES,
   FIRST_NAMES,
   FLOOR_BASE_COST,
@@ -51,7 +52,8 @@ import type {
 // v3: multiple companies on a map (shared wallet)
 // v4: story beats, Gabriel tutorial, player identity, language setting
 // v5: missions + VsCoin premium currency with ledger
-export const SAVE_VERSION = 5;
+// v6: customizable player avatar look (founder office)
+export const SAVE_VERSION = 6;
 
 // ---------------------------------------------------------------------------
 // State creation
@@ -76,7 +78,7 @@ export function createInitialState(now = Date.now()): GameState {
     settings: { sound: true, particles: true, timeScale: 1, language: 'auto' },
     story: { seen: [], queue: [] },
     tutorial: { step: 0, done: false, giftGiven: false },
-    player: { name: 'Founder' },
+    player: { name: 'Founder', look: { ...DEFAULT_PLAYER_LOOK } },
     vsCoin: 0,
     vsCoinLedger: [],
     missionsClaimed: [],

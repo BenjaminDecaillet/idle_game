@@ -41,6 +41,20 @@ export const en = {
   'mission.upgradeLevels': 'Buy {target} upgrade levels',
   'mission.desks': 'Own {target} workstations',
 
+  // --- Founder office & avatar customization -------------------------------
+  'ui.founderOffice': 'Founder’s Office',
+  'ui.customize': 'Customize',
+  'ui.done': 'Done',
+  'ui.renameAvatar': 'Change name',
+  'look.skin': 'Skin',
+  'look.hair': 'Hair color',
+  'look.hairstyle': 'Hairstyle',
+  'look.eyeStyle': 'Eyes',
+  'look.mouthStyle': 'Mouth',
+  'look.facialHair': 'Facial hair',
+  'look.outfit': 'Outfit',
+  'look.accessory': 'Accessory',
+
   // --- Tutorial (Gabriel speaking) ----------------------------------------
   'tutorial.welcome.text':
     'Hi! I’m Gabriel, your very own angel investor — the guardian kind. You dream of building an AI that helps everyone, and I’m here to get you from this garage to the stars. Ready?',

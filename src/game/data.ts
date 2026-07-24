@@ -43,6 +43,30 @@ export const VSCOIN_BOOST_DURATION_SEC = 3_600;
 // Founder's Aura premium upgrade effect.
 export const AURA_OUTPUT_PER_LEVEL = 0.25;
 
+// Player avatar customization: number of options per look field. Must match
+// the art option lists in src/ui/persona.ts (which clamp defensively).
+export const PLAYER_LOOK_OPTIONS = {
+  skin: 9,
+  hair: 11,
+  hairstyle: 8,
+  eyeStyle: 3,
+  mouthStyle: 4,
+  facialHair: 4,
+  outfit: 8,
+  accessory: 6,
+} as const;
+
+export const DEFAULT_PLAYER_LOOK = {
+  skin: 2,
+  hair: 1,
+  hairstyle: 1,
+  eyeStyle: 0,
+  mouthStyle: 0,
+  facialHair: 0,
+  outfit: 0,
+  accessory: 0,
+} as const;
+
 // Marketing campaign: a purchasable output boost — the money sink twin of
 // the ad/IAP boosts. Cost is ~MARKETING_COST_SEC seconds of current gross
 // income, for MARKETING_DURATION_SEC seconds of MARKETING_MULT x output.

@@ -37,6 +37,20 @@ export const fr: Record<keyof typeof en, string> = {
   'mission.upgradeLevels': 'Achetez {target} niveaux d’amélioration',
   'mission.desks': 'Possédez {target} postes de travail',
 
+  // --- Bureau du fondateur & personnalisation ------------------------------
+  'ui.founderOffice': 'Bureau du fondateur',
+  'ui.customize': 'Personnaliser',
+  'ui.done': 'Terminé',
+  'ui.renameAvatar': 'Changer de nom',
+  'look.skin': 'Peau',
+  'look.hair': 'Couleur de cheveux',
+  'look.hairstyle': 'Coiffure',
+  'look.eyeStyle': 'Yeux',
+  'look.mouthStyle': 'Bouche',
+  'look.facialHair': 'Pilosité',
+  'look.outfit': 'Tenue',
+  'look.accessory': 'Accessoire',
+
   // --- Tutoriel (Gabriel parle) -------------------------------------------
   'tutorial.welcome.text':
     'Salut ! Moi c’est Gabriel, ton investisseur providentiel — au sens littéral. Tu rêves d’une IA qui aide tout le monde, et je suis là pour te mener de ce garage jusqu’aux étoiles. On y va ?',
