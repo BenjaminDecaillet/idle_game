@@ -36,6 +36,13 @@ export interface CompanySiteDef {
   cost: number; // 0 = free starting site
   outputBonus: number; // multiplier on all worker output at this site (1 = none)
   floorCostFactor: number; // scales floor prices at this site
+  /**
+   * Scale of the projects run at this site: rewards and unlock costs are
+   * multiplied by projectScale, required work by
+   * projectScale^PROJECT_WORK_SCALE_EXP — later companies run bigger,
+   * more lucrative contracts instead of re-doing the garage ones.
+   */
+  projectScale: number;
   emoji: string;
   blurb: string;
 }
@@ -68,6 +75,8 @@ export interface UpgradeDef {
   costGrowth: number;
   maxLevel: number; // Infinity-like cap via large number
   emoji: string;
+  /** Hidden until the player owns this many companies (undefined = always). */
+  requiresCompanies?: number;
 }
 
 /** An in-flight training program: the worker is away from their desk. */
@@ -107,6 +116,31 @@ export interface Settings {
   particles: boolean;
   /** Free simulation speed toggle for the live loop: 1, 2 or 4. */
   timeScale: number;
+  /** UI language: explicit choice or browser auto-detection. */
+  language: 'auto' | 'en' | 'fr';
+}
+
+/** Narrative progress (see src/game/story.ts). */
+export interface StoryState {
+  /** Beats already triggered (shown or queued) — never re-fire. */
+  seen: string[];
+  /** Beats waiting to be displayed, oldest first. */
+  queue: string[];
+}
+
+/** Gabriel tutorial progress (see src/game/tutorial.ts). */
+export interface TutorialState {
+  /** Index into TUTORIAL_STEPS. */
+  step: number;
+  /** Completed or skipped — never show again. */
+  done: boolean;
+  /** Gabriel's one-time seed-money gift was paid out. */
+  giftGiven: boolean;
+}
+
+/** The player themself (named in the tutorial; look added by customization). */
+export interface PlayerState {
+  name: string;
 }
 
 /**
@@ -158,6 +192,9 @@ export interface GameState {
   mapThemeId: string;
   boosts: Boost[];
   settings: Settings;
+  story: StoryState;
+  tutorial: TutorialState;
+  player: PlayerState;
   nextEntityId: number;
 }
 

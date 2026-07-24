@@ -526,6 +526,152 @@ button.project-card {
   background: var(--surface-2);
 }
 
+.card.locked {
+  opacity: 0.8;
+  background: var(--surface-2);
+}
+
+.lock-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* --- Gabriel: tutorial coach card + story dialogs ------------------------ */
+
+#coach-zone {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: calc(var(--tabbar-h) + 12px);
+  z-index: 40;
+  pointer-events: none;
+}
+
+.coach {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  pointer-events: auto;
+  animation: coach-in 0.25s ease-out;
+  box-shadow: 0 6px 0 rgba(45, 36, 64, 0.22);
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+@keyframes coach-in {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.coach-gabriel { flex: 0 0 auto; }
+
+.coach-main { flex: 1; min-width: 0; }
+
+.coach-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.coach-text {
+  margin: 4px 0 8px;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.coach-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.coach-input {
+  flex: 1;
+  min-width: 0;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 600;
+  background: #fff;
+  color: var(--ink);
+}
+
+.coach-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tab-btn.tab-attention {
+  animation: tab-attention 1s ease-in-out infinite;
+}
+
+@keyframes tab-attention {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.story-modal {
+  text-align: center;
+  max-width: 420px;
+}
+
+.story-gabriel { margin: -46px auto 2px; width: 84px; }
+
+.story-kicker {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.story-text {
+  margin: 8px 0 14px;
+  line-height: 1.45;
+}
+
+.gabriel-float {
+  animation: gabriel-float 3.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.gabriel-halo {
+  animation: gabriel-halo 3.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes gabriel-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2.5px); }
+}
+
+@keyframes gabriel-halo {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-1.5px) rotate(2deg); }
+}
+
+.settings-label {
+  font-weight: 700;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gabriel-float, .gabriel-halo, .tab-btn.tab-attention { animation: none; }
+}
+
 /* On project cards the tag sits as a ribbon on the top edge so it never
    covers the reward column; in the sheet header it flows inline. */
 .project-card .active-tag {

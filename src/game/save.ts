@@ -7,8 +7,11 @@ import {
   PROJECTS,
   TIME_SCALES,
   WALLPAPERS,
+  siteById,
 } from './data';
 import { createInitialState, newProjectState, SAVE_VERSION, simulateOffline } from './engine';
+import { backfillStory, STORY_BEATS } from './story';
+import { TUTORIAL_STEPS } from './tutorial';
 import type { CompanyState, GameState } from './types';
 
 export const SAVE_KEY = 'idle-silicon-valley-save';
@@ -89,10 +92,24 @@ export function migrate(
     version: SAVE_VERSION,
     settings: { ...fresh.settings, ...(parsed.settings ?? {}) },
     boosts: Array.isArray(parsed.boosts) ? parsed.boosts : [],
+    story: {
+      seen: Array.isArray(parsed.story?.seen) ? parsed.story.seen : [],
+      queue: Array.isArray(parsed.story?.queue) ? parsed.story.queue : [],
+    },
+    tutorial: { ...fresh.tutorial, ...(parsed.tutorial ?? {}) },
+    player: { ...fresh.player, ...(parsed.player ?? {}) },
     companies: Array.isArray(parsed.companies) && parsed.companies.length > 0
       ? parsed.companies
       : fresh.companies,
   };
+  // Pre-v4 saves belong to players who already know the game: never show
+  // them the tutorial, and mark every already-passed story beat as seen so
+  // they don't get a wall of catch-up dialogs (done below, once companies
+  // are migrated).
+  const preStorySave = parsed.tutorial === undefined;
+  if (preStorySave) {
+    state.tutorial = { step: TUTORIAL_STEPS.length, done: true, giftGiven: true };
+  }
   // Strip legacy flat fields that the spread may have copied onto the state.
   for (const key of [
     'companyName', 'workers', 'workstations', 'activeProjectId',
@@ -133,9 +150,11 @@ export function migrate(
     const savedFloors = Math.max(1, Math.min(company.floors ?? 1, MAX_FLOORS));
     company.floors = Math.max(savedFloors, neededFloors);
     // Ensure every project defined in data.ts has a state entry (new content
-    // added in updates appears automatically in old saves).
+    // added in updates appears automatically in old saves), scaled to the
+    // company's site so late-game companies get late-game contracts.
     const byId = new Map((company.projects ?? []).map((p) => [p.defId, p]));
-    company.projects = PROJECTS.map((def) => byId.get(def.id) ?? newProjectState(def));
+    const scale = siteById(company.siteId).projectScale;
+    company.projects = PROJECTS.map((def) => byId.get(def.id) ?? newProjectState(def, scale));
     if (!company.projects.some((p) => p.defId === company.activeProjectId && p.unlocked)) {
       company.projects[0].unlocked = true;
       company.activeProjectId = company.projects[0].defId;
@@ -166,6 +185,17 @@ export function migrate(
   );
   if (!state.ownedMapThemes.includes(state.mapThemeId)) state.mapThemeId = 'daylight';
   if (!TIME_SCALES.includes(state.settings.timeScale)) state.settings.timeScale = 1;
+
+  // Story hygiene: drop unknown beat ids (content may change between
+  // versions), and backfill milestones a pre-story save already passed.
+  const knownBeats = new Set(STORY_BEATS.map((b) => b.id));
+  state.story.seen = state.story.seen.filter((id) => knownBeats.has(id));
+  state.story.queue = state.story.queue.filter((id) => knownBeats.has(id));
+  state.tutorial.step = Math.max(0, Math.min(state.tutorial.step, TUTORIAL_STEPS.length));
+  if (!['auto', 'en', 'fr'].includes(state.settings.language)) {
+    state.settings.language = 'auto';
+  }
+  if (preStorySave) backfillStory(state);
 
   // nextEntityId must stay above every id in the save (workers, desks,
   // companies) so freshly created entities never collide.

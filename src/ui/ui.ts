@@ -8,6 +8,7 @@ import {
   PROJECTS,
   TIME_SCALES,
   TRAIN_DURATION_SEC,
+  TUTORIAL_ANGEL_GIFT,
   UPGRADES,
   WALLPAPERS,
   WORKSTATIONS,
@@ -38,6 +39,7 @@ import {
   setCompanyWallpaper,
   setDefaultWallpaper,
   setMapTheme,
+  setLanguage,
   setTimeScale,
   estimatedIncome,
   expToNextLevel,
@@ -48,6 +50,9 @@ import {
   rerollCandidates,
   setActiveProject,
   stationCost,
+  companyCost,
+  hireCost,
+  projectUnlockCost,
   totalSalaries,
   totalWorkRate,
   trainCost,
@@ -59,8 +64,24 @@ import {
 } from '../game/engine';
 import { formatDuration, formatMoney, formatNumber, formatRate } from '../game/format';
 import { exportSave, importSave, resetGame, saveGame } from '../game/save';
+import {
+  advanceStory,
+  currentStoryBeat,
+  dismissStoryBeat,
+} from '../game/story';
+import {
+  TUTORIAL_STEPS,
+  advanceTutorial,
+  currentTutorialStep,
+  refreshTutorial,
+  setPlayerName,
+  skipTutorial,
+  type TutorialStepDef,
+} from '../game/tutorial';
 import type { CompanyState, GameState, WorkerState } from '../game/types';
+import { lookup, resolveLang, setCurrentLang, t } from '../i18n';
 import type { Fx } from './fx';
+import { gabriel, type GabrielPose } from './gabriel';
 import { cityMapSvg, type SiteView } from './cityMap';
 import { icon } from './icons';
 import { lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
@@ -101,6 +122,8 @@ export class UI {
   private rebuildTimer = 0;
   private officeDirty = true;
   private sheetSiteId: string | null = null;
+  /** Tutorial step currently rendered in the coach card ('' = force redraw). */
+  private coachStep: string | null | '' = '';
   private onStateReplaced: (next: GameState) => void;
 
   constructor(
@@ -173,6 +196,7 @@ export class UI {
           </button>`,
         ).join('')}
       </nav>
+      <div id="coach-zone"></div>
       <div id="sheet-zone"></div>
       <div id="toast-zone"></div>
       <div id="modal-zone"></div>
@@ -236,7 +260,100 @@ export class UI {
     if (this.rebuildTimer >= 0.5) {
       this.rebuildTimer = 0;
       this.rebuildTab();
+      this.updateNarrative();
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Narrative: Gabriel tutorial coach + story beats
+  // -------------------------------------------------------------------------
+
+  /** Advance tutorial/story state and sync their DOM. Cheap and idempotent. */
+  private updateNarrative(): void {
+    const s = this.state;
+    const progressed = refreshTutorial(s);
+    if (progressed) saveGame(s);
+    const step = currentTutorialStep(s);
+    if ((step?.id ?? null) !== this.coachStep) {
+      this.coachStep = step?.id ?? null;
+      this.renderCoach(step);
+    }
+    advanceStory(s);
+    const beat = currentStoryBeat(s);
+    const zone = document.getElementById('modal-zone');
+    if (beat && zone && zone.childElementCount === 0) {
+      this.showStoryModal(beat);
+    }
+  }
+
+  private renderCoach(step: TutorialStepDef | null): void {
+    const zone = document.getElementById('coach-zone');
+    if (!zone) return;
+    for (const tab of TABS) {
+      document.getElementById(`tab-btn-${tab.id}`)?.classList.remove('tab-attention');
+    }
+    if (!step) {
+      zone.innerHTML = '';
+      return;
+    }
+    if (step.tab) {
+      document.getElementById(`tab-btn-${step.tab}`)?.classList.add('tab-attention');
+    }
+    const idx = TUTORIAL_STEPS.findIndex((def) => def.id === step.id);
+    const pose: GabrielPose = step.tab ? 'point' : step.id === 'outro' ? 'cheer' : 'idle';
+    const text = lookup(`tutorial.${step.id}.text`, {
+      gift: formatMoney(TUTORIAL_ANGEL_GIFT),
+      name: this.state.player.name,
+    });
+    const input = step.input
+      ? `<div class="coach-input-row">
+           <input id="tut-input" class="coach-input" type="text"
+                  maxlength="${step.input === 'avatar-name' ? 20 : 30}"
+                  placeholder="${step.input === 'avatar-name' ? t('ui.namePlaceholder') : t('ui.companyPlaceholder')}" />
+           <button class="btn btn-primary btn-small" data-action="tutorial-submit">
+             ${t('ui.confirm')}
+           </button>
+         </div>`
+      : '';
+    const next =
+      !step.input && !step.isComplete
+        ? `<button class="btn btn-primary btn-small" data-action="tutorial-next">${t('ui.next')}</button>`
+        : '';
+    zone.innerHTML = `
+      <div class="coach card">
+        <div class="coach-gabriel">${gabriel(pose, 62)}</div>
+        <div class="coach-main">
+          <div class="coach-head">
+            <strong>${t('ui.gabriel')}</strong>
+            <span class="muted">${t('ui.tutorialStep', { step: idx + 1, total: TUTORIAL_STEPS.length })}</span>
+          </div>
+          <p class="coach-text">${text}</p>
+          ${input}
+          <div class="coach-actions">
+            ${next}
+            <button class="btn btn-ghost btn-small" data-action="tutorial-skip">
+              ${t('ui.skipTutorial')}
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  private showStoryModal(beatId: string): void {
+    const zone = document.getElementById('modal-zone');
+    if (!zone) return;
+    const pose: GabrielPose =
+      beatId === 'agi-shipped' || beatId === 'dream-achieved' ? 'cheer' : 'think';
+    zone.innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal card story-modal">
+          <div class="story-gabriel">${gabriel(pose, 84)}</div>
+          <span class="story-kicker">${t('ui.storyTitle')}</span>
+          <h2>${lookup(`story.${beatId}.title`)}</h2>
+          <p class="story-text">${lookup(`story.${beatId}.text`)}</p>
+          <button class="btn btn-primary" data-action="story-continue">${t('ui.continue')}</button>
+        </div>
+      </div>`;
   }
 
   /** Viewport point where payout FX should originate (hero progress bar). */
@@ -392,18 +509,20 @@ export class UI {
           }
         </div>`;
     }
-    const affordable = s.money >= site.cost;
+    const price = companyCost(s, site.id);
+    const affordable = s.money >= price;
     return `
       <div class="sheet-head"><h2>${site.name}</h2></div>
       <p class="sheet-blurb">${site.blurb}</p>
       <div class="sheet-stats">
-        <div class="sheet-stat"><span>Price</span><strong>${formatMoney(site.cost)}</strong></div>
+        <div class="sheet-stat"><span>Price</span><strong>${formatMoney(price)}</strong></div>
         <div class="sheet-stat"><span>Site bonus</span><strong>×${site.outputBonus} output</strong></div>
+        <div class="sheet-stat"><span>Contract scale</span><strong>×${formatNumber(site.projectScale)} rewards</strong></div>
       </div>
       <div class="sheet-actions">
         <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                 data-action="found-company:${site.id}">
-          🏗️ Found a company — ${formatMoney(site.cost)}
+          🏗️ Found a company — ${formatMoney(price)}
         </button>
       </div>`;
   }
@@ -464,7 +583,8 @@ export class UI {
         </button>`;
       }
       if (i <= lastUnlockedIdx + 2) {
-        const affordable = s.money >= def.unlockCost;
+        const unlockPrice = projectUnlockCost(c, def.id);
+        const affordable = s.money >= unlockPrice;
         return `
         <div class="card project-card locked">
           <div class="card-row">
@@ -475,7 +595,7 @@ export class UI {
             </div>
             <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                     data-action="unlock-project:${def.id}">
-              Unlock ${formatMoney(def.unlockCost)}
+              Unlock ${formatMoney(unlockPrice)}
             </button>
           </div>
         </div>`;
@@ -489,20 +609,21 @@ export class UI {
     const s = this.state;
     const c = activeCompany(s);
     const candidates = c.candidates
-      .map((c, i) => {
-        const tier = tierById(c.tierId);
-        const affordable = s.money >= tier.hireCost;
+      .map((cand, i) => {
+        const tier = tierById(cand.tierId);
+        const price = hireCost(c, cand.tierId);
+        const affordable = s.money >= price;
         return `
         <div class="card candidate-card">
-          <span class="card-emoji persona-slot">${personaAvatar(`c:${c.name}:${c.tierId}`, c.specialization, c.tierId)}</span>
+          <span class="card-emoji persona-slot">${personaAvatar(`c:${cand.name}:${cand.tierId}`, cand.specialization, cand.tierId)}</span>
           <div class="card-main">
-            <h3>${c.name}</h3>
+            <h3>${cand.name}</h3>
             <span class="muted">${tier.title} · ${formatRate(tier.baseRate)} · salary ${formatMoney(tier.salary)}/s</span>
-            <span class="spec-badge spec-${c.specialization.replace(' ', '')}">${c.specialization}</span>
+            <span class="spec-badge spec-${cand.specialization.replace(' ', '')}">${cand.specialization}</span>
           </div>
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                   data-action="hire:${i}">
-            Hire ${formatMoney(tier.hireCost)}
+            Hire ${formatMoney(price)}
           </button>
         </div>`;
       })
@@ -821,7 +942,22 @@ export class UI {
           </button>
         </div>
       </div>`;
+    const owned = s.companies.length;
     const cards = UPGRADES.map((def) => {
+      const required = def.requiresCompanies ?? 1;
+      if (owned < required) {
+        return `
+      <div class="card locked">
+        <div class="card-row">
+          <span class="card-emoji locked-art">${upgradeArt(def.id, 38)}</span>
+          <div class="card-main">
+            <h3>${def.name}</h3>
+            <span class="muted">${def.description}</span>
+          </div>
+          <span class="lock-hint">${icon('lock', 16)} ${required} companies</span>
+        </div>
+      </div>`;
+      }
       const level = c.upgrades[def.id] ?? 0;
       const maxed = level >= def.maxLevel;
       const cost = upgradeCost(c, def.id);
@@ -885,6 +1021,19 @@ export class UI {
             <button class="btn" data-action="cycle-speed" title="Live simulation speed">
               ${icon('speed', 16)} Speed ×${s.settings.timeScale}
             </button>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">${t('ui.language')}</span>
+            ${(['auto', 'en', 'fr'] as const)
+              .map(
+                (lang) => `
+              <button class="btn btn-small ${s.settings.language === lang ? 'btn-primary' : ''}"
+                      ${s.settings.language === lang ? 'disabled' : ''}
+                      data-action="set-language:${lang}">
+                ${t(`ui.lang.${lang}`)}
+              </button>`,
+              )
+              .join('')}
           </div>
           <div class="settings-row">
             <button class="btn" data-action="export-save">${icon('save-export', 16)} Export save</button>
@@ -1056,6 +1205,39 @@ export class UI {
         structural = false;
         break;
       }
+      case 'tutorial-next':
+        error = advanceTutorial(s);
+        if (!error) this.updateNarrative();
+        break;
+      case 'tutorial-skip':
+        error = skipTutorial(s);
+        if (!error) this.updateNarrative();
+        break;
+      case 'tutorial-submit': {
+        const inputEl = document.getElementById('tut-input') as HTMLInputElement | null;
+        const value = inputEl?.value ?? '';
+        const step = currentTutorialStep(s);
+        error =
+          step?.input === 'avatar-name' ? setPlayerName(s, value) : renameCompany(s, value);
+        if (!error) error = advanceTutorial(s);
+        if (!error) this.updateNarrative();
+        break;
+      }
+      case 'story-continue': {
+        error = dismissStoryBeat(s);
+        const zone = document.getElementById('modal-zone');
+        if (zone) zone.innerHTML = '';
+        break;
+      }
+      case 'set-language': {
+        error = setLanguage(s, arg);
+        if (!error) {
+          setCurrentLang(resolveLang(s.settings.language, navigator.language));
+          this.coachStep = ''; // force the coach card to re-render translated
+          this.updateNarrative();
+        }
+        break;
+      }
       default:
         structural = false;
     }
@@ -1090,8 +1272,11 @@ export class UI {
     this.state = next;
     this.fx.soundEnabled = next.settings.sound;
     this.fx.enabled = next.settings.particles;
+    setCurrentLang(resolveLang(next.settings.language, navigator.language));
     this.officeDirty = true;
+    this.coachStep = '';
     this.rebuildTab();
+    this.updateNarrative();
   }
 
   private text(id: string, value: string): void {
