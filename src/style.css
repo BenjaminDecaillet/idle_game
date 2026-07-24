@@ -989,33 +989,21 @@ button.site-card {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
   gap: 10px;
-  padding: 12px;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.035) 0 1px,
-      transparent 1px 28px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.035) 0 1px,
-      transparent 1px 28px
-    ),
-    rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
+  padding: 12px 10px 14px;
+  background: var(--floor-surface, #e8e2d4);
 }
 
 .desk-tile {
   position: relative;
-  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  border: 1.5px solid var(--tile-border, rgba(45, 36, 64, 0.25));
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--tile-bg, rgba(255, 255, 255, 0.5));
   padding: 8px 6px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  color: #eef2f7;
+  color: var(--tile-text, var(--ink));
   font-family: inherit;
   cursor: pointer;
   transition: transform 0.08s;
@@ -1040,32 +1028,141 @@ button.site-card {
 
 .free-slot {
   font-size: 1.6rem;
-  color: #cbd5e1;
+  color: currentColor;
+  opacity: 0.7;
   line-height: 1;
 }
 
-/* --- Building & floors ---------------------------------------------------- */
+/* --- Building & floors (dollhouse cutaway) --------------------------------- */
 
 .building {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Decor bands: roof / per-floor wall / lobby. Items are standalone SVGs laid
+   out on the "ground" of the band; backgrounds come from the wallpaper vars. */
+.roof-band,
+.floor-wall,
+.lobby-band {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  overflow: hidden;
+  padding: 0 8px;
+}
+
+.roof-band {
+  height: 44px;
+  background: var(--roof-bg, #d7dee9);
+  border-bottom: 2.5px solid var(--sep-color, var(--ink-90));
+}
+
+.floor-wall {
+  position: relative;
+  height: 64px;
+  background: var(--wall-bg, #dfe7f2);
+}
+
+.floor-wall > svg,
+.roof-band > svg,
+.lobby-band > svg {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.lobby-band {
+  height: 56px;
+  background: var(--lobby-bg, #dfe7f2);
+  border-top: 2.5px solid var(--sep-color, var(--ink-90));
 }
 
 .floor-block + .floor-block {
-  border-top: 2px solid rgba(255, 255, 255, 0.12);
-  margin-top: 6px;
-  padding-top: 6px;
+  border-top: 2.5px solid var(--sep-color, var(--ink-90));
 }
 
 .floor-label {
-  font-size: 0.62rem;
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  z-index: 2;
+  font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
-  padding: 2px 4px;
+  color: var(--wall-text, var(--ink));
+  opacity: 0.92;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(45, 36, 64, 0.18);
+  pointer-events: none;
+}
+
+/* Wallpaper decor micro-animations (classes set by officeScene.ts). */
+.os-anim-bob {
+  animation: os-bob 2.6s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+@keyframes os-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2.5px);
+  }
+}
+
+.os-anim-twinkle {
+  animation: os-twinkle 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes os-twinkle {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.os-anim-neon {
+  animation: os-neon 3.4s linear infinite;
+}
+
+@keyframes os-neon {
+  0%,
+  6.5%,
+  9%,
+  100% {
+    opacity: 1;
+  }
+  7%,
+  8.5% {
+    opacity: 0.35;
+  }
+  62% {
+    opacity: 1;
+  }
+  63.5% {
+    opacity: 0.5;
+  }
+  65% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os-anim-bob,
+  .os-anim-twinkle,
+  .os-anim-neon {
+    animation: none;
+  }
 }
 
 .floor-actions {
@@ -1099,6 +1196,7 @@ button.site-card {
   justify-content: center;
   font-size: 1.2rem;
   flex-shrink: 0;
+  background: var(--wall-bg, var(--surface-2));
 }
 
 .decor-card.applied {
@@ -1127,7 +1225,8 @@ button.site-card {
 
 .desk-info {
   font-size: 0.6rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--tile-text, var(--ink));
+  opacity: 0.65;
 }
 
 /* typing animations */

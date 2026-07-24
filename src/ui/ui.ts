@@ -15,7 +15,6 @@ import {
   siteById,
   stationDefById,
   tierById,
-  wallpaperById,
 } from '../game/data';
 import {
   activeBoost,
@@ -63,6 +62,7 @@ import { exportSave, importSave, resetGame, saveGame } from '../game/save';
 import type { CompanyState, GameState, WorkerState } from '../game/types';
 import type { Fx } from './fx';
 import { cityMapSvg, type SiteView } from './cityMap';
+import { lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
 import { personaAtDesk, personaAvatar, personaStanding } from './persona';
 
 const SPEECH_LINES = [
@@ -636,6 +636,7 @@ export class UI {
     const stations: ({ id: number; defId: string } | null)[] = [...c.workstations].sort(
       (a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier,
     );
+    const wpId = effectiveWallpaper(s, c);
     const floorBlocks: string[] = [];
     for (let f = c.floors; f >= 1; f--) {
       const slots = stations.slice((f - 1) * FLOOR_CAPACITY, f * FLOOR_CAPACITY);
@@ -643,7 +644,10 @@ export class UI {
       const tiles = slots.map((st) => this.renderDeskTile(c, st)).join('');
       floorBlocks.push(`
         <div class="floor-block">
-          <div class="floor-label">${f === 1 ? 'Ground floor' : `Floor ${f}`}</div>
+          <div class="floor-wall">
+            <span class="floor-label">${f === 1 ? 'Ground floor' : `Floor ${f}`}</span>
+            ${wallDecor(wpId, f - 1)}
+          </div>
           <div class="office-grid">${tiles}</div>
         </div>`);
     }
@@ -685,8 +689,11 @@ export class UI {
           ${c.floors}/${MAX_FLOORS} floors</span>
       </div>
       <div class="floor-actions">${floorBtn}</div>
-      <div class="building card"
-           style="background:${wallpaperById(effectiveWallpaper(s, c)).css}">${floorBlocks.join('')}</div>
+      <div class="building card" style="${officeWallVars(wpId)}">
+        <div class="roof-band">${roofDecor(wpId)}</div>
+        ${floorBlocks.join('')}
+        <div class="lobby-band">${lobbyDecor(wpId)}</div>
+      </div>
       ${
         standing
           ? `<div class="warning-banner">⚠️ Waiting for a desk (producing nothing):</div>
@@ -764,7 +771,7 @@ export class UI {
       return `
       <div class="card decor-card ${isApplied ? 'applied' : ''}">
         <div class="card-row">
-          <span class="decor-swatch" style="background:${def.css}">${def.emoji}</span>
+          <span class="decor-swatch" style="${officeWallVars(def.id)}">${def.emoji}</span>
           <div class="card-main">
             <h3>${def.name}</h3>
             <span class="muted">${owned ? 'Owned — free to apply anywhere' : 'Unlocks for every company'}</span>
