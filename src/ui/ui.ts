@@ -74,6 +74,12 @@ import {
   missionProgress,
   visibleMissions,
 } from '../game/missions';
+import {
+  cyclePlayerLook,
+  officeStage,
+  PLAYER_LOOK_FIELDS,
+  type PlayerLookField,
+} from '../game/player';
 import { exportSave, importSave, resetGame, saveGame } from '../game/save';
 import {
   advanceStory,
@@ -97,7 +103,14 @@ import { cityMapSvg, type SiteView } from './cityMap';
 import { icon } from './icons';
 import { lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
 import { projectArt, stationArt, upgradeArt, upgradeProp } from './itemArt';
-import { emptyDeskSvg, personaAtDesk, personaAvatar, personaStanding } from './persona';
+import {
+  emptyDeskSvg,
+  founderOffice,
+  personaAtDesk,
+  personaAvatar,
+  personaStanding,
+  playerAvatar,
+} from './persona';
 
 const SPEECH_LINES = [
   'Shipping it! 🚀',
@@ -351,6 +364,33 @@ export class UI {
               ${t('ui.skipTutorial')}
             </button>
           </div>
+        </div>
+      </div>`;
+  }
+
+  /** Avatar customization dialog (re-rendered in place on every change). */
+  private renderCustomizer(): void {
+    const zone = document.getElementById('modal-zone');
+    if (!zone) return;
+    const look = this.state.player.look;
+    const rows = PLAYER_LOOK_FIELDS.map(
+      (field) => `
+      <div class="customizer-row">
+        <span class="customizer-label">${t(`look.${field}`)}</span>
+        <div class="customizer-controls">
+          <button class="btn btn-small" data-action="look-prev:${field}">‹</button>
+          <span class="customizer-value">${look[field] + 1}</span>
+          <button class="btn btn-small" data-action="look-next:${field}">›</button>
+        </div>
+      </div>`,
+    ).join('');
+    zone.innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal card customizer-modal">
+          <h2>${t('ui.customize')}</h2>
+          <div class="customizer-preview">${playerAvatar(look, 96)}</div>
+          <div class="customizer-rows">${rows}</div>
+          <button class="btn btn-primary" data-action="close-modal">${t('ui.done')}</button>
         </div>
       </div>`;
   }
@@ -1080,8 +1120,25 @@ export class UI {
       [icon('clock', 16), 'Time played', formatDuration(s.playTimeSec)],
       [icon('boost', 16), 'Founded', new Date(s.startedAt).toLocaleDateString()],
     ];
+    const founder = `
+      <div class="card founder-card">
+        <h2 class="card-title">${icon('star', 18)} ${t('ui.founderOffice')}</h2>
+        <div class="founder-scene">${founderOffice(s.player.look, officeStage(s))}</div>
+        <div class="founder-bar">
+          <strong class="founder-name">${s.player.name}</strong>
+          <div class="founder-actions">
+            <button class="btn btn-small" data-action="rename-player">
+              ${icon('pencil', 14)} ${t('ui.renameAvatar')}
+            </button>
+            <button class="btn btn-small btn-primary" data-action="customize-avatar">
+              ${t('ui.customize')}
+            </button>
+          </div>
+        </div>
+      </div>`;
     return `
       <div class="stack">
+        ${founder}
         <div class="card">
           <h2 class="card-title">${icon('stats', 18)} ${c.name}</h2>
           <table class="stats-table">
@@ -1319,6 +1376,22 @@ export class UI {
         error = dismissStoryBeat(s);
         const zone = document.getElementById('modal-zone');
         if (zone) zone.innerHTML = '';
+        break;
+      }
+      case 'customize-avatar':
+        this.renderCustomizer();
+        structural = false;
+        break;
+      case 'look-prev':
+      case 'look-next': {
+        error = cyclePlayerLook(s, arg as PlayerLookField, action === 'look-next' ? 1 : -1);
+        if (!error) this.renderCustomizer();
+        structural = false;
+        break;
+      }
+      case 'rename-player': {
+        const name = prompt(t('ui.namePlaceholder'), s.player.name);
+        if (name !== null) error = setPlayerName(s, name);
         break;
       }
       case 'set-language': {

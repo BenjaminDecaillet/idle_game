@@ -1643,3 +1643,168 @@ button.site-card {
     padding: 16px 18px;
   }
 }
+
+/* ==========================================================================
+   APPENDED BLOCK — persona life details + founder office (owned by the
+   persona.ts task; do not merge into sections above)
+   ========================================================================== */
+
+/* Periodic eyelid blink on open-eyed personas: long pause, quick shut.
+   Phase is staggered per person via an inline hash-driven animation-delay. */
+.persona-blink {
+  animation: persona-blink 4.6s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes persona-blink {
+  0%,
+  90.5%,
+  94.5%,
+  100% {
+    transform: scaleY(1);
+  }
+  92%,
+  93% {
+    transform: scaleY(0.12);
+  }
+}
+
+/* Very subtle idle bob for seated personas (nested inside .persona-sit-head
+   so it composes with the existing typing head tilt). */
+.persona-bob {
+  animation: persona-bob 3.4s ease-in-out infinite;
+}
+
+@keyframes persona-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(0.8px);
+  }
+}
+
+/* Founder office scene (persona.ts founderOffice) */
+.founder-office {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Stage-3 halo-drone gently floats near the round window. */
+.fo-drone {
+  animation: fo-drone-float 5s ease-in-out infinite;
+}
+
+@keyframes fo-drone-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Stage-3 AGI core: soft opacity pulse (cheap — no filters, no layout). */
+.fo-core {
+  animation: fo-core-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes fo-core-pulse {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .persona-blink,
+  .persona-bob,
+  .fo-drone,
+  .fo-core {
+    animation: none;
+  }
+}
+
+/* --- Founder card & avatar customizer (Stats tab) ------------------------ */
+
+.founder-card .founder-scene {
+  border: 2px solid var(--ink-faint);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.founder-scene svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.founder-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.founder-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.founder-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.customizer-modal {
+  width: min(92vw, 380px);
+}
+
+.customizer-preview {
+  display: grid;
+  place-items: center;
+  margin: 6px 0 10px;
+}
+
+.customizer-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.customizer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.customizer-label {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+.customizer-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.customizer-value {
+  min-width: 26px;
+  text-align: center;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
