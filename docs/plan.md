@@ -30,6 +30,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [x] **Employee training fix** — replaced the dead-end `150·4^tier·level²` instant training with a timed program (120 s off the floor, +3 levels) costing `baseRate·45·(1+0.15·(lvl−1))`; payback guard test keeps it worthwhile
 - [x] **Wallpapers & decor** — 7 wallpapers + 3 map themes bought once with project money, applied per company / player default / map
 - [x] **QoL & sinks** — free x1/x2/x4 live speed toggle, marketing campaign (paid 2× boost, extendable), per-company renaming
+- [x] **Refonte graphique cartoon** (voir [design-system.md](design-system.md)) — thème « sunny valley » (Baloo 2 embarquée, boutons 3D, cartes crème contours ink) ; carte de ville illustrée cliquable + bottom sheet (`cityMap.ts`, 3 thèmes) ; bureau en coupe dollhouse avec 7 wallpapers-scènes (`officeScene.ts`) ; illustrations d'objets/upgrades/projets + postes spécifiques par workstation + props d'upgrades au rez-de-chaussée (`itemArt.ts`, `persona.ts`) ; set de 30 icônes UI (`icons.ts`), HUD/tab bar redessinés, nouveau favicon/PWA icons
 - [ ] **Monetization Phase 0** — analytics (PostHog/Plausible) + privacy policy → see [monetization.md](monetization.md)
 - [ ] **Shop/Boost tab** — UI for boost & time-skip offers over the existing engine hooks (mock "ad" in dev)
 - [ ] **Rewarded ads** — portal SDK (CrazyGames/Poki) or H5 Games Ads + consent banner

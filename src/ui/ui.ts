@@ -11,11 +11,10 @@ import {
   UPGRADES,
   WALLPAPERS,
   WORKSTATIONS,
-  mapThemeById,
   projectDefById,
+  siteById,
   stationDefById,
   tierById,
-  wallpaperById,
 } from '../game/data';
 import {
   activeBoost,
@@ -62,7 +61,11 @@ import { formatDuration, formatMoney, formatNumber, formatRate } from '../game/f
 import { exportSave, importSave, resetGame, saveGame } from '../game/save';
 import type { CompanyState, GameState, WorkerState } from '../game/types';
 import type { Fx } from './fx';
-import { personaAtDesk, personaAvatar, personaStanding } from './persona';
+import { cityMapSvg, type SiteView } from './cityMap';
+import { icon } from './icons';
+import { lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
+import { projectArt, stationArt, upgradeArt, upgradeProp } from './itemArt';
+import { emptyDeskSvg, personaAtDesk, personaAvatar, personaStanding } from './persona';
 
 const SPEECH_LINES = [
   'Shipping it! 🚀',
@@ -81,13 +84,13 @@ const SPEECH_LINES = [
 
 type Tab = 'map' | 'projects' | 'team' | 'office' | 'upgrades' | 'stats';
 
-const TABS: { id: Tab; label: string; emoji: string }[] = [
-  { id: 'map', label: 'Map', emoji: '🗺️' },
-  { id: 'projects', label: 'Projects', emoji: '📋' },
-  { id: 'team', label: 'Team', emoji: '👥' },
-  { id: 'office', label: 'Office', emoji: '🏢' },
-  { id: 'upgrades', label: 'Upgrades', emoji: '🧪' },
-  { id: 'stats', label: 'Stats', emoji: '📊' },
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'map', label: 'Map' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'team', label: 'Team' },
+  { id: 'office', label: 'Office' },
+  { id: 'upgrades', label: 'Upgrades' },
+  { id: 'stats', label: 'Stats' },
 ];
 
 export class UI {
@@ -97,6 +100,7 @@ export class UI {
   private tab: Tab = 'projects';
   private rebuildTimer = 0;
   private officeDirty = true;
+  private sheetSiteId: string | null = null;
   private onStateReplaced: (next: GameState) => void;
 
   constructor(
@@ -123,14 +127,17 @@ export class UI {
       <header class="hud">
         <div class="hud-row">
           <button class="company" data-action="rename-company" title="Rename company">
-            🏢 <span id="company-name"></span>
+            ${icon('office', 16)} <span id="company-name"></span>
           </button>
           <div class="hud-badges">
-            <span class="badge badge-boost" id="hud-boost" hidden title="Active boost"></span>
+            <span class="badge badge-boost" id="hud-boost" hidden title="Active boost">
+              ${icon('boost', 13)}<span id="hud-boost-text"></span>
+            </span>
             <span class="badge badge-income" id="hud-income" title="Estimated net income"></span>
           </div>
         </div>
         <div class="money-row">
+          <span class="money-coin">${icon('coin', 30)}</span>
           <div class="money" id="hud-money">$0</div>
           <div class="money-sub" id="hud-salary"></div>
         </div>
@@ -152,9 +159,9 @@ export class UI {
           <span class="progress-label" id="hero-label"></span>
         </div>
         <div class="hero-stats">
-          <span id="hero-rate"></span>
-          <span id="hero-eta"></span>
-          <span id="hero-completions"></span>
+          <span class="hstat">${icon('energy', 15)}<span id="hero-rate"></span></span>
+          <span class="hstat">${icon('clock', 15)}<span id="hero-eta"></span></span>
+          <span class="hstat">${icon('check', 15)}<span id="hero-completions"></span></span>
         </div>
       </section>
       <main id="tab-content"></main>
@@ -162,10 +169,11 @@ export class UI {
         ${TABS.map(
           (t) => `
           <button class="tab-btn" data-action="tab:${t.id}" id="tab-btn-${t.id}">
-            <span class="tab-emoji">${t.emoji}</span><span>${t.label}</span>
+            <span class="tab-icon">${icon(t.id, 24)}</span><span>${t.label}</span>
           </button>`,
         ).join('')}
       </nav>
+      <div id="sheet-zone"></div>
       <div id="toast-zone"></div>
       <div id="modal-zone"></div>
     `;
@@ -192,7 +200,7 @@ export class UI {
     if (boostEl) {
       boostEl.hidden = boost === null;
       if (boost) {
-        boostEl.textContent = `🚀 ×${boost.mult} ${formatDuration(boost.remainingSec)}`;
+        this.text('hud-boost-text', `×${boost.mult} ${formatDuration(boost.remainingSec)}`);
       }
     }
 
@@ -200,7 +208,11 @@ export class UI {
     const project = getProject(company, company.activeProjectId);
     const def = projectDefById(project.defId);
     const rate = totalWorkRate(s);
-    this.text('hero-emoji', def.emoji);
+    const heroArt = document.getElementById('hero-emoji');
+    if (heroArt && heroArt.dataset.art !== def.id) {
+      heroArt.dataset.art = def.id;
+      heroArt.innerHTML = projectArt(def.id, 42);
+    }
     this.text('hero-name', def.name);
     this.text('hero-spec', def.specialization);
     this.text('hero-reward', formatMoney(project.currentReward));
@@ -211,12 +223,12 @@ export class UI {
       'hero-label',
       `${formatNumber(project.progress)} / ${formatNumber(project.currentWork)}`,
     );
-    this.text('hero-rate', `⚡ ${formatRate(rate)}`);
+    this.text('hero-rate', formatRate(rate));
     this.text(
       'hero-eta',
-      rate > 0 ? `⏱️ ${formatDuration((project.currentWork - project.progress) / rate)}` : '⏱️ —',
+      rate > 0 ? formatDuration((project.currentWork - project.progress) / rate) : '—',
     );
-    this.text('hero-completions', `✅ ×${project.completions}`);
+    this.text('hero-completions', `×${project.completions}`);
 
     // Rebuild the active tab a couple of times per second to refresh costs,
     // affordability and progress details without redoing it every frame.
@@ -274,6 +286,7 @@ export class UI {
     switch (this.tab) {
       case 'map':
         content.innerHTML = this.renderMap();
+        this.refreshSheet();
         break;
       case 'projects':
         content.innerHTML = this.renderProjects();
@@ -304,50 +317,18 @@ export class UI {
     }
   }
 
-  /** The map: every site is either your company (manage/switch) or for sale. */
+  /** The map: an illustrated city where every site is a tappable building. */
   private renderMap(): string {
     const s = this.state;
-    const cards = COMPANY_SITES.map((site) => {
+    const sites: SiteView[] = COMPANY_SITES.map((site) => {
       const company = companyAtSite(s, site.id);
-      if (company) {
-        const active = company.id === s.activeCompanyId;
-        const income = companyIncome(s, company);
-        return `
-        <button class="card site-card owned ${active ? 'active-site' : ''}"
-                data-action="switch-company:${company.id}">
-          <div class="card-row">
-            <span class="card-emoji">${site.emoji}</span>
-            <div class="card-main">
-              <h3>${company.name}</h3>
-              <span class="muted">${site.name} · ×${site.outputBonus} output</span>
-              <span class="muted">👥 ${company.workers.length} ·
-                🧾 ${formatMoney(companySalaries(company))}/s ·
-                ⚡ ${formatRate(companyWorkRate(s, company))}</span>
-            </div>
-            <div class="card-right">
-              <strong class="${income < 0 ? 'negative' : ''}">${income >= 0 ? '▲' : '▼'} ${formatMoney(income)}/s</strong>
-              ${active ? '<span class="active-tag">MANAGING</span>' : '<span class="muted">tap to manage</span>'}
-            </div>
-          </div>
-        </button>`;
-      }
-      const affordable = s.money >= site.cost;
-      return `
-      <div class="card site-card locked">
-        <div class="card-row">
-          <span class="card-emoji">${site.emoji}</span>
-          <div class="card-main">
-            <h3>${site.name}</h3>
-            <span class="muted">${site.blurb}</span>
-            <span class="muted">×${site.outputBonus} output for every worker here</span>
-          </div>
-          <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
-                  data-action="found-company:${site.id}">
-            Found ${formatMoney(site.cost)}
-          </button>
-        </div>
-      </div>`;
-    }).join('');
+      if (!company) return { id: site.id, status: 'free' as const, label: site.name };
+      return {
+        id: site.id,
+        status: company.id === s.activeCompanyId ? ('active' as const) : ('owned' as const),
+        label: company.name,
+      };
+    });
     const themes = MAP_THEMES.map((def) => {
       const owned = s.ownedMapThemes.includes(def.id);
       const active = s.mapThemeId === def.id;
@@ -365,16 +346,91 @@ export class UI {
     }).join('');
 
     return `
-      <div class="stack map-screen" style="background:${mapThemeById(s.mapThemeId).css}">
+      <div class="stack map-screen">
         <div class="section-head"><h2>Silicon Valley</h2>
           <span class="muted">${s.companies.length}/${COMPANY_SITES.length} sites owned</span>
         </div>
-        ${cards}
+        ${cityMapSvg(s.mapThemeId, sites)}
         <div class="section-head"><h2>Map style</h2></div>
         <div class="settings-row">${themes}</div>
-        <p class="hint">💡 Every company works and earns at the same time — even while
-        you're away. New companies start empty: hire a team and buy desks to get them shipping.</p>
+        <p class="hint">💡 Tap a building to found or manage a company there. Every company
+        works and earns at the same time — even while you're away.</p>
       </div>`;
+  }
+
+  /** Bottom-sheet body for the currently selected map site. */
+  private renderSiteSheet(): string {
+    const s = this.state;
+    const site = siteById(this.sheetSiteId!);
+    const company = companyAtSite(s, site.id);
+    if (company) {
+      const active = company.id === s.activeCompanyId;
+      const income = companyIncome(s, company);
+      const seats = company.workstations.length;
+      return `
+        <div class="sheet-head">
+          <h2>${company.name}</h2>
+          ${active ? '<span class="active-tag">MANAGING</span>' : ''}
+        </div>
+        <p class="sheet-blurb">${site.name} — ${site.blurb}</p>
+        <div class="sheet-stats">
+          <div class="sheet-stat"><span>Income</span>
+            <strong class="${income < 0 ? 'negative' : ''}">${income >= 0 ? '▲' : '▼'} ${formatMoney(income)}/s</strong></div>
+          <div class="sheet-stat"><span>Site bonus</span><strong>×${site.outputBonus} output</strong></div>
+          <div class="sheet-stat"><span>Team</span><strong>${company.workers.length} people · ${seats} desks</strong></div>
+          <div class="sheet-stat"><span>Salaries</span><strong>${formatMoney(companySalaries(company))}/s</strong></div>
+          <div class="sheet-stat"><span>Output</span><strong>${formatRate(companyWorkRate(s, company))}</strong></div>
+          <div class="sheet-stat"><span>Floors</span><strong>${company.floors}/${MAX_FLOORS}</strong></div>
+        </div>
+        <div class="sheet-actions">
+          ${
+            active
+              ? `<button class="btn" data-action="rename-company">${icon('pencil', 15)} Rename</button>
+                 <button class="btn btn-primary" disabled>✓ Managing</button>`
+              : `<button class="btn btn-primary" data-action="switch-company:${company.id}">
+                   Manage this company</button>`
+          }
+        </div>`;
+    }
+    const affordable = s.money >= site.cost;
+    return `
+      <div class="sheet-head"><h2>${site.name}</h2></div>
+      <p class="sheet-blurb">${site.blurb}</p>
+      <div class="sheet-stats">
+        <div class="sheet-stat"><span>Price</span><strong>${formatMoney(site.cost)}</strong></div>
+        <div class="sheet-stat"><span>Site bonus</span><strong>×${site.outputBonus} output</strong></div>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
+                data-action="found-company:${site.id}">
+          🏗️ Found a company — ${formatMoney(site.cost)}
+        </button>
+      </div>`;
+  }
+
+  private openSheet(siteId: string): void {
+    this.sheetSiteId = siteId;
+    const zone = document.getElementById('sheet-zone');
+    if (!zone) return;
+    zone.innerHTML = `
+      <div class="sheet-backdrop" data-action="close-sheet"></div>
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div id="sheet-body">${this.renderSiteSheet()}</div>
+      </div>`;
+  }
+
+  /** Keep an open sheet's numbers fresh without restarting its animation. */
+  private refreshSheet(): void {
+    if (!this.sheetSiteId) return;
+    const body = document.getElementById('sheet-body');
+    if (body) body.innerHTML = this.renderSiteSheet();
+  }
+
+  private closeSheet(): void {
+    this.sheetSiteId = null;
+    const zone = document.getElementById('sheet-zone');
+    if (zone) zone.innerHTML = '';
   }
 
   private renderProjects(): string {
@@ -393,7 +449,7 @@ export class UI {
         <button class="card project-card ${active ? 'active-project' : ''}"
                 data-action="select-project:${def.id}">
           <div class="card-row">
-            <span class="card-emoji">${def.emoji}</span>
+            <span class="card-emoji">${projectArt(def.id, 38)}</span>
             <div class="card-main">
               <h3>${def.name}</h3>
               <span class="spec-badge spec-${def.specialization.replace(' ', '')}">${def.specialization}</span>
@@ -412,7 +468,7 @@ export class UI {
         return `
         <div class="card project-card locked">
           <div class="card-row">
-            <span class="card-emoji">🔒</span>
+            <span class="card-emoji locked-art">${projectArt(def.id, 38)}</span>
             <div class="card-main">
               <h3>${def.name}</h3>
               <span class="spec-badge">${def.specialization}</span>
@@ -463,7 +519,7 @@ export class UI {
           <h2>Candidates</h2>
           <button class="btn btn-ghost" data-action="reroll"
                   ${s.money >= c.candidateRerollCost ? '' : 'disabled'}>
-            🎲 New batch ${formatMoney(c.candidateRerollCost)}
+            ${icon('dice', 16)} New batch ${formatMoney(c.candidateRerollCost)}
           </button>
         </div>
         ${candidates}
@@ -507,7 +563,7 @@ export class UI {
       : `<button class="btn btn-small" ${s.money >= cost ? '' : 'disabled'}
                  data-action="train:${w.id}"
                  title="+${trainLevels(w)} levels, ${formatDuration(TRAIN_DURATION_SEC)} off the floor">
-           📚 Train ${formatMoney(cost)}
+           ${icon('train', 15)} Train ${formatMoney(cost)}
          </button>`;
     return `
       <div class="card worker-card ${station || training ? '' : 'benched'} ${training ? 'training' : ''}">
@@ -559,24 +615,17 @@ export class UI {
       const tier = tierById(worker.tierId);
       return `
         <button class="desk-tile occupied" data-action="poke:${worker.id}"
-                title="${worker.name} — ${tier.title}">
-          ${personaAtDesk(`w:${worker.id}:${worker.name}`, worker.specialization, worker.tierId)}
+                title="${worker.name} — ${tier.title} at a ${def.name}">
+          ${personaAtDesk(`w:${worker.id}:${worker.name}`, worker.specialization, worker.tierId, def.id)}
           <span class="desk-name">${worker.name.split(' ')[0]}</span>
-          <span class="desk-info">${def.emoji} ×${def.multiplier}</span>
+          <span class="desk-info">×${def.multiplier}</span>
         </button>`;
     }
     return `
         <div class="desk-tile empty" title="${def.name} — empty">
-          <svg class="persona-desk" viewBox="0 0 64 56" aria-hidden="true">
-            <rect x="8" y="30" width="12" height="4" rx="2" fill="#1f2937"/>
-            <rect x="12" y="33" width="4" height="12" fill="#1f2937"/>
-            <rect x="30" y="33" width="30" height="3" rx="1.5" fill="#475569"/>
-            <rect x="42" y="36" width="4" height="10" fill="#334155"/>
-            <rect x="34" y="24" width="16" height="10" rx="1.2" fill="#0f172a"
-                  stroke="#334155" stroke-width="0.8"/>
-          </svg>
+          ${emptyDeskSvg(def.id)}
           <span class="desk-name muted">empty</span>
-          <span class="desk-info">${def.emoji} ×${def.multiplier}</span>
+          <span class="desk-info">×${def.multiplier}</span>
         </div>`;
   }
 
@@ -589,14 +638,23 @@ export class UI {
     const stations: ({ id: number; defId: string } | null)[] = [...c.workstations].sort(
       (a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier,
     );
+    const wpId = effectiveWallpaper(s, c);
+    // Bought upgrades show up as real props on the ground floor ("perks floor").
+    const perks = UPGRADES.filter((u) => (c.upgrades[u.id] ?? 0) > 0)
+      .map((u) => upgradeProp(u.id))
+      .join('');
     const floorBlocks: string[] = [];
     for (let f = c.floors; f >= 1; f--) {
       const slots = stations.slice((f - 1) * FLOOR_CAPACITY, f * FLOOR_CAPACITY);
       while (slots.length < FLOOR_CAPACITY) slots.push(null);
       const tiles = slots.map((st) => this.renderDeskTile(c, st)).join('');
+      const wall = f === 1 && perks ? perks : wallDecor(wpId, f - 1);
       floorBlocks.push(`
         <div class="floor-block">
-          <div class="floor-label">${f === 1 ? 'Ground floor' : `Floor ${f}`}</div>
+          <div class="floor-wall">
+            <span class="floor-label">${f === 1 ? 'Ground floor' : `Floor ${f}`}</span>
+            ${wall}
+          </div>
           <div class="office-grid">${tiles}</div>
         </div>`);
     }
@@ -606,7 +664,7 @@ export class UI {
       ? `<span class="muted">🏁 Max height reached</span>`
       : `<button class="btn ${s.money >= nextCost ? 'btn-primary' : ''}"
                  ${s.money >= nextCost ? '' : 'disabled'} data-action="buy-floor">
-           ⬆️ Add floor ${formatMoney(nextCost)}
+           ${icon('floor-up', 16)} Add floor ${formatMoney(nextCost)}
          </button>`;
 
     const standing = c.workers
@@ -638,8 +696,11 @@ export class UI {
           ${c.floors}/${MAX_FLOORS} floors</span>
       </div>
       <div class="floor-actions">${floorBtn}</div>
-      <div class="building card"
-           style="background:${wallpaperById(effectiveWallpaper(s, c)).css}">${floorBlocks.join('')}</div>
+      <div class="building card" style="${officeWallVars(wpId)}">
+        <div class="roof-band">${roofDecor(wpId)}</div>
+        ${floorBlocks.join('')}
+        <div class="lobby-band">${lobbyDecor(wpId)}</div>
+      </div>
       ${
         standing
           ? `<div class="warning-banner">⚠️ Waiting for a desk (producing nothing):</div>
@@ -667,7 +728,7 @@ export class UI {
       return `
       <div class="card">
         <div class="card-row">
-          <span class="card-emoji">${def.emoji}</span>
+          <span class="card-emoji">${stationArt(def.id, 38)}</span>
           <div class="card-main">
             <h3>${def.name}</h3>
             <span class="muted">×${def.multiplier} output · owned ${owned}</span>
@@ -717,7 +778,7 @@ export class UI {
       return `
       <div class="card decor-card ${isApplied ? 'applied' : ''}">
         <div class="card-row">
-          <span class="decor-swatch" style="background:${def.css}">${def.emoji}</span>
+          <span class="decor-swatch" style="${officeWallVars(def.id)}">${def.emoji}</span>
           <div class="card-main">
             <h3>${def.name}</h3>
             <span class="muted">${owned ? 'Owned — free to apply anywhere' : 'Unlocks for every company'}</span>
@@ -747,7 +808,7 @@ export class UI {
     const marketing = `
       <div class="card">
         <div class="card-row">
-          <span class="card-emoji">📣</span>
+          <span class="card-emoji">${upgradeArt('marketing', 38)}</span>
           <div class="card-main">
             <h3>Marketing Campaign</h3>
             <span class="muted">×${MARKETING_MULT} output for
@@ -768,7 +829,7 @@ export class UI {
       return `
       <div class="card">
         <div class="card-row">
-          <span class="card-emoji">${def.emoji}</span>
+          <span class="card-emoji">${upgradeArt(def.id, 38)}</span>
           <div class="card-main">
             <h3>${def.name} <span class="lvl">Lv ${level}${maxed ? ' MAX' : ''}</span></h3>
             <span class="muted">${def.description}</span>
@@ -788,42 +849,47 @@ export class UI {
     const c = activeCompany(s);
     const employees = s.companies.reduce((sum, co) => sum + co.workers.length, 0);
     const desks = s.companies.reduce((sum, co) => sum + co.workstations.length, 0);
-    const rows: [string, string][] = [
-      ['💰 Total earned', formatMoney(s.totalEarned)],
-      ['✅ Projects completed', formatNumber(s.projectsCompleted)],
-      ['🏢 Companies', String(s.companies.length)],
-      ['👥 Employees', String(employees)],
-      ['🪑 Workstations', String(desks)],
-      ['⚡ Team output (here)', formatRate(totalWorkRate(s))],
-      ['🧾 Salaries (all)', `${formatMoney(totalSalaries(s))}/s`],
-      ['⏱️ Time played', formatDuration(s.playTimeSec)],
-      ['🚀 Founded', new Date(s.startedAt).toLocaleDateString()],
+    const rows: [string, string, string][] = [
+      [icon('coin', 16), 'Total earned', formatMoney(s.totalEarned)],
+      [icon('check', 16), 'Projects completed', formatNumber(s.projectsCompleted)],
+      [icon('office', 16), 'Companies', String(s.companies.length)],
+      [icon('team', 16), 'Employees', String(employees)],
+      [icon('star', 16), 'Workstations', String(desks)],
+      [icon('energy', 16), 'Team output (here)', formatRate(totalWorkRate(s))],
+      [icon('salary', 16), 'Salaries (all)', `${formatMoney(totalSalaries(s))}/s`],
+      [icon('clock', 16), 'Time played', formatDuration(s.playTimeSec)],
+      [icon('boost', 16), 'Founded', new Date(s.startedAt).toLocaleDateString()],
     ];
     return `
       <div class="stack">
         <div class="card">
-          <h2 class="card-title">📊 ${c.name}</h2>
+          <h2 class="card-title">${icon('stats', 18)} ${c.name}</h2>
           <table class="stats-table">
-            ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
+            ${rows
+              .map(
+                ([i, k, v]) =>
+                  `<tr><td><span class="stat-label">${i}${k}</span></td><td>${v}</td></tr>`,
+              )
+              .join('')}
           </table>
         </div>
         <div class="card">
-          <h2 class="card-title">⚙️ Settings</h2>
+          <h2 class="card-title">Settings</h2>
           <div class="settings-row">
             <button class="btn" data-action="toggle-sound">
-              ${s.settings.sound ? '🔊 Sound on' : '🔇 Sound off'}
+              ${s.settings.sound ? `${icon('sound-on', 16)} Sound on` : `${icon('sound-off', 16)} Sound off`}
             </button>
             <button class="btn" data-action="toggle-particles">
-              ${s.settings.particles ? '✨ Effects on' : '💤 Effects off'}
+              ${icon('sparkles', 16)} Effects ${s.settings.particles ? 'on' : 'off'}
             </button>
             <button class="btn" data-action="cycle-speed" title="Live simulation speed">
-              ⏩ Speed ×${s.settings.timeScale}
+              ${icon('speed', 16)} Speed ×${s.settings.timeScale}
             </button>
           </div>
           <div class="settings-row">
-            <button class="btn" data-action="export-save">📤 Export save</button>
-            <button class="btn" data-action="import-save">📥 Import save</button>
-            <button class="btn btn-danger" data-action="reset-game">🗑️ Reset game</button>
+            <button class="btn" data-action="export-save">${icon('save-export', 16)} Export save</button>
+            <button class="btn" data-action="import-save">${icon('save-import', 16)} Import save</button>
+            <button class="btn btn-danger" data-action="reset-game">${icon('trash', 16)} Reset game</button>
           </div>
           <p class="hint">Progress is saved automatically every 10 seconds and when you close the
           app. Your team keeps working while you're away (up to 24h).</p>
@@ -846,6 +912,16 @@ export class UI {
     switch (action) {
       case 'tab':
         this.tab = arg as Tab;
+        this.closeSheet();
+        break;
+      case 'site':
+        this.openSheet(arg);
+        this.fx.click();
+        structural = false;
+        break;
+      case 'close-sheet':
+        this.closeSheet();
+        structural = false;
         break;
       case 'select-project':
         error = setActiveProject(s, arg);
