@@ -11,8 +11,8 @@ import {
   UPGRADES,
   WALLPAPERS,
   WORKSTATIONS,
-  mapThemeById,
   projectDefById,
+  siteById,
   stationDefById,
   tierById,
   wallpaperById,
@@ -62,6 +62,7 @@ import { formatDuration, formatMoney, formatNumber, formatRate } from '../game/f
 import { exportSave, importSave, resetGame, saveGame } from '../game/save';
 import type { CompanyState, GameState, WorkerState } from '../game/types';
 import type { Fx } from './fx';
+import { cityMapSvg, type SiteView } from './cityMap';
 import { personaAtDesk, personaAvatar, personaStanding } from './persona';
 
 const SPEECH_LINES = [
@@ -97,6 +98,7 @@ export class UI {
   private tab: Tab = 'projects';
   private rebuildTimer = 0;
   private officeDirty = true;
+  private sheetSiteId: string | null = null;
   private onStateReplaced: (next: GameState) => void;
 
   constructor(
@@ -166,6 +168,7 @@ export class UI {
           </button>`,
         ).join('')}
       </nav>
+      <div id="sheet-zone"></div>
       <div id="toast-zone"></div>
       <div id="modal-zone"></div>
     `;
@@ -274,6 +277,7 @@ export class UI {
     switch (this.tab) {
       case 'map':
         content.innerHTML = this.renderMap();
+        this.refreshSheet();
         break;
       case 'projects':
         content.innerHTML = this.renderProjects();
@@ -304,50 +308,18 @@ export class UI {
     }
   }
 
-  /** The map: every site is either your company (manage/switch) or for sale. */
+  /** The map: an illustrated city where every site is a tappable building. */
   private renderMap(): string {
     const s = this.state;
-    const cards = COMPANY_SITES.map((site) => {
+    const sites: SiteView[] = COMPANY_SITES.map((site) => {
       const company = companyAtSite(s, site.id);
-      if (company) {
-        const active = company.id === s.activeCompanyId;
-        const income = companyIncome(s, company);
-        return `
-        <button class="card site-card owned ${active ? 'active-site' : ''}"
-                data-action="switch-company:${company.id}">
-          <div class="card-row">
-            <span class="card-emoji">${site.emoji}</span>
-            <div class="card-main">
-              <h3>${company.name}</h3>
-              <span class="muted">${site.name} · ×${site.outputBonus} output</span>
-              <span class="muted">👥 ${company.workers.length} ·
-                🧾 ${formatMoney(companySalaries(company))}/s ·
-                ⚡ ${formatRate(companyWorkRate(s, company))}</span>
-            </div>
-            <div class="card-right">
-              <strong class="${income < 0 ? 'negative' : ''}">${income >= 0 ? '▲' : '▼'} ${formatMoney(income)}/s</strong>
-              ${active ? '<span class="active-tag">MANAGING</span>' : '<span class="muted">tap to manage</span>'}
-            </div>
-          </div>
-        </button>`;
-      }
-      const affordable = s.money >= site.cost;
-      return `
-      <div class="card site-card locked">
-        <div class="card-row">
-          <span class="card-emoji">${site.emoji}</span>
-          <div class="card-main">
-            <h3>${site.name}</h3>
-            <span class="muted">${site.blurb}</span>
-            <span class="muted">×${site.outputBonus} output for every worker here</span>
-          </div>
-          <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
-                  data-action="found-company:${site.id}">
-            Found ${formatMoney(site.cost)}
-          </button>
-        </div>
-      </div>`;
-    }).join('');
+      if (!company) return { id: site.id, status: 'free' as const, label: site.name };
+      return {
+        id: site.id,
+        status: company.id === s.activeCompanyId ? ('active' as const) : ('owned' as const),
+        label: company.name,
+      };
+    });
     const themes = MAP_THEMES.map((def) => {
       const owned = s.ownedMapThemes.includes(def.id);
       const active = s.mapThemeId === def.id;
@@ -365,16 +337,91 @@ export class UI {
     }).join('');
 
     return `
-      <div class="stack map-screen" style="background:${mapThemeById(s.mapThemeId).css}">
+      <div class="stack map-screen">
         <div class="section-head"><h2>Silicon Valley</h2>
           <span class="muted">${s.companies.length}/${COMPANY_SITES.length} sites owned</span>
         </div>
-        ${cards}
+        ${cityMapSvg(s.mapThemeId, sites)}
         <div class="section-head"><h2>Map style</h2></div>
         <div class="settings-row">${themes}</div>
-        <p class="hint">💡 Every company works and earns at the same time — even while
-        you're away. New companies start empty: hire a team and buy desks to get them shipping.</p>
+        <p class="hint">💡 Tap a building to found or manage a company there. Every company
+        works and earns at the same time — even while you're away.</p>
       </div>`;
+  }
+
+  /** Bottom-sheet body for the currently selected map site. */
+  private renderSiteSheet(): string {
+    const s = this.state;
+    const site = siteById(this.sheetSiteId!);
+    const company = companyAtSite(s, site.id);
+    if (company) {
+      const active = company.id === s.activeCompanyId;
+      const income = companyIncome(s, company);
+      const seats = company.workstations.length;
+      return `
+        <div class="sheet-head">
+          <h2>${company.name}</h2>
+          ${active ? '<span class="active-tag">MANAGING</span>' : ''}
+        </div>
+        <p class="sheet-blurb">${site.name} — ${site.blurb}</p>
+        <div class="sheet-stats">
+          <div class="sheet-stat"><span>Income</span>
+            <strong class="${income < 0 ? 'negative' : ''}">${income >= 0 ? '▲' : '▼'} ${formatMoney(income)}/s</strong></div>
+          <div class="sheet-stat"><span>Site bonus</span><strong>×${site.outputBonus} output</strong></div>
+          <div class="sheet-stat"><span>Team</span><strong>${company.workers.length} people · ${seats} desks</strong></div>
+          <div class="sheet-stat"><span>Salaries</span><strong>${formatMoney(companySalaries(company))}/s</strong></div>
+          <div class="sheet-stat"><span>Output</span><strong>${formatRate(companyWorkRate(s, company))}</strong></div>
+          <div class="sheet-stat"><span>Floors</span><strong>${company.floors}/${MAX_FLOORS}</strong></div>
+        </div>
+        <div class="sheet-actions">
+          ${
+            active
+              ? `<button class="btn" data-action="rename-company">✏️ Rename</button>
+                 <button class="btn btn-primary" disabled>✓ Managing</button>`
+              : `<button class="btn btn-primary" data-action="switch-company:${company.id}">
+                   Manage this company</button>`
+          }
+        </div>`;
+    }
+    const affordable = s.money >= site.cost;
+    return `
+      <div class="sheet-head"><h2>${site.name}</h2></div>
+      <p class="sheet-blurb">${site.blurb}</p>
+      <div class="sheet-stats">
+        <div class="sheet-stat"><span>Price</span><strong>${formatMoney(site.cost)}</strong></div>
+        <div class="sheet-stat"><span>Site bonus</span><strong>×${site.outputBonus} output</strong></div>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
+                data-action="found-company:${site.id}">
+          🏗️ Found a company — ${formatMoney(site.cost)}
+        </button>
+      </div>`;
+  }
+
+  private openSheet(siteId: string): void {
+    this.sheetSiteId = siteId;
+    const zone = document.getElementById('sheet-zone');
+    if (!zone) return;
+    zone.innerHTML = `
+      <div class="sheet-backdrop" data-action="close-sheet"></div>
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div id="sheet-body">${this.renderSiteSheet()}</div>
+      </div>`;
+  }
+
+  /** Keep an open sheet's numbers fresh without restarting its animation. */
+  private refreshSheet(): void {
+    if (!this.sheetSiteId) return;
+    const body = document.getElementById('sheet-body');
+    if (body) body.innerHTML = this.renderSiteSheet();
+  }
+
+  private closeSheet(): void {
+    this.sheetSiteId = null;
+    const zone = document.getElementById('sheet-zone');
+    if (zone) zone.innerHTML = '';
   }
 
   private renderProjects(): string {
@@ -846,6 +893,16 @@ export class UI {
     switch (action) {
       case 'tab':
         this.tab = arg as Tab;
+        this.closeSheet();
+        break;
+      case 'site':
+        this.openSheet(arg);
+        this.fx.click();
+        structural = false;
+        break;
+      case 'close-sheet':
+        this.closeSheet();
+        structural = false;
         break;
       case 'select-project':
         error = setActiveProject(s, arg);

@@ -1,21 +1,37 @@
 /* ---------------------------------------------------------------------------
-   Idle Silicon Valley — dark startup-dashboard theme
+   Idle Silicon Valley — bright cartoon theme ("sunny valley")
+   Design system: docs/design-system.md
    ------------------------------------------------------------------------- */
 
+@font-face {
+  font-family: 'Baloo 2';
+  src: url('./assets/fonts/baloo2-latin.woff2') format('woff2');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --bg-0: #0b0f1a;
-  --bg-1: #111827;
-  --card: rgba(255, 255, 255, 0.055);
-  --card-border: rgba(255, 255, 255, 0.09);
-  --text: #e5e9f0;
-  --muted: #8b93a7;
-  --accent-a: #6366f1;
-  --accent-b: #22d3ee;
-  --green: #34d399;
-  --red: #f87171;
-  --amber: #fbbf24;
+  --sky-hi: #6ec6f5;
+  --sky-lo: #cdefff;
+  --surface: #fff8ec;
+  --surface-2: #f6ecd9;
+  --ink: #2d2440;
+  --ink-90: rgba(45, 36, 64, 0.9);
+  --ink-soft: rgba(45, 36, 64, 0.55);
+  --ink-faint: rgba(45, 36, 64, 0.18);
+  --primary: #ff8a2a;
+  --primary-deep: #e06a00;
+  --blue: #38b6ff;
+  --blue-deep: #0e87cf;
+  --green: #2fbf6b;
+  --green-deep: #1f9d55;
+  --red: #ff5d55;
+  --red-deep: #c2362f;
+  --gold: #ffc93c;
   --radius: 16px;
-  --tabbar-h: 62px;
+  --shadow-card: 0 4px 0 var(--ink-faint);
+  --tabbar-h: 66px;
 }
 
 * {
@@ -31,19 +47,12 @@ body {
 }
 
 body {
-  font-family:
-    Inter,
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  font-family: 'Baloo 2', 'Comic Sans MS', system-ui, sans-serif;
   background:
-    radial-gradient(1200px 600px at 85% -10%, rgba(99, 102, 241, 0.28), transparent 60%),
-    radial-gradient(900px 500px at -10% 30%, rgba(34, 211, 238, 0.14), transparent 55%),
-    linear-gradient(180deg, var(--bg-0), var(--bg-1));
+    radial-gradient(520px 320px at 82% -60px, rgba(255, 244, 179, 0.75), transparent 70%),
+    linear-gradient(180deg, var(--sky-hi) 0%, #9adbf8 45%, var(--sky-lo) 100%);
   background-attachment: fixed;
-  color: var(--text);
+  color: var(--ink);
   overscroll-behavior: none;
   user-select: none;
 }
@@ -86,48 +95,51 @@ body {
 .company {
   background: none;
   border: none;
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-weight: 600;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
   cursor: pointer;
   padding: 4px 0;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .company:active {
-  color: var(--text);
+  opacity: 0.7;
 }
 
 .badge {
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 800;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(52, 211, 153, 0.12);
-  color: var(--green);
-  border: 1px solid rgba(52, 211, 153, 0.25);
+  background: #dff7e8;
+  color: var(--green-deep);
+  border: 2px solid var(--ink);
+  box-shadow: 0 2px 0 var(--ink-faint);
 }
 
 .badge-boost {
-  background: rgba(167, 139, 250, 0.14);
-  color: #c4b5fd;
-  border: 1px solid rgba(167, 139, 250, 0.35);
+  background: #efe4ff;
+  color: #7c3aed;
   animation: boost-pulse 1.6s ease-in-out infinite;
 }
 
 @keyframes boost-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 rgba(167, 139, 250, 0);
+    box-shadow: 0 2px 0 var(--ink-faint);
   }
   50% {
-    box-shadow: 0 0 12px rgba(167, 139, 250, 0.5);
+    box-shadow:
+      0 2px 0 var(--ink-faint),
+      0 0 14px rgba(167, 139, 250, 0.8);
   }
 }
 
 .badge.negative {
-  background: rgba(248, 113, 113, 0.12);
-  color: var(--red);
-  border-color: rgba(248, 113, 113, 0.25);
+  background: #ffe3e1;
+  color: var(--red-deep);
 }
 
 .money-row {
@@ -139,35 +151,34 @@ body {
 .money {
   font-size: 2.4rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
-  background: linear-gradient(90deg, #fff, #a5b4fc);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.55),
+    0 4px 10px rgba(45, 36, 64, 0.15);
   font-variant-numeric: tabular-nums;
 }
 
 .money-sub {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 0.8rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 /* --- Cards --------------------------------------------------------------- */
 
 .card {
-  background: var(--card);
-  border: 1px solid var(--card-border);
+  background: var(--surface);
+  border: 2px solid var(--ink-90);
   border-radius: var(--radius);
   padding: 14px;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-card);
 }
 
 .card h3 {
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 0.98rem;
+  font-weight: 800;
 }
 
 .card-title {
@@ -183,11 +194,12 @@ body {
 
 .card-emoji {
   font-size: 1.7rem;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-2);
+  border: 2px solid var(--ink-faint);
   border-radius: 12px;
   flex-shrink: 0;
 }
@@ -210,8 +222,9 @@ body {
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 0.78rem;
+  font-weight: 600;
 }
 
 .stack {
@@ -228,7 +241,9 @@ body {
 }
 
 .section-head h2 {
-  font-size: 1rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 /* --- Hero (active project) ----------------------------------------------- */
@@ -236,8 +251,7 @@ body {
 .hero {
   position: relative;
   overflow: hidden;
-  border-color: rgba(99, 102, 241, 0.35);
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(34, 211, 238, 0.07));
+  background: linear-gradient(160deg, #fffdf5 0%, #e8f6ff 100%);
 }
 
 .hero-head {
@@ -262,6 +276,7 @@ body {
 .hero-title h2 {
   font-size: 1.15rem;
   letter-spacing: -0.01em;
+  font-weight: 800;
 }
 
 .hero-reward {
@@ -271,7 +286,7 @@ body {
 }
 
 .hero-reward strong {
-  color: var(--green);
+  color: var(--green-deep);
   font-size: 1.1rem;
   font-variant-numeric: tabular-nums;
 }
@@ -280,8 +295,9 @@ body {
   display: flex;
   justify-content: space-between;
   margin-top: 10px;
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 0.82rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -289,18 +305,19 @@ body {
 
 .progress {
   position: relative;
-  height: 26px;
-  background: rgba(0, 0, 0, 0.35);
+  height: 28px;
+  background: rgba(45, 36, 64, 0.12);
   border-radius: 999px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 2px solid var(--ink-90);
+  box-shadow: inset 0 2px 3px rgba(45, 36, 64, 0.2);
 }
 
 .progress-fill {
   height: 100%;
   width: 0%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent-a), var(--accent-b));
+  background: linear-gradient(180deg, #ffb84d 0%, var(--primary) 55%, #f57200 100%);
   position: relative;
   transition: width 0.12s linear;
 }
@@ -312,7 +329,7 @@ body {
   background: linear-gradient(
     110deg,
     transparent 20%,
-    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.45) 50%,
     transparent 80%
   );
   animation: shimmer 1.8s infinite;
@@ -333,15 +350,19 @@ body {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--ink);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8),
+    0 0 6px rgba(255, 255, 255, 0.6);
   font-variant-numeric: tabular-nums;
 }
 
 .progress.mini {
-  height: 8px;
+  height: 10px;
   margin-top: 10px;
+  border-width: 1.5px;
 }
 
 .progress.mini .progress-fill::after {
@@ -349,56 +370,71 @@ body {
 }
 
 .progress.exp .progress-fill {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  background: linear-gradient(180deg, #ffe08a, var(--gold) 60%, #f2ab00);
 }
 
 /* --- Buttons ------------------------------------------------------------- */
 
 .btn {
-  border: 1px solid var(--card-border);
-  background: rgba(255, 255, 255, 0.07);
-  color: var(--text);
-  font-weight: 700;
-  font-size: 0.82rem;
+  border: 2px solid var(--ink-90);
+  background: linear-gradient(180deg, #fffdf5, #f7ecd6);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 0.84rem;
   padding: 9px 14px;
   border-radius: 12px;
   cursor: pointer;
+  box-shadow: 0 3px 0 rgba(45, 36, 64, 0.55);
   transition:
     transform 0.06s,
-    background 0.15s,
+    box-shadow 0.06s,
     opacity 0.15s;
   white-space: nowrap;
   font-family: inherit;
 }
 
 .btn:active:not([disabled]) {
-  transform: scale(0.96);
+  transform: translateY(3px);
+  box-shadow: 0 0 0 rgba(45, 36, 64, 0.55);
 }
 
 .btn[disabled] {
-  opacity: 0.38;
+  opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: 0 2px 0 var(--ink-faint);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent-a), #4f46e5);
-  border-color: rgba(129, 140, 248, 0.5);
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+  background: linear-gradient(180deg, #ffb35c 0%, var(--primary) 60%, #f57200 100%);
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(45, 36, 64, 0.35);
+  box-shadow: 0 3px 0 var(--primary-deep);
+}
+
+.btn-primary:active:not([disabled]) {
+  box-shadow: 0 0 0 var(--primary-deep);
 }
 
 .btn-danger {
-  color: var(--red);
-  border-color: rgba(248, 113, 113, 0.3);
-  background: rgba(248, 113, 113, 0.08);
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(45, 36, 64, 0.35);
+  background: linear-gradient(180deg, #ff7a70, var(--red) 60%, #e2453c);
+  box-shadow: 0 3px 0 var(--red-deep);
+}
+
+.btn-danger:active:not([disabled]) {
+  box-shadow: 0 0 0 var(--red-deep);
 }
 
 .btn-ghost {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.55);
+  border-color: var(--ink-soft);
+  box-shadow: 0 2px 0 var(--ink-faint);
 }
 
 .btn-small {
   padding: 7px 11px;
-  font-size: 0.75rem;
+  font-size: 0.76rem;
 }
 
 .card-actions {
@@ -420,22 +456,42 @@ button.project-card {
 }
 
 .project-card.active-project {
-  border-color: rgba(34, 211, 238, 0.5);
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.12), rgba(99, 102, 241, 0.08));
+  border-color: var(--blue-deep);
+  background: linear-gradient(160deg, #eaf7ff, #d8f0ff);
+  box-shadow: 0 4px 0 rgba(14, 135, 207, 0.4);
 }
 
 .active-tag {
   position: absolute;
   top: 10px;
   right: 12px;
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.1em;
-  color: var(--accent-b);
+  color: #fff;
+  background: var(--blue);
+  border: 1.5px solid var(--ink-90);
+  border-radius: 999px;
+  padding: 2px 8px;
 }
 
 .project-card.locked {
-  opacity: 0.75;
+  opacity: 0.8;
+  background: var(--surface-2);
+}
+
+/* On project cards the tag sits as a ribbon on the top edge so it never
+   covers the reward column; in the sheet header it flows inline. */
+.project-card .active-tag {
+  top: -11px;
+  right: auto;
+  left: 14px;
+}
+
+.sheet-head .active-tag {
+  position: static;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* --- Map / company sites -------------------------------------------------- */
@@ -450,16 +506,238 @@ button.site-card {
 }
 
 .site-card.active-site {
-  border-color: rgba(34, 211, 238, 0.5);
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.12), rgba(99, 102, 241, 0.08));
+  border-color: var(--blue-deep);
+  background: linear-gradient(160deg, #eaf7ff, #d8f0ff);
 }
 
 .site-card.locked {
+  opacity: 0.85;
+}
+
+.negative {
+  color: var(--red-deep);
+}
+
+/* --- The illustrated city map --------------------------------------------- */
+
+.map-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.city-map {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 2px solid var(--ink-90);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  background: var(--surface-2);
+}
+
+.city-map text {
+  user-select: none;
+}
+
+.map-site {
+  cursor: pointer;
+}
+
+.map-site:active {
   opacity: 0.8;
 }
 
-.site-card .negative {
-  color: var(--red);
+@media (hover: hover) {
+  .map-site:hover {
+    filter: brightness(1.07);
+  }
+}
+
+.map-cloud {
+  animation: cloud-drift 11s ease-in-out infinite alternate;
+}
+
+.map-cloud-2 {
+  animation-duration: 16s;
+  animation-delay: -4s;
+}
+
+.map-cloud-3 {
+  animation-duration: 21s;
+  animation-delay: -9s;
+}
+
+@keyframes cloud-drift {
+  from {
+    transform: translateX(-12px);
+  }
+  to {
+    transform: translateX(16px);
+  }
+}
+
+.map-car-a {
+  animation: car-cross-a 15s linear infinite;
+}
+
+.map-car-b {
+  animation: car-cross-b 19s linear infinite;
+}
+
+@keyframes car-cross-a {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(450px);
+  }
+}
+
+@keyframes car-cross-b {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-450px);
+  }
+}
+
+.map-active-flag {
+  animation: flag-bob 1.6s ease-in-out infinite;
+}
+
+@keyframes flag-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-cloud,
+  .map-car-a,
+  .map-car-b,
+  .map-active-flag {
+    animation: none;
+  }
+}
+
+/* --- Bottom sheet ---------------------------------------------------------- */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(45, 36, 64, 0.45);
+  z-index: 88;
+  animation: fade-in 0.18s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sheet {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 100%;
+  max-width: 680px;
+  background: var(--surface);
+  border: 2px solid var(--ink-90);
+  border-bottom: none;
+  border-radius: 22px 22px 0 0;
+  z-index: 89;
+  padding: 8px 16px calc(16px + env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 30px rgba(45, 36, 64, 0.35);
+  animation: sheet-up 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateX(-50%) translateY(100%);
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.sheet-handle {
+  width: 44px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(45, 36, 64, 0.25);
+  margin: 2px auto 10px;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.sheet-head h2 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-blurb {
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  line-height: 1.45;
+}
+
+.sheet-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  background: var(--surface-2);
+  border: 2px solid var(--ink-faint);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.sheet-stat span {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sheet-actions .btn {
+  flex: 1;
+  padding: 12px 14px;
+  font-size: 0.95rem;
 }
 
 /* --- Badges & misc ------------------------------------------------------- */
@@ -470,45 +748,42 @@ button.site-card {
   letter-spacing: 0.04em;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(167, 139, 250, 0.15);
-  color: #c4b5fd;
-  border: 1px solid rgba(167, 139, 250, 0.3);
+  background: #efe4ff;
+  color: #6d28d9;
+  border: 1.5px solid var(--ink-90);
   text-transform: uppercase;
 }
 
 .spec-Frontend {
-  background: rgba(244, 114, 182, 0.14);
-  color: #f9a8d4;
-  border-color: rgba(244, 114, 182, 0.3);
+  background: #ffdeeb;
+  color: #d6336c;
 }
 
 .spec-Backend {
-  background: rgba(96, 165, 250, 0.14);
-  color: #93c5fd;
-  border-color: rgba(96, 165, 250, 0.3);
+  background: #dbeaff;
+  color: #1d5fd6;
 }
 
 .spec-DevOps {
-  background: rgba(52, 211, 153, 0.14);
-  color: #6ee7b7;
-  border-color: rgba(52, 211, 153, 0.3);
+  background: #d9f7e8;
+  color: #148a54;
 }
 
 .spec-DataScience {
-  background: rgba(251, 191, 36, 0.14);
-  color: #fcd34d;
-  border-color: rgba(251, 191, 36, 0.3);
+  background: #fff0d2;
+  color: #c07c00;
 }
 
 .lvl {
   font-size: 0.68rem;
-  color: var(--amber);
+  color: #c07c00;
   font-weight: 800;
   margin-left: 4px;
 }
 
 .worker-card.benched {
-  border-color: rgba(251, 191, 36, 0.4);
+  border-color: #c07c00;
+  background: #fff6e3;
 }
 
 .candidate-card {
@@ -518,19 +793,21 @@ button.site-card {
 }
 
 .warning-banner {
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.35);
-  color: var(--amber);
+  background: #fff0d2;
+  border: 2px solid var(--ink-90);
+  color: #9a6400;
   padding: 10px 14px;
   border-radius: 12px;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
+  box-shadow: var(--shadow-card);
 }
 
 .empty-hint,
 .hint {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 0.83rem;
+  font-weight: 600;
   text-align: center;
   padding: 14px;
   line-height: 1.5;
@@ -544,12 +821,12 @@ button.site-card {
 
 .stats-table td {
   padding: 7px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1.5px dashed var(--ink-faint);
 }
 
 .stats-table td:last-child {
   text-align: right;
-  font-weight: 700;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
@@ -570,22 +847,24 @@ button.site-card {
   width: 100%;
   max-width: 680px;
   height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
+  padding: 4px 6px env(safe-area-inset-bottom);
   display: flex;
-  background: rgba(13, 17, 28, 0.85);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-top: 1px solid var(--card-border);
+  gap: 2px;
+  background: var(--surface);
+  border-top: 2px solid var(--ink-90);
+  box-shadow: 0 -4px 18px rgba(45, 36, 64, 0.18);
   z-index: 40;
 }
 
 .tab-btn {
   flex: 1;
   background: none;
-  border: none;
-  color: var(--muted);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  margin: 6px 0;
+  color: var(--ink-soft);
   font-size: 0.62rem;
-  font-weight: 700;
+  font-weight: 800;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -593,7 +872,9 @@ button.site-card {
   gap: 3px;
   cursor: pointer;
   font-family: inherit;
-  transition: color 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .tab-emoji {
@@ -602,7 +883,10 @@ button.site-card {
 }
 
 .tab-btn.active {
-  color: var(--accent-b);
+  color: var(--ink);
+  background: #d8f0ff;
+  border-color: var(--ink-90);
+  box-shadow: 0 2px 0 var(--ink-faint);
 }
 
 .tab-btn.active .tab-emoji {
@@ -625,25 +909,24 @@ button.site-card {
 }
 
 .toast {
-  background: rgba(20, 25, 40, 0.95);
-  border: 1px solid var(--card-border);
+  background: var(--ink);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  color: var(--surface);
   padding: 9px 18px;
   border-radius: 999px;
   font-size: 0.85rem;
-  font-weight: 700;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(45, 36, 64, 0.35);
   animation: toast-in 0.2s ease-out;
   transition: opacity 0.4s;
 }
 
 .toast-error {
-  border-color: rgba(248, 113, 113, 0.4);
-  color: var(--red);
+  color: #ffb3ae;
 }
 
 .toast-info {
-  border-color: rgba(52, 211, 153, 0.4);
-  color: var(--green);
+  color: #8ef0b8;
 }
 
 .toast.gone {
@@ -664,13 +947,12 @@ button.site-card {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(45, 36, 64, 0.5);
   z-index: 90;
   display: grid;
   place-items: center;
   padding: 24px;
-  animation: toast-in 0.25s ease-out;
+  animation: fade-in 0.2s ease-out;
 }
 
 .modal {
@@ -686,7 +968,7 @@ button.site-card {
 .modal-earnings {
   font-size: 2rem;
   font-weight: 800;
-  color: var(--green);
+  color: var(--green-deep);
   font-variant-numeric: tabular-nums;
 }
 
@@ -694,6 +976,7 @@ button.site-card {
 
 .persona-slot {
   background: none;
+  border: none;
   padding: 0;
 }
 
@@ -710,28 +993,29 @@ button.site-card {
   background:
     repeating-linear-gradient(
       0deg,
-      rgba(255, 255, 255, 0.025) 0 1px,
+      rgba(255, 255, 255, 0.035) 0 1px,
       transparent 1px 28px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.025) 0 1px,
+      rgba(255, 255, 255, 0.035) 0 1px,
       transparent 1px 28px
     ),
-    var(--card);
+    rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
 }
 
 .desk-tile {
   position: relative;
-  border: 1px solid var(--card-border);
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.07);
   padding: 8px 6px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  color: inherit;
+  color: #eef2f7;
   font-family: inherit;
   cursor: pointer;
   transition: transform 0.08s;
@@ -747,7 +1031,7 @@ button.site-card {
 }
 
 .desk-tile.free {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: default;
   border-style: dashed;
   justify-content: center;
@@ -756,7 +1040,7 @@ button.site-card {
 
 .free-slot {
   font-size: 1.6rem;
-  color: var(--muted);
+  color: #cbd5e1;
   line-height: 1;
 }
 
@@ -770,7 +1054,7 @@ button.site-card {
 }
 
 .floor-block + .floor-block {
-  border-top: 2px solid rgba(255, 255, 255, 0.08);
+  border-top: 2px solid rgba(255, 255, 255, 0.12);
   margin-top: 6px;
   padding-top: 6px;
 }
@@ -780,7 +1064,7 @@ button.site-card {
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.55);
   padding: 2px 4px;
 }
 
@@ -792,11 +1076,11 @@ button.site-card {
 /* --- Training ------------------------------------------------------------- */
 
 .progress.training .progress-fill {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  background: linear-gradient(180deg, #ffe08a, var(--gold) 60%, #f2ab00);
 }
 
 .worker-card.training {
-  border-color: rgba(251, 191, 36, 0.35);
+  border-color: #c07c00;
 }
 
 .stand-slot.training {
@@ -806,10 +1090,10 @@ button.site-card {
 /* --- Decor shop & map themes ---------------------------------------------- */
 
 .decor-swatch {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 10px;
-  border: 1px solid var(--card-border);
+  border: 2px solid var(--ink-90);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -818,19 +1102,13 @@ button.site-card {
 }
 
 .decor-card.applied {
-  border-color: rgba(34, 211, 238, 0.5);
+  border-color: var(--blue-deep);
 }
 
 .decor-card .card-actions {
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
-}
-
-.map-screen {
-  border-radius: 16px;
-  padding: 12px;
-  margin: -12px;
 }
 
 .persona-desk {
@@ -849,7 +1127,7 @@ button.site-card {
 
 .desk-info {
   font-size: 0.6rem;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* typing animations */
@@ -948,14 +1226,15 @@ button.site-card {
   left: 50%;
   transform: translateX(-50%);
   background: #fff;
-  color: #0b0f1a;
+  color: var(--ink);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 800;
   padding: 5px 9px;
   border-radius: 10px;
+  border: 1.5px solid var(--ink-90);
   white-space: nowrap;
   z-index: 10;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 14px rgba(45, 36, 64, 0.35);
   animation: bubble-in 0.18s ease-out;
   pointer-events: none;
 }
@@ -991,7 +1270,7 @@ button.site-card {
   background: none;
   border: none;
   cursor: pointer;
-  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.8));
+  filter: drop-shadow(0 0 12px rgba(255, 201, 60, 0.9));
   animation: briefcase-float 1.4s ease-in-out infinite;
   padding: 8px;
 }

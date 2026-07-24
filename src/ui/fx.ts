@@ -114,9 +114,12 @@ export class Fx {
       if (t.life >= 1.2) return false;
       const alpha = 1 - t.life / 1.2;
       ctx.globalAlpha = alpha;
-      ctx.font = '700 16px Inter, system-ui, sans-serif';
-      ctx.fillStyle = '#34d399';
+      ctx.font = `800 16px 'Baloo 2', system-ui, sans-serif`;
+      ctx.fillStyle = '#1f9d55';
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 3;
       ctx.textAlign = 'center';
+      ctx.strokeText(t.text, t.x, t.y - t.life * 50);
       ctx.fillText(t.text, t.x, t.y - t.life * 50);
       return true;
     });

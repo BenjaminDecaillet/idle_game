@@ -16,8 +16,8 @@ export default defineConfig({
         short_name: 'IdleSV',
         description:
           'Build the greatest tech company: hire workers, ship projects, earn billions — even while you are away.',
-        theme_color: '#0b0f1a',
-        background_color: '#0b0f1a',
+        theme_color: '#6ec6f5',
+        background_color: '#cdefff',
         display: 'standalone',
         orientation: 'portrait-primary',
         start_url: '.',
