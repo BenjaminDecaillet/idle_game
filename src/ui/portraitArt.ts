@@ -158,47 +158,56 @@ function strand(d: string, col: string, w: number, o: number): string {
  * Eyes
  * ---------------------------------------------------------------------- */
 
-/** One open eye. mode: 0 neutral, 1 friendly (squinted warm), 2 wide alert. */
+/** One open eye. mode: 0 neutral, 1 friendly (squinted warm), 2 wide alert.
+ * Painted-realism recipe: big almond, radial-gradient iris with a dark
+ * limbal ring + lower transmitted-light crescent, pupil, two catchlights,
+ * the upper lid casting a soft shadow band onto the eyeball, and a filled
+ * tapered lash crescent instead of a plain stroke. */
 function openEye(uid: string, p: Pal, cx: number, side: -1 | 1, mode: number): string {
-  const cy = 26.3;
-  const hw = mode === 2 ? 2.6 : 2.35;
-  const up = mode === 2 ? 2.45 : 1.95;
-  const dn = mode === 1 ? 1.1 : 1.55;
-  const irisR = mode === 2 ? 1.32 : 1.52;
-  const icx = N(cx + side * 0.12);
-  const icy = mode === 2 ? N(cy - 0.42) : N(cy - 0.12);
+  const cy = 26.6;
+  const hw = mode === 2 ? 3.2 : 2.95;
+  const up = mode === 2 ? 2.95 : 2.45;
+  const dn = mode === 1 ? 1.35 : 1.9;
+  const irisR = mode === 2 ? 1.8 : 1.95;
+  const icx = N(cx + side * 0.15);
+  const icy = mode === 2 ? N(cy - 0.5) : N(cy - 0.15);
+  const limbal = mix(p.irisDark, '#05040a', 0.5);
   const id = `${uid}-e${side < 0 ? 'l' : 'r'}`;
   const shape = `M${N(cx - hw)} ${cy} Q${cx} ${N(cy - up)} ${N(cx + hw)} ${cy} Q${cx} ${N(cy + dn)} ${N(cx - hw)} ${cy} Z`;
   // Friendly eyes get the lower lid pushed up over the iris (warm squint).
   const squint =
     mode === 1
-      ? `<path d="M${N(cx - hw)} ${N(cy + 0.1)} Q${cx} ${N(cy + 1.8)} ${N(cx + hw)} ${N(cy + 0.1)} L${N(cx + hw)} ${N(cy + 2.2)} L${N(cx - hw)} ${N(cy + 2.2)} Z" fill="${p.skin}" opacity="0.92"/>`
+      ? `<path d="M${N(cx - hw)} ${N(cy + 0.1)} Q${cx} ${N(cy + 2.2)} ${N(cx + hw)} ${N(cy + 0.1)} L${N(cx + hw)} ${N(cy + 2.6)} L${N(cx - hw)} ${N(cy + 2.6)} Z" fill="${p.skin}" opacity="0.92"/>`
       : '';
   return `<clipPath id="${id}"><path d="${shape}"/></clipPath>
     <path d="${shape}" fill="#f4eee6"/>
     <g clip-path="url(#${id})">
-      <path d="M${N(cx - hw)} ${N(cy - 0.3)} Q${cx} ${N(cy - up - 0.5)} ${N(cx + hw)} ${N(cy - 0.3)} L${N(cx + hw)} ${N(cy - up - 1)} L${N(cx - hw)} ${N(cy - up - 1)} Z" fill="${p.skinShadow}" opacity="0.25"/>
+      <ellipse cx="${N(cx + side * hw * 0.55)}" cy="${N(cy + 0.4)}" rx="1.1" ry="0.9" fill="${p.blush}" opacity="0.16"/>
       <circle cx="${icx}" cy="${icy}" r="${irisR}" fill="url(#${uid}-irisg)"/>
-      <circle cx="${icx}" cy="${icy}" r="${irisR}" fill="none" stroke="${p.irisDark}" stroke-width="0.22" opacity="0.8"/>
-      <circle cx="${icx}" cy="${icy}" r="0.66" fill="#191019"/>
-      <circle cx="${N(icx - 0.5)}" cy="${N(icy - 0.5)}" r="0.36" fill="#ffffff" opacity="0.95"/>
-      <circle cx="${N(icx + 0.44)}" cy="${N(icy + 0.4)}" r="0.17" fill="#ffffff" opacity="0.55"/>
+      <circle cx="${icx}" cy="${icy}" r="${N(irisR - 0.18)}" fill="none" stroke="${limbal}" stroke-width="0.42" opacity="0.9"/>
+      <ellipse cx="${icx}" cy="${N(icy + irisR * 0.62)}" rx="${N(irisR * 0.62)}" ry="${N(irisR * 0.3)}" fill="${p.irisLight}" opacity="0.4"/>
+      <circle cx="${icx}" cy="${icy}" r="0.85" fill="#140d14"/>
+      <path d="M${N(cx - hw)} ${N(cy - 0.05)} Q${cx} ${N(cy - up - 0.05)} ${N(cx + hw)} ${N(cy - 0.05)} Q${cx} ${N(cy - up + 1)} ${N(cx - hw)} ${N(cy - 0.05)} Z" fill="#31202c" opacity="0.32"/>
+      <circle cx="${N(icx - 0.68)}" cy="${N(icy - 0.72)}" r="0.46" fill="#ffffff" opacity="0.95"/>
+      <circle cx="${N(icx + 0.6)}" cy="${N(icy + 0.55)}" r="0.22" fill="#ffffff" opacity="0.6"/>
       ${squint}
+      <circle cx="${N(cx - side * hw)}" cy="${N(cy - 0.1)}" r="0.36" fill="${p.blush}" opacity="0.5"/>
     </g>
-    <path d="M${N(cx - hw - 0.25)} ${N(cy + 0.05)} Q${cx} ${N(cy - up - 0.35)} ${N(cx + hw + 0.25)} ${N(cy - 0.05)}" fill="none" stroke="${p.lash}" stroke-width="0.55" stroke-linecap="round" opacity="0.9"/>
-    <path d="M${N(cx + side * (hw + 0.2))} ${N(cy - 0.15)} l${N(side * 0.7)} -0.55" stroke="${p.lash}" stroke-width="0.5" stroke-linecap="round" opacity="0.85" fill="none"/>
-    <path d="M${N(cx - hw + 0.5)} ${N(cy + dn + 0.35)} Q${cx} ${N(cy + dn + 0.85)} ${N(cx + hw - 0.3)} ${N(cy + dn + 0.1)}" fill="none" stroke="${p.skinShadow}" stroke-width="0.4" opacity="0.4"/>
-    <path d="M${N(cx - hw + 0.3)} ${N(cy - up - 0.55)} Q${cx} ${N(cy - up - 1.15)} ${N(cx + hw - 0.1)} ${N(cy - up - 0.45)}" fill="none" stroke="${p.skinShadow}" stroke-width="0.5" opacity="0.4"/>`;
+    <path d="M${N(cx - hw - 0.35)} ${N(cy + 0.1)} Q${cx} ${N(cy - up - 0.55)} ${N(cx + hw + 0.4)} ${N(cy - 0.15)} Q${cx} ${N(cy - up + 0.3)} ${N(cx - hw - 0.35)} ${N(cy + 0.1)} Z" fill="${p.lash}" opacity="0.95"/>
+    <path d="M${N(cx + side * (hw + 0.25))} ${N(cy - 0.35)} l${N(side * 0.85)} -0.6 M${N(cx + side * (hw + 0.05))} ${N(cy - 1)} l${N(side * 0.7)} -0.75" stroke="${p.lash}" stroke-width="0.5" stroke-linecap="round" opacity="0.85" fill="none"/>
+    <path d="M${N(cx + side * 0.4)} ${N(cy + dn + 0.4)} Q${N(cx + side * (hw - 0.9))} ${N(cy + dn + 0.35)} ${N(cx + side * (hw - 0.1))} ${N(cy + dn - 0.35)}" fill="none" stroke="${p.lash}" stroke-width="0.4" opacity="0.4"/>
+    <path d="M${N(cx - hw + 0.5)} ${N(cy + dn + 0.5)} Q${cx} ${N(cy + dn + 1)} ${N(cx + hw - 0.3)} ${N(cy + dn + 0.15)}" fill="none" stroke="${p.skinShadow}" stroke-width="0.45" opacity="0.42"/>
+    <path d="M${N(cx - hw + 0.3)} ${N(cy - up - 0.6)} Q${cx} ${N(cy - up - 1.25)} ${N(cx + hw - 0.1)} ${N(cy - up - 0.5)}" fill="none" stroke="${p.skinShadow}" stroke-width="0.5" opacity="0.42"/>`;
 }
 
 /** Closed eye — content soft lid with lashes (also used for the wink). */
 function closedEye(p: Pal, cx: number, side: -1 | 1): string {
-  const cy = 26.4;
-  return `<path d="M${N(cx - 2.3)} ${N(cy - 0.3)} Q${cx} ${N(cy + 1.6)} ${N(cx + 2.3)} ${N(cy - 0.3)}" fill="none" stroke="${p.skinShadow}" stroke-width="1.1" stroke-linecap="round" opacity="0.35"/>
-    <path d="M${N(cx - 2.3)} ${N(cy - 0.4)} Q${cx} ${N(cy + 1.5)} ${N(cx + 2.3)} ${N(cy - 0.4)}" fill="none" stroke="${p.lash}" stroke-width="0.65" stroke-linecap="round" opacity="0.9"/>
-    <path d="M${N(cx - 1.5)} ${N(cy + 0.55)} l-0.35 0.75 M${cx} ${N(cy + 0.85)} l0 0.8 M${N(cx + 1.5)} ${N(cy + 0.55)} l0.35 0.75" stroke="${p.lash}" stroke-width="0.42" stroke-linecap="round" opacity="0.8" fill="none"/>
-    <path d="M${N(cx - 1.9)} ${N(cy - 1.5)} Q${cx} ${N(cy - 2.2)} ${N(cx + 1.9)} ${N(cy - 1.4)}" fill="none" stroke="${p.skinShadow}" stroke-width="0.5" opacity="0.4"/>
-    <path d="M${N(cx + side * 2.4)} ${N(cy - 0.5)} l${N(side * 0.6)} -0.4" stroke="${p.lash}" stroke-width="0.45" stroke-linecap="round" opacity="0.8" fill="none"/>`;
+  const cy = 26.7;
+  return `<path d="M${N(cx - 2.9)} ${N(cy - 0.5)} Q${cx} ${N(cy + 1.9)} ${N(cx + 2.9)} ${N(cy - 0.5)}" fill="none" stroke="${p.skinShadow}" stroke-width="1.3" stroke-linecap="round" opacity="0.32"/>
+    <path d="M${N(cx - 2.9)} ${N(cy - 0.6)} Q${cx} ${N(cy + 1.8)} ${N(cx + 2.9)} ${N(cy - 0.6)}" fill="none" stroke="${p.lash}" stroke-width="0.75" stroke-linecap="round" opacity="0.92"/>
+    <path d="M${N(cx - 1.9)} ${N(cy + 0.75)} l-0.4 0.95 M${cx} ${N(cy + 1.15)} l0 1 M${N(cx + 1.9)} ${N(cy + 0.75)} l0.4 0.95" stroke="${p.lash}" stroke-width="0.48" stroke-linecap="round" opacity="0.85" fill="none"/>
+    <path d="M${N(cx - 2.3)} ${N(cy - 2)} Q${cx} ${N(cy - 2.8)} ${N(cx + 2.3)} ${N(cy - 1.9)}" fill="none" stroke="${p.skinShadow}" stroke-width="0.5" opacity="0.42"/>
+    <path d="M${N(cx + side * 3)} ${N(cy - 0.75)} l${N(side * 0.7)} -0.5" stroke="${p.lash}" stroke-width="0.5" stroke-linecap="round" opacity="0.85" fill="none"/>`;
 }
 
 function eyesArt(uid: string, p: Pal, eyeStyle: number): string {
@@ -223,14 +232,14 @@ function browsArt(p: Pal, style: number): string {
   let extra = '';
   if (style === 1) {
     // raised arch
-    d = 'M24.9 22.7 Q26.9 20.2 30.2 21.2 L30.3 22.1 Q27.4 21.4 25.2 23.4 Z';
+    d = 'M24.9 22.3 Q26.9 19.8 30.2 20.8 L30.3 21.7 Q27.4 21 25.2 23 Z';
   } else if (style === 2) {
     // furrowed: inner end angled down, glabella creases
-    d = 'M25 22.1 Q27.6 21.6 30.2 23.3 L30 24.1 Q27.5 22.8 25.1 23 Z';
-    extra = `<path d="M31.3 23.3 l-0.35 1.6 M32.7 23.3 l0.35 1.6" stroke="${p.skinShadow}" stroke-width="0.45" opacity="0.4" fill="none"/>`;
+    d = 'M25 21.7 Q27.6 21.2 30.2 22.9 L30 23.7 Q27.5 22.4 25.1 22.6 Z';
+    extra = `<path d="M31.3 22.9 l-0.35 1.6 M32.7 22.9 l0.35 1.6" stroke="${p.skinShadow}" stroke-width="0.45" opacity="0.4" fill="none"/>`;
   } else {
     // straight-soft
-    d = 'M24.9 22.9 Q27.5 21.4 30.2 22.1 L30.2 23 Q27.6 22.5 25.2 23.7 Z';
+    d = 'M24.9 22.5 Q27.5 21 30.2 21.7 L30.2 22.6 Q27.6 22.1 25.2 23.3 Z';
   }
   const one =
     `<path d="${d}" fill="${p.brow}" opacity="0.92"/>` +
@@ -238,12 +247,21 @@ function browsArt(p: Pal, style: number): string {
   return one + mirrored(one) + extra;
 }
 
-function noseArt(p: Pal): string {
-  return `<path d="M31.1 25.9 Q30.5 29 30.2 30.7 Q30 31.7 30.7 32.1" fill="none" stroke="${p.skinShadow}" stroke-width="0.6" stroke-linecap="round" opacity="0.42"/>
-    <path d="M32.9 25.9 Q33.3 28.8 33.6 30.6" fill="none" stroke="${p.skinLight}" stroke-width="0.7" stroke-linecap="round" opacity="0.4"/>
-    <path d="M30.1 31.9 Q30.6 32.7 31.4 32.7 M33.9 31.9 Q33.4 32.7 32.6 32.7" fill="none" stroke="${p.skinDeep}" stroke-width="0.5" stroke-linecap="round" opacity="0.6"/>
-    <ellipse cx="32" cy="30.9" rx="0.9" ry="0.55" fill="#ffffff" opacity="0.22"/>
-    <path d="M30.7 32.8 Q32 33.5 33.3 32.8" fill="none" stroke="${p.skinShadow}" stroke-width="0.7" opacity="0.25"/>`;
+/** Soft gradient-shaded nose: no outlines — a wide faint + narrow stronger
+ * shadow stroke on the dark side of the bridge, a matching highlight pair on
+ * the lit side, a sheen-gradient tip with a specular dot, and soft nostril
+ * shadow pools. */
+function noseArt(uid: string, p: Pal): string {
+  return `<path d="M31.15 25.7 Q30.5 28.9 30.2 30.6 Q30 31.7 30.7 32.15" fill="none" stroke="${p.skinShadow}" stroke-width="1.5" stroke-linecap="round" opacity="0.16"/>
+    <path d="M31.05 25.9 Q30.45 29 30.15 30.7 Q30 31.6 30.6 32" fill="none" stroke="${p.skinShadow}" stroke-width="0.65" stroke-linecap="round" opacity="0.4"/>
+    <path d="M33 25.8 Q33.5 28.6 33.7 30.4" fill="none" stroke="${p.skinLight}" stroke-width="1.4" stroke-linecap="round" opacity="0.28"/>
+    <path d="M32.2 26.2 Q32.55 28.4 32.7 30" fill="none" stroke="#fffdf5" stroke-width="0.6" stroke-linecap="round" opacity="0.4"/>
+    <ellipse cx="32.15" cy="30.8" rx="1.55" ry="1.05" fill="url(#${uid}-sheen)"/>
+    <ellipse cx="32.3" cy="30.5" rx="0.55" ry="0.4" fill="#ffffff" opacity="0.35"/>
+    <ellipse cx="30.35" cy="31.9" rx="0.55" ry="0.4" fill="${p.skinDeep}" opacity="0.4"/>
+    <ellipse cx="33.75" cy="31.9" rx="0.55" ry="0.4" fill="${p.skinDeep}" opacity="0.32"/>
+    <path d="M30.05 31.75 Q30.6 32.6 31.4 32.65 M33.95 31.75 Q33.4 32.6 32.6 32.65" fill="none" stroke="${p.skinDeep}" stroke-width="0.5" stroke-linecap="round" opacity="0.55"/>
+    <path d="M30.5 33 Q32 33.8 33.5 33" fill="none" stroke="${p.skinShadow}" stroke-width="0.9" opacity="0.3"/>`;
 }
 
 function mouthArt(p: Pal, style: number): string {
@@ -265,7 +283,8 @@ function mouthArt(p: Pal, style: number): string {
       return (
         naso +
         `<path d="M28.4 33.6 Q32 34.4 35.6 33.6 Q35 37.2 32 37.2 Q29 37.2 28.4 33.6 Z" fill="${p.mouthIn}"/>
-         <path d="M28.8 33.8 Q32 34.5 35.2 33.8 L35 35.3 Q32 35.9 29 35.3 Z" fill="${p.teeth}"/>
+         <path d="M28.8 33.8 Q32 34.5 35.2 33.8 L35 35.3 Q32 35.9 29 35.3 Z" fill="${p.teeth}" opacity="0.95"/>
+         <path d="M29.2 35.15 Q32 35.75 34.8 35.15" fill="none" stroke="${p.skinShadow}" stroke-width="0.3" opacity="0.32"/>
          <path d="M28.3 33.5 Q32 34.4 35.7 33.5" fill="none" stroke="${p.lipLine}" stroke-width="0.55" stroke-linecap="round" opacity="0.9"/>
          <path d="M29 36.6 Q32 38.5 35 36.6 Q33.8 38.3 32 38.3 Q30.2 38.3 29 36.6 Z" fill="${p.lipLower}" opacity="0.75"/>
          <ellipse cx="32" cy="37.4" rx="1.2" ry="0.4" fill="#ffffff" opacity="0.25"/>`
@@ -278,29 +297,37 @@ function mouthArt(p: Pal, style: number): string {
          <ellipse cx="32" cy="35.3" rx="1.1" ry="0.4" fill="#ffffff" opacity="0.25"/>` +
         underLip(36.8)
       );
-    case 3: // slightly open
+    case 3: // softly parted lips
       return (
-        `<path d="M30.1 33.9 Q32 33.3 33.9 33.9 Q33.6 35.9 32 35.9 Q30.4 35.9 30.1 33.9 Z" fill="${p.mouthIn}"/>
-         <path d="M30.4 34 Q32 33.6 33.6 34 L33.5 34.7 Q32 34.4 30.5 34.7 Z" fill="${p.teeth}" opacity="0.9"/>
-         <path d="M30 33.8 Q32 33.15 34 33.8" fill="none" stroke="${p.lipLine}" stroke-width="0.55" stroke-linecap="round" opacity="0.8"/>
-         <path d="M30.4 36 Q32 36.9 33.6 36 Q32.9 36.9 32 36.9 Q31.1 36.9 30.4 36 Z" fill="${p.lipLower}" opacity="0.8"/>` +
-        underLip(37.2)
+        upperLip +
+        `<path d="M29.9 34.15 Q32 33.6 34.1 34.15 Q33.7 35.45 32 35.45 Q30.3 35.45 29.9 34.15 Z" fill="${p.mouthIn}" opacity="0.92"/>
+         <path d="M30.3 34.1 Q32 33.7 33.7 34.1 L33.55 34.8 Q32 34.5 30.45 34.8 Z" fill="${p.teeth}" opacity="0.9"/>
+         <path d="M29.6 34.05 Q32 33.35 34.4 34.05" fill="none" stroke="${p.lipLine}" stroke-width="0.55" stroke-linecap="round" opacity="0.8"/>
+         <path d="M29.7 35.15 Q32 36.9 34.3 35.15 Q33.3 37.1 32 37.1 Q30.7 37.1 29.7 35.15 Z" fill="${p.lipLower}" opacity="0.85"/>
+         <ellipse cx="32" cy="36.05" rx="1.1" ry="0.4" fill="#ffffff" opacity="0.3"/>` +
+        underLip(37.6)
       );
     case 4: // open laugh with tongue
       return (
         naso +
-        `<path d="M28.6 33.4 Q32 34.2 35.4 33.4 Q35 38 32 38 Q29 38 28.6 33.4 Z" fill="${p.mouthIn}"/>
-         <path d="M29 33.6 Q32 34.3 35 33.6 L34.85 34.75 Q32 35.3 29.15 34.75 Z" fill="${p.teeth}"/>
-         <path d="M30.3 36.2 Q32 37.7 33.7 36.2 Q33.4 38 32 38 Q30.6 38 30.3 36.2 Z" fill="#c2606b"/>
-         <path d="M28.5 33.3 Q32 34.2 35.5 33.3" fill="none" stroke="${p.lipLine}" stroke-width="0.55" stroke-linecap="round" opacity="0.9"/>`
+        `<path d="M28.5 33.5 Q30.4 32.6 32 32.9 Q33.6 32.6 35.5 33.5 Q32 34.5 28.5 33.5 Z" fill="${p.lipUpper}" opacity="0.8"/>
+         <path d="M28.6 33.6 Q32 34.5 35.4 33.6 Q35.1 37.9 32 37.9 Q28.9 37.9 28.6 33.6 Z" fill="${p.mouthIn}"/>
+         <path d="M29 33.8 Q32 34.5 35 33.8 L34.9 35 Q32 35.55 29.1 35 Z" fill="${p.teeth}" opacity="0.95"/>
+         <path d="M29.2 34.9 Q32 35.5 34.8 34.9" fill="none" stroke="${p.skinShadow}" stroke-width="0.3" opacity="0.3"/>
+         <path d="M30.2 36.3 Q32 37.75 33.8 36.3 Q33.5 38.05 32 38.05 Q30.5 38.05 30.2 36.3 Z" fill="#b85560"/>
+         <ellipse cx="32" cy="37.1" rx="0.8" ry="0.3" fill="#ffffff" opacity="0.3"/>
+         <path d="M28.4 33.4 Q32 34.35 35.6 33.4" fill="none" stroke="${p.lipLine}" stroke-width="0.55" stroke-linecap="round" opacity="0.9"/>
+         <path d="M29.2 37.5 Q32 39.1 34.8 37.5 Q33.6 38.85 32 38.85 Q30.4 38.85 29.2 37.5 Z" fill="${p.lipLower}" opacity="0.7"/>`
       );
-    default: // smirk
+    default: // smirk — lips stay centered, only the corners are asymmetric
       return (
-        `<path d="M29.1 34.6 Q31.8 35 34.4 33.7 Q35.1 33.35 35.5 33.95" fill="none" stroke="${p.lipLine}" stroke-width="0.6" stroke-linecap="round" opacity="0.85"/>
-         <path d="M29.5 34.8 Q31.6 36 33.6 34.6 Q32.7 36.2 31.4 36.2 Q30.3 36.2 29.5 34.8 Z" fill="${p.lipLower}" opacity="0.8"/>
-         <path d="M35.2 32.6 Q36 33.3 35.9 34.3" fill="none" stroke="${p.skinShadow}" stroke-width="0.5" opacity="0.35"/>
-         <ellipse cx="31.6" cy="35.3" rx="1" ry="0.38" fill="#ffffff" opacity="0.25"/>` +
-        underLip(36.9)
+        `<path d="M29.2 34.3 Q30.7 33.2 32.1 33.4 Q33.6 33 35 33.6 Q32.2 34.8 29.2 34.3 Z" fill="${p.lipUpper}" opacity="0.8"/>
+         <path d="M29.1 34.35 Q31.9 35.05 34.5 33.9 Q35 33.7 35.35 34.05" fill="none" stroke="${p.lipLine}" stroke-width="0.6" stroke-linecap="round" opacity="0.85"/>
+         <path d="M29.6 34.7 Q31.9 36.4 34.1 34.9 Q33.2 36.6 31.8 36.6 Q30.4 36.55 29.6 34.7 Z" fill="${p.lipLower}" opacity="0.85"/>
+         <ellipse cx="31.7" cy="35.6" rx="1.05" ry="0.38" fill="#ffffff" opacity="0.3"/>
+         <path d="M35.4 32.5 Q36.2 33.3 36 34.6" fill="none" stroke="${p.skinShadow}" stroke-width="0.5" opacity="0.28"/>
+         <circle cx="35.75" cy="34.35" r="0.32" fill="${p.skinShadow}" opacity="0.3"/>` +
+        underLip(37.1)
       );
   }
 }
@@ -526,20 +553,20 @@ function accessoryArt(uid: string, acc: BustAccessory): string {
         <path d="M28.9 18.3 q3.1 -1 6.2 0 l-0.3 1.2 q-2.8 -0.8 -5.6 0 z" fill="#191024" opacity="0.55"/>`;
     case 'glasses':
       return `<g fill="none" stroke="#2a2331" stroke-width="0.7">
-          <circle cx="27.7" cy="26.3" r="3.1"/><circle cx="36.3" cy="26.3" r="3.1"/>
-          <path d="M30.8 25.9 Q32 25 33.2 25.9"/>
-          <path d="M24.6 25.7 L22.4 26.3 M39.4 25.7 L41.6 26.3"/>
+          <circle cx="27.7" cy="26.6" r="3.5"/><circle cx="36.3" cy="26.6" r="3.5"/>
+          <path d="M31.2 26.1 Q32 25.2 32.8 26.1"/>
+          <path d="M24.2 26 L22.4 26.6 M39.8 26 L41.6 26.6"/>
         </g>
-        <circle cx="27.7" cy="26.3" r="3.1" fill="#ffffff" opacity="0.08"/>
-        <circle cx="36.3" cy="26.3" r="3.1" fill="#ffffff" opacity="0.08"/>
-        <path d="M25.6 24.9 A2.6 2.6 0 0 1 27.3 23.7 M34.2 24.9 A2.6 2.6 0 0 1 35.9 23.7" stroke="#ffffff" stroke-width="0.55" opacity="0.4" fill="none"/>`;
+        <circle cx="27.7" cy="26.6" r="3.5" fill="#ffffff" opacity="0.08"/>
+        <circle cx="36.3" cy="26.6" r="3.5" fill="#ffffff" opacity="0.08"/>
+        <path d="M25.3 25 A3 3 0 0 1 27.2 23.6 M33.9 25 A3 3 0 0 1 35.8 23.6" stroke="#ffffff" stroke-width="0.55" opacity="0.4" fill="none"/>`;
     case 'sunglasses':
-      return `<rect x="24.2" y="24.1" width="7" height="4.7" rx="2.2" fill="url(#${uid}-sung)" stroke="#120d1c" stroke-width="0.45"/>
-        <rect x="32.8" y="24.1" width="7" height="4.7" rx="2.2" fill="url(#${uid}-sung)" stroke="#120d1c" stroke-width="0.45"/>
-        <path d="M31.2 25.4 Q32 24.8 32.8 25.4" fill="none" stroke="#120d1c" stroke-width="0.8"/>
-        <path d="M24.2 25.6 L22.4 26.2 M39.8 25.6 L41.6 26.2" stroke="#120d1c" stroke-width="0.7" fill="none"/>
-        <path d="M25.5 25.2 L28 27.9 M26.8 24.9 L28.6 26.8" stroke="#ffffff" stroke-width="0.7" opacity="0.28" fill="none"/>
-        <path d="M34.1 25.2 L36.6 27.9" stroke="#ffffff" stroke-width="0.7" opacity="0.22" fill="none"/>`;
+      return `<rect x="23.9" y="23.9" width="7.4" height="5.5" rx="2.4" fill="url(#${uid}-sung)" stroke="#120d1c" stroke-width="0.45"/>
+        <rect x="32.7" y="23.9" width="7.4" height="5.5" rx="2.4" fill="url(#${uid}-sung)" stroke="#120d1c" stroke-width="0.45"/>
+        <path d="M31.3 25.3 Q32 24.7 32.7 25.3" fill="none" stroke="#120d1c" stroke-width="0.8"/>
+        <path d="M23.9 25.5 L22.3 26.1 M40.1 25.5 L41.7 26.1" stroke="#120d1c" stroke-width="0.7" fill="none"/>
+        <path d="M25.3 25.1 L28.1 28.3 M26.7 24.8 L28.7 27" stroke="#ffffff" stroke-width="0.7" opacity="0.28" fill="none"/>
+        <path d="M34.1 25.1 L36.9 28.3" stroke="#ffffff" stroke-width="0.7" opacity="0.22" fill="none"/>`;
     case 'headphones':
       return `<path d="M22.4 18.6 q0.2 -11.2 9.6 -11.2 q9.4 0 9.6 11.2" fill="none" stroke="#332c44" stroke-width="2.2" stroke-linecap="round"/>
         <path d="M23.5 16.2 q1.1 -7.6 8.5 -7.7" fill="none" stroke="#584e78" stroke-width="0.7" opacity="0.7"/>
@@ -606,7 +633,7 @@ export function paintedBust(look: PersonaLook, accessory: BustAccessory, size = 
       <stop offset="0" stop-color="${p.skinLight}"/><stop offset="0.45" stop-color="${p.skin}"/><stop offset="1" stop-color="${p.skinShadow}"/>
     </linearGradient>
     <radialGradient id="${uid}-sheen" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#fffdf5" stop-opacity="0.3"/><stop offset="1" stop-color="#fffdf5" stop-opacity="0"/>
+      <stop offset="0" stop-color="#fffdf5" stop-opacity="0.42"/><stop offset="1" stop-color="#fffdf5" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="${uid}-hairg" x1="0.15" y1="0" x2="0.55" y2="1">
       <stop offset="0" stop-color="${p.hairLight}"/><stop offset="0.42" stop-color="${p.hair}"/><stop offset="1" stop-color="${p.hairDark}"/>
@@ -644,23 +671,28 @@ export function paintedBust(look: PersonaLook, accessory: BustAccessory, size = 
 
   // Layered face shading, clipped to the head.
   const fringeShadow = hairL.fringeShadow
-    ? `<path d="M23.8 19.6 Q32 14.8 40.2 19.6" fill="none" stroke="${p.hairDark}" stroke-width="1.7" opacity="0.16"/>`
+    ? `<path d="M23.8 19.9 Q32 14.9 40.2 19.9" fill="none" stroke="${p.hairDark}" stroke-width="2.6" stroke-linecap="round" opacity="0.2"/>
+       <path d="M24.2 19.3 Q32 14.7 39.8 19.3" fill="none" stroke="${p.hairDark}" stroke-width="1" stroke-linecap="round" opacity="0.2"/>`
     : '';
   const shading = `<g clip-path="url(#${uid}-head)">
-      <ellipse cx="42.6" cy="26" rx="7" ry="14.5" fill="${p.skinShadow}" opacity="0.24"/>
-      <ellipse cx="32" cy="39.2" rx="6.4" ry="2.5" fill="${p.skinShadow}" opacity="0.22"/>
-      <ellipse cx="27.7" cy="25.1" rx="3.1" ry="1.9" fill="${p.skinShadow}" opacity="0.13"/>
-      <ellipse cx="36.3" cy="25.1" rx="3.1" ry="1.9" fill="${p.skinShadow}" opacity="0.13"/>
-      <ellipse cx="26.7" cy="30.3" rx="2.6" ry="1.6" fill="${p.blush}" opacity="0.12"/>
-      <ellipse cx="37.3" cy="30.3" rx="2.6" ry="1.6" fill="${p.blush}" opacity="0.12"/>
+      <ellipse cx="42.4" cy="26" rx="7" ry="14.5" fill="${p.skinShadow}" opacity="0.3"/>
+      <ellipse cx="44.3" cy="27" rx="4.6" ry="12" fill="${p.skinShadow}" opacity="0.24"/>
+      <ellipse cx="32" cy="39.2" rx="6.4" ry="2.5" fill="${p.skinShadow}" opacity="0.3"/>
+      <ellipse cx="27.7" cy="24.6" rx="3.5" ry="2.1" fill="${p.skinShadow}" opacity="0.15"/>
+      <ellipse cx="36.3" cy="24.6" rx="3.5" ry="2.1" fill="${p.skinShadow}" opacity="0.15"/>
+      <ellipse cx="26.7" cy="30.6" rx="2.6" ry="1.6" fill="${p.blush}" opacity="0.12"/>
+      <ellipse cx="37.3" cy="30.6" rx="2.6" ry="1.6" fill="${p.blush}" opacity="0.12"/>
       ${fringeShadow}
     </g>
     <ellipse cx="28.6" cy="19" rx="5" ry="3.4" fill="url(#${uid}-sheen)"/>
-    <ellipse cx="27.2" cy="29.4" rx="2.4" ry="1.4" fill="url(#${uid}-sheen)" opacity="0.6"/>
-    <ellipse cx="32" cy="36.4" rx="1.7" ry="0.9" fill="#ffffff" opacity="0.13"/>
+    <ellipse cx="26.9" cy="29.2" rx="2.8" ry="1.7" fill="url(#${uid}-sheen)" opacity="0.85"/>
+    <ellipse cx="25.9" cy="27.6" rx="1.7" ry="1" fill="#ffffff" opacity="0.12"/>
+    <ellipse cx="32" cy="36.4" rx="1.7" ry="0.9" fill="#ffffff" opacity="0.15"/>
     <path d="M30.6 37.4 Q32 38.1 33.4 37.4" fill="none" stroke="${p.skinShadow}" stroke-width="0.5" opacity="0.3"/>`;
 
-  const rimLight = `<path d="M40.6 14.6 Q43.2 19.5 42.6 25.5 Q42.1 31 39.4 35.4" fill="none" stroke="${p.rim}" stroke-width="0.95" stroke-linecap="round" opacity="0.42"/>
+  const rimLight = `<path d="M40.6 14.6 Q43.2 19.5 42.6 25.5 Q42.1 31 39.4 35.4" fill="none" stroke="${p.rim}" stroke-width="2.4" stroke-linecap="round" opacity="0.16"/>
+    <path d="M40.6 14.6 Q43.2 19.5 42.6 25.5 Q42.1 31 39.4 35.4" fill="none" stroke="${p.rim}" stroke-width="1.15" stroke-linecap="round" opacity="0.55"/>
+    <path d="M39 35.9 Q37.2 38.1 34.8 38.9" fill="none" stroke="${p.rim}" stroke-width="0.8" stroke-linecap="round" opacity="0.35"/>
     <path d="M24.8 14.4 Q22.5 18.8 22.4 23.8" fill="none" stroke="#ffdfae" stroke-width="0.8" stroke-linecap="round" opacity="0.28"/>`;
 
   const svg = `<svg class="portrait-svg" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true">
@@ -676,7 +708,7 @@ export function paintedBust(look: PersonaLook, accessory: BustAccessory, size = 
       ${shading}
       ${browsArt(p, eyebrowStyle)}
       ${eyesArt(uid, p, eyeStyle)}
-      ${noseArt(p)}
+      ${noseArt(uid, p)}
       ${blemishArt(p, blemish)}
       ${facialHairArt(uid, p, facialHair)}
       ${mouthArt(p, mouthStyle)}
