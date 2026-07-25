@@ -97,6 +97,7 @@ import {
 } from '../game/tutorial';
 import type { CompanyState, GameState, WorkerState } from '../game/types';
 import { lookup, resolveLang, setCurrentLang, t } from '../i18n';
+import { placeCoach } from './coachPlacement';
 import type { Fx } from './fx';
 import { gabriel, type GabrielPose } from './gabriel';
 import { cityMapSvg, type SiteView } from './cityMap';
@@ -149,6 +150,8 @@ export class UI {
   private sheetSiteId: string | null = null;
   /** Tutorial step currently rendered in the coach card ('' = force redraw). */
   private coachStep: string | null | '' = '';
+  /** Element the coach popup is currently anchored to / highlighting. */
+  private coachTargetEl: Element | null = null;
   private onStateReplaced: (next: GameState) => void;
 
   constructor(
@@ -164,6 +167,10 @@ export class UI {
     this.buildSkeleton();
     this.rebuildTab();
     this.root.addEventListener('click', (e) => this.handleClick(e));
+    // The coach popup anchors to on-screen elements: track every layout
+    // change (resize, any panel scrolling) so it never drifts over its target.
+    window.addEventListener('resize', () => this.positionCoach());
+    window.addEventListener('scroll', () => this.positionCoach(), true);
   }
 
   // -------------------------------------------------------------------------
@@ -366,6 +373,63 @@ export class UI {
           </div>
         </div>
       </div>`;
+    this.positionCoach();
+    // Bring a freshly targeted element into view so popup + target are
+    // both visible when the step starts.
+    if (this.coachTargetEl && 'scrollIntoView' in this.coachTargetEl) {
+      this.coachTargetEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
+  /**
+   * Anchor the coach card next to the current step's target and keep the
+   * target highlighted — the popup must never cover the element it is
+   * explaining. Target resolution: the step's own target selector (when
+   * visible) → the step's tab button (player is on another tab) → docked
+   * bottom card (steps with no target, e.g. naming). Re-run on every 2 Hz
+   * rebuild, resize and scroll: tab re-renders replace target nodes freely.
+   */
+  private positionCoach(): void {
+    const card = document.querySelector<HTMLElement>('#coach-zone .coach');
+    const step = card ? currentTutorialStep(this.state) : null;
+    let el: Element | null = null;
+    if (step) {
+      if (step.target) {
+        el = document.querySelector(step.target);
+        // Ignore matches hidden inside collapsed/other-tab containers.
+        if (el && (el as HTMLElement).offsetParent === null) el = null;
+      }
+      if (!el && step.tab && step.tab !== this.tab) {
+        el = document.getElementById(`tab-btn-${step.tab}`);
+      }
+    }
+    if (this.coachTargetEl !== el) {
+      this.coachTargetEl?.classList.remove('coach-target');
+      this.coachTargetEl = el;
+    }
+    // Re-add every pass: innerHTML rebuilds recreate the node without it.
+    el?.classList.add('coach-target');
+    if (!card) return;
+    if (!el) {
+      card.classList.remove('coach-anchored');
+      card.style.left = '';
+      card.style.top = '';
+      card.style.width = '';
+      return;
+    }
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const width = Math.min(560, vw - 20);
+    card.classList.add('coach-anchored');
+    card.style.width = `${width}px`;
+    const t = el.getBoundingClientRect();
+    const pos = placeCoach(
+      { width, height: card.offsetHeight },
+      { left: t.left, top: t.top, width: t.width, height: t.height },
+      { width: vw, height: vh },
+    );
+    card.style.left = `${pos.left}px`;
+    card.style.top = `${pos.top}px`;
   }
 
   /** Avatar customization dialog (re-rendered in place on every change). */
@@ -491,6 +555,8 @@ export class UI {
         content.innerHTML = this.renderStats();
         break;
     }
+    // Tab content just changed under the coach popup — re-anchor it.
+    this.positionCoach();
   }
 
   /** The map: an illustrated city where every site is a tappable building. */
