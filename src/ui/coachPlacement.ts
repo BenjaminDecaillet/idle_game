@@ -64,15 +64,12 @@ export function placeCoach(
   else if (fitsAbove) placement = 'above';
   else placement = spaceBelow >= spaceAbove ? 'below' : 'above';
 
-  // Ideal spot hugs the target; the clamp only kicks in on the forced case
-  // (side too small), where staying fully on-screen wins over the overlap.
-  let top: number;
-  if (placement === 'below') {
-    top = Math.min(targetBottom + margin, viewport.height - popup.height - margin);
-  } else {
-    top = target.top - margin - popup.height;
-  }
-  top = Math.max(top, margin);
+  // Ideal spot hugs the target; the final clamp only moves the popup when
+  // the target sits (partly) outside the viewport — e.g. scrolled below the
+  // fold — or on the forced case above. Staying fully on-screen wins then:
+  // an off-screen target cannot be covered anyway.
+  let top = placement === 'below' ? targetBottom + margin : target.top - margin - popup.height;
+  top = clamp(top, margin, Math.max(margin, viewport.height - popup.height - margin));
 
   const left = clamp(
     target.left + target.width / 2 - popup.width / 2,

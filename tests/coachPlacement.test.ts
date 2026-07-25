@@ -56,6 +56,13 @@ describe('placeCoach', () => {
     expect(pos.left + popup.width / 2).toBeCloseTo(550, 0);
   });
 
+  it('stays fully on-screen when the target is scrolled below the fold', () => {
+    const target: Rect = { left: 10, top: 1088, width: 370, height: 48 }; // off-screen
+    const pos = placeCoach(popup, target, phone);
+    expect(pos.top + popup.height).toBeLessThanOrEqual(phone.height);
+    expect(pos.top).toBeGreaterThanOrEqual(0);
+  });
+
   it('degrades gracefully when neither side fits: picks the roomier side and stays on-screen', () => {
     const tiny: Size = { width: 320, height: 200 };
     const target: Rect = { left: 0, top: 20, width: 320, height: 40 };
