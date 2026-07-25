@@ -284,7 +284,6 @@ describe('legacy v2 save migration to v3', () => {
     const result = migrate(flatSave, NOW);
 
     expect(result.version).toBe(SAVE_VERSION);
-    expect(result.version).toBe(3);
     expect(result.money).toBe(500);
     expect(result.companies).toHaveLength(1);
 

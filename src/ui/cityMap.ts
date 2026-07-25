@@ -12,7 +12,7 @@
  */
 
 export interface SiteView {
-  id: string; // 'garage' | 'loft' | 'paloalto' | 'campus' | 'tower'
+  id: string; // 'garage' | 'loft' | 'paloalto' | 'campus' | 'tower' | 'seattle' | 'nyc' | 'orbital'
   status: 'free' | 'owned' | 'active';
   label: string; // company name if owned/active, site name otherwise
 }
@@ -457,7 +457,7 @@ function defsSection(P: ThemePalette): string {
 
 function groundSection(P: ThemePalette): string {
   return (
-    `<rect x="0" y="0" width="360" height="520" fill="${P.grass}" stroke="none"/>` +
+    `<rect x="0" y="0" width="360" height="740" fill="${P.grass}" stroke="none"/>` +
     // mottled grass patches, no stroke — just texture
     `<g stroke="none">` +
     `<ellipse cx="60" cy="250" rx="70" ry="40" fill="${P.grassDark}" opacity=".5"/>` +
@@ -465,6 +465,11 @@ function groundSection(P: ThemePalette): string {
     `<ellipse cx="120" cy="60" rx="80" ry="38" fill="${P.grassLight}" opacity=".5"/>` +
     `<ellipse cx="60" cy="470" rx="60" ry="30" fill="${P.grassLight}" opacity=".4"/>` +
     `<ellipse cx="180" cy="360" rx="55" ry="28" fill="${P.grassDark}" opacity=".35"/>` +
+    // south district (seattle / nyc / orbital)
+    `<ellipse cx="90" cy="640" rx="60" ry="30" fill="${P.grassDark}" opacity=".35"/>` +
+    `<ellipse cx="300" cy="690" rx="70" ry="34" fill="${P.grassLight}" opacity=".4"/>` +
+    `<ellipse cx="40" cy="706" rx="50" ry="26" fill="${P.grassDark}" opacity=".4"/>` +
+    `<ellipse cx="230" cy="548" rx="46" ry="22" fill="${P.grassLight}" opacity=".35"/>` +
     `</g>`
   );
 }
@@ -518,12 +523,15 @@ function riverSection(P: ThemePalette): string {
 const MAIN_ROAD =
   'M166,456 C154,404 184,360 182,322 C180,284 158,248 168,210 C176,178 200,152 206,114 C210,86 202,44 204,-6';
 
+const SOUTH_ROAD = 'M45,470 C54,528 34,586 48,648 C56,690 42,716 46,746';
+
 function roadsSection(P: ThemePalette): string {
   const streets = [
     'M162,428 L104,428', // to the garage
     'M170,292 L98,292', // to Palo Alto
     'M200,152 L142,152', // to the campus
     'M180,390 L246,390', // to the loft
+    'M38,648 L364,648', // south cross street (seattle / nyc / orbital)
   ];
   let g = `<g fill="none">`;
   // side streets (casing + tarmac)
@@ -541,7 +549,12 @@ function roadsSection(P: ThemePalette): string {
   g +=
     `<path d="${MAIN_ROAD}" stroke="${INK}" stroke-width="30"/>` +
     `<path d="${MAIN_ROAD}" stroke="${P.road}" stroke-width="26"/>` +
-    `<path d="${MAIN_ROAD}" stroke="${P.roadDash}" stroke-width="2.5" stroke-dasharray="10 14" opacity=".9"/>` +
+    `<path d="${MAIN_ROAD}" stroke="${P.roadDash}" stroke-width="2.5" stroke-dasharray="10 14" opacity=".9"/>`;
+  // south avenue winding down into the new district (tucks under the boulevard)
+  g +=
+    `<path d="${SOUTH_ROAD}" stroke="${INK}" stroke-width="30"/>` +
+    `<path d="${SOUTH_ROAD}" stroke="${P.road}" stroke-width="26"/>` +
+    `<path d="${SOUTH_ROAD}" stroke="${P.roadDash}" stroke-width="2.5" stroke-dasharray="10 14" opacity=".9"/>` +
     `</g>`;
   // bridge deck over the river
   g +=
@@ -680,11 +693,20 @@ function fillerSection(P: ThemePalette): string {
     lamp(190, 344, P) +
     lamp(152, 250, P) +
     lamp(218, 132, P);
+  // south district greenery + lamps along the cross street
+  g +=
+    treeRound(24, 566, 0.85, P) +
+    treePine(232, 556, 0.8, P) +
+    bush(22, 668, 1, P) +
+    treeRound(346, 664, 0.85, P) +
+    treePine(342, 726, 0.9, P) +
+    bush(90, 730, 0.9, P);
+  g += lamp(76, 640, P) + lamp(222, 640, P) + lamp(316, 640, P);
   return g;
 }
 
 // ---------------------------------------------------------------------------
-// The five interactive sites
+// The eight interactive sites
 // ---------------------------------------------------------------------------
 
 interface SiteFrame {
@@ -1070,6 +1092,241 @@ function siteTower(P: ThemePalette, s: SiteView): string {
   return g + close;
 }
 
+// --- site: seattle ----------------------------------------------------------------
+
+function siteSeattle(P: ThemePalette, s: SiteView): string {
+  const { open, bOpen, close, free, active, F, D } = siteFrame(P, s);
+  const glassFill = free ? P.freeFill : `url(#cm-${P.id}-glass)`;
+  let g = open + shadow(140, 602, 58, 9);
+  if (active) g += activeRing(140, 605, 64, 10);
+  g += bOpen;
+  // wet forecourt down to the cross street
+  g += `<rect x="96" y="596" width="88" height="10" rx="2" fill="${D(P.sidewalk)}"/>`;
+  // main low glass block
+  g += `<rect x="96" y="552" width="52" height="44" rx="3" fill="${glassFill}"/>`;
+  g += shadeRect(136, 552, 12, 44);
+  g += liteRect(98, 554, 6, 40, P);
+  g += `<rect x="92" y="545" width="60" height="9" rx="3" fill="${F(P.roofD)}"/>`; // green roof parapet
+  // lower annex block
+  g += `<rect x="152" y="562" width="34" height="34" rx="3" fill="${glassFill}"/>`;
+  g += shadeRect(176, 562, 10, 34);
+  g += `<rect x="148" y="556" width="42" height="8" rx="3" fill="${F(P.roofB)}"/>`;
+  // glazed link between the blocks
+  g += `<rect x="146" y="578" width="8" height="12" fill="${F(P.wall)}"/>`;
+  // mullions + floor line on the main block
+  g +=
+    `<g stroke-width="1" opacity=".35">` +
+    `<line x1="109" y1="552" x2="109" y2="596"/>` +
+    `<line x1="122" y1="552" x2="122" y2="596"/>` +
+    `<line x1="135" y1="552" x2="135" y2="596"/>` +
+    `</g>` +
+    `<g stroke-width="1.4" opacity=".55"><line x1="96" y1="574" x2="148" y2="574"/></g>`;
+  // lit strips behind the glass
+  g +=
+    `<g stroke="none" opacity=".5">` +
+    `<rect x="100" y="558" width="18" height="10" fill="${D(P.window)}"/>` +
+    `<rect x="118" y="580" width="22" height="10" fill="${D(P.window)}"/>` +
+    `<rect x="156" y="568" width="14" height="9" fill="${D(P.window)}"/>` +
+    `<rect x="160" y="584" width="20" height="8" fill="${D(P.window)}"/>` +
+    `</g>`;
+  // entrance + canopy
+  g +=
+    `<rect x="114" y="582" width="16" height="14" fill="${D(P.window)}"/>` +
+    `<line x1="122" y1="582" x2="122" y2="596" stroke-width="1.5"/>` +
+    `<rect x="111" y="578" width="22" height="5" rx="2" fill="${F(P.roofD)}"/>`;
+  // rooftop HVAC
+  g += `<rect x="100" y="538" width="12" height="7" rx="1.5" fill="${D(P.sidewalk)}"/>`;
+  g += close;
+  // evergreens frame the lot in full colour (site furniture, not the model)
+  g += treePine(86, 610, 0.95, P) + treePine(194, 610, 0.85, P) + treePine(90, 566, 0.7, P);
+  // tiny Space Needle silhouette
+  g +=
+    `<g>` +
+    `<ellipse cx="206" cy="600" rx="8" ry="2.5" fill="${INK}" opacity=".12" stroke="none"/>` +
+    `<path d="M199,600 C202,586 202,574 206,566" fill="none" stroke-width="2"/>` +
+    `<path d="M213,600 C210,586 210,574 206,566" fill="none" stroke-width="2"/>` +
+    `<line x1="206" y1="598" x2="206" y2="566" stroke-width="2"/>` +
+    `<ellipse cx="206" cy="564" rx="11" ry="4" fill="${P.glassDark}"/>` +
+    `<ellipse cx="206" cy="561" rx="11" ry="4" fill="${P.wall}"/>` +
+    `<ellipse cx="206" cy="557.5" rx="5" ry="2" fill="${P.wall}"/>` +
+    `<line x1="206" y1="556" x2="206" y2="546" stroke-width="1.5"/>` +
+    `<circle cx="206" cy="544.5" r="1.5" fill="${GOLD}" stroke-width="1"/>` +
+    `</g>`;
+  // resident rain clouds + drizzle (it's Seattle)
+  g +=
+    `<g><g transform="translate(118 532) scale(.8)"><path d="${CLOUD_PATH}" fill="${P.road}" opacity=".95"/></g></g>` +
+    `<g><g transform="translate(170 522) scale(.55)"><path d="${CLOUD_PATH}" fill="${P.road}" opacity=".9"/></g></g>` +
+    `<g stroke="${P.river}" stroke-width="1.8" opacity=".8">` +
+    `<line x1="104" y1="542" x2="101" y2="551"/>` +
+    `<line x1="116" y1="544" x2="113" y2="553"/>` +
+    `<line x1="128" y1="542" x2="125" y2="551"/>` +
+    `<line x1="168" y1="530" x2="165.5" y2="537"/>` +
+    `<line x1="177" y1="531" x2="174.5" y2="538"/>` +
+    `</g>`;
+  if (free) g += forSaleSign(100, 634, P);
+  else g += plaque(140, 610, s.label, active);
+  if (active) g += activeFlag(102, 540);
+  return g + close;
+}
+
+// --- site: nyc --------------------------------------------------------------------
+
+function siteNyc(P: ThemePalette, s: SiteView): string {
+  const { open, bOpen, close, free, active, F, D } = siteFrame(P, s);
+  let g = open + shadow(292, 616, 46, 8);
+  if (active) g += activeRing(292, 617, 52, 9);
+  g += bOpen;
+  // plaza apron with tiles
+  g +=
+    `<rect x="254" y="608" width="74" height="10" rx="2" fill="${D(P.sidewalk)}"/>` +
+    `<g stroke-width="1" opacity=".4">` +
+    `<line x1="274" y1="608" x2="274" y2="618"/><line x1="294" y1="608" x2="294" y2="618"/>` +
+    `<line x1="314" y1="608" x2="314" y2="618"/>` +
+    `</g>`;
+  // flatiron wedge: narrow lit west face + wide shaded east face meet at the prow
+  g += `<path d="M250,612 L250,554 Q250,546 257,543 L268,537 L268,612 Z" fill="${F(P.brick)}"/>`;
+  g += liteRect(252, 556, 5, 52, P);
+  g += `<path d="M268,537 L330,549 L330,612 L268,612 Z" fill="${F(P.brick)}"/>`;
+  g += shadeRect(268, 549, 62, 63, 0.12);
+  // cornice bands
+  g += `<path d="M268,537 L330,549 L330,554 L268,542 Z" fill="${D(P.sand)}"/>`;
+  g += `<path d="M251,553 Q251,547 257,544 L267,539" fill="none" stroke="${D(P.sand)}" stroke-width="3"/>`;
+  // flagpole on the prow
+  g +=
+    `<line x1="268" y1="537" x2="268" y2="516" stroke-width="2"/>` +
+    `<path d="M268,516 L282,520 L268,525 Z" fill="${D(P.carA)}"/>`;
+  // window grid, east face
+  let wg = `<g stroke-width="1.5">`;
+  for (const wy of [556, 568, 580, 592]) {
+    for (const wx of [274, 287, 300, 313]) {
+      wg += `<rect x="${wx}" y="${wy}" width="8" height="7" fill="${D(P.window)}"/>`;
+    }
+  }
+  wg += `</g>`;
+  g += wg;
+  // narrow windows on the west face
+  g +=
+    `<g stroke-width="1.5">` +
+    `<rect x="255" y="556" width="7" height="7" fill="${D(P.window)}"/>` +
+    `<rect x="255" y="568" width="7" height="7" fill="${D(P.window)}"/>` +
+    `<rect x="255" y="580" width="7" height="7" fill="${D(P.window)}"/>` +
+    `<rect x="255" y="592" width="7" height="7" fill="${D(P.window)}"/>` +
+    `</g>`;
+  // arched ground floor + door at the prow
+  g +=
+    `<g stroke-width="1.5">` +
+    `<rect x="276" y="600" width="10" height="10" rx="3" fill="${D(P.window)}"/>` +
+    `<rect x="292" y="600" width="10" height="10" rx="3" fill="${D(P.window)}"/>` +
+    `<rect x="308" y="600" width="10" height="10" rx="3" fill="${D(P.window)}"/>` +
+    `</g>` +
+    `<rect x="256" y="598" width="10" height="14" fill="${D(P.door)}"/>` +
+    `<circle cx="258.5" cy="605" r="1.1" fill="${GOLD}" stroke="none"/>`;
+  // rooftop water tank on the east roof
+  g +=
+    `<g>` +
+    `<line x1="312" y1="543" x2="312" y2="547" stroke-width="2"/>` +
+    `<line x1="320" y1="543" x2="320" y2="548" stroke-width="2"/>` +
+    `<rect x="308" y="534" width="16" height="10" rx="2" fill="${F(P.wall)}"/>` +
+    `<ellipse cx="316" cy="534" rx="8" ry="2.5" fill="${D(P.brickDark)}"/>` +
+    `</g>`;
+  g += close;
+  // Lady-Liberty-green statuette + yellow cab (site furniture, full colour)
+  g +=
+    `<g>` +
+    `<ellipse cx="341" cy="600" rx="8" ry="2.5" fill="${INK}" opacity=".12" stroke="none"/>` +
+    `<rect x="336" y="588" width="10" height="12" rx="1" fill="${P.sidewalk}"/>` +
+    `<path d="M341,570 L336.5,588 L345.5,588 Z" fill="${P.roofD}"/>` +
+    `<circle cx="341" cy="567" r="2.5" fill="${P.roofD}" stroke-width="1.5"/>` +
+    `<g stroke-width="1">` +
+    `<line x1="339" y1="565" x2="337.5" y2="562.5"/>` +
+    `<line x1="341" y1="564.5" x2="341" y2="561.5"/>` +
+    `<line x1="343" y1="565" x2="344.5" y2="562.5"/>` +
+    `</g>` +
+    `<line x1="343" y1="571" x2="347" y2="562" stroke-width="2"/>` +
+    `<circle cx="347.5" cy="560.5" r="1.8" fill="${GOLD}" stroke-width="1"/>` +
+    `</g>`;
+  g +=
+    `<g>` +
+    `<rect x="281" y="637" width="6" height="4" rx="1.5" fill="${P.carC}" stroke-width="1"/>` +
+    parkedCar(274, 640, P.carC, P) +
+    `</g>`;
+  if (free) g += forSaleSign(246, 636, P);
+  else g += plaque(292, 620, s.label, active);
+  if (active) g += activeFlag(300, 543);
+  return g + close;
+}
+
+// --- site: orbital ----------------------------------------------------------------
+
+function siteOrbital(P: ThemePalette, s: SiteView): string {
+  const { open, bOpen, close, free, active, F, D } = siteFrame(P, s);
+  let g = open + shadow(188, 720, 64, 8);
+  if (active) g += activeRing(188, 700, 74, 28);
+  g += bOpen;
+  // raised concrete launch platform (top slab + visible rim)
+  g += `<ellipse cx="188" cy="700" rx="66" ry="24" fill="${D(P.road)}"/>`;
+  g += `<ellipse cx="188" cy="693" rx="66" ry="24" fill="${F(P.sidewalk)}"/>`;
+  // hazard ring + humming sci-fi energy ring
+  g += `<ellipse cx="188" cy="693" rx="46" ry="15" fill="none" stroke="${GOLD}" stroke-width="2.5" stroke-dasharray="8 6" opacity=".9"/>`;
+  g += `<ellipse cx="188" cy="694" rx="58" ry="20" fill="none" stroke="${D(P.pool)}" stroke-width="1.5" stroke-dasharray="2 6" opacity=".6"/>`;
+  // scorch mark under the rocket
+  g += `<ellipse cx="166" cy="696" rx="13" ry="5" fill="${INK}" opacity=".18" stroke="none"/>`;
+  // mission-control bunker at the back edge
+  g +=
+    `<rect x="134" y="666" width="22" height="14" rx="2" fill="${F(P.wall)}"/>` +
+    shadeRect(150, 666, 6, 14) +
+    `<rect x="137" y="670" width="12" height="5" fill="${D(P.window)}" stroke-width="1.5"/>` +
+    `<line x1="152" y1="666" x2="152" y2="658" stroke-width="1.5"/>` +
+    `<circle cx="152" cy="656.5" r="1.4" fill="${GOLD}" stroke-width="1"/>`;
+  // the rocket (fins, body, stripe, porthole, nose)
+  g +=
+    `<path d="M158,668 L148,690 L158,682 Z" fill="${D(P.carA)}"/>` +
+    `<path d="M174,668 L184,690 L174,682 Z" fill="${D(P.carA)}"/>` +
+    `<rect x="158" y="640" width="16" height="46" rx="5" fill="${D(P.sail)}"/>` +
+    shadeRect(169, 644, 5, 38, 0.12) +
+    `<path d="M158,644 Q166,618 174,644 Z" fill="${D(P.carA)}"/>` +
+    `<rect x="159" y="664" width="14" height="4" fill="${D(P.carA)}" stroke-width="1"/>` +
+    `<circle cx="166" cy="656" r="3.5" fill="${D(P.window)}" stroke-width="1.5"/>`;
+  // idling thruster glow
+  g +=
+    `<circle cx="166" cy="689" r="5.5" fill="${GOLD}" opacity=".3" stroke="none"/>` +
+    `<circle cx="166" cy="689" r="2.4" fill="${GOLD}" stroke-width="1"/>`;
+  // service gantry with warning light
+  g +=
+    `<rect x="179" y="638" width="7" height="48" fill="${D(P.brickDark)}"/>` +
+    `<g stroke-width="1.2" opacity=".6">` +
+    `<line x1="179" y1="650" x2="186" y2="644"/>` +
+    `<line x1="179" y1="662" x2="186" y2="656"/>` +
+    `<line x1="179" y1="674" x2="186" y2="668"/>` +
+    `</g>` +
+    `<line x1="174" y1="644" x2="179" y2="644" stroke-width="2"/>` +
+    `<circle cx="182.5" cy="634" r="4" fill="${GOLD}" opacity=".4" stroke="none"/>` +
+    `<circle cx="182.5" cy="634" r="1.8" fill="${GOLD}" stroke-width="1"/>`;
+  // deep-space uplink dish
+  g +=
+    `<rect x="226" y="664" width="5" height="14" rx="1.5" fill="${D(P.sidewalk)}"/>` +
+    `<g transform="rotate(-24 228 658)">` +
+    `<ellipse cx="228" cy="658" rx="13" ry="5.5" fill="${D(P.glass)}"/>` +
+    `<ellipse cx="228" cy="658" rx="8" ry="3" fill="${D(P.glassDark)}" stroke="none"/>` +
+    `</g>` +
+    `<line x1="228" y1="658" x2="236" y2="650" stroke-width="1.5"/>` +
+    `<circle cx="237" cy="649" r="1.5" fill="${GOLD}" stroke-width="1"/>`;
+  // blinking pad rim lights
+  g +=
+    `<g stroke-width="1">` +
+    `<circle cx="128" cy="698" r="1.6" fill="${GOLD}"/>` +
+    `<circle cx="158" cy="712" r="1.6" fill="${GOLD}"/>` +
+    `<circle cx="188" cy="716" r="1.6" fill="${GOLD}"/>` +
+    `<circle cx="218" cy="712" r="1.6" fill="${GOLD}"/>` +
+    `<circle cx="248" cy="698" r="1.6" fill="${GOLD}"/>` +
+    `</g>`;
+  g += close;
+  if (free) g += forSaleSign(112, 736, P);
+  else g += plaque(188, 722, s.label, active);
+  if (active) g += activeFlag(250, 688);
+  return g + close;
+}
+
 // ---------------------------------------------------------------------------
 // Theme overlays, clouds, animated cars
 // ---------------------------------------------------------------------------
@@ -1077,24 +1334,24 @@ function siteTower(P: ThemePalette, s: SiteView): string {
 function overlaySection(P: ThemePalette): string {
   let g = '';
   if (P.overlay) {
-    g += `<rect x="0" y="0" width="360" height="520" fill="url(#cm-${P.id}-ov)" opacity="${P.overlay.opacity}" stroke="none"/>`;
+    g += `<rect x="0" y="0" width="360" height="740" fill="url(#cm-${P.id}-ov)" opacity="${P.overlay.opacity}" stroke="none"/>`;
   }
   if (P.satTint) {
     // drone/spy view: tint + coordinate grid + viewfinder corners + HUD tag
-    g += `<rect x="0" y="0" width="360" height="520" fill="${P.satTint}" opacity=".05" stroke="none"/>`;
+    g += `<rect x="0" y="0" width="360" height="740" fill="${P.satTint}" opacity=".05" stroke="none"/>`;
     let grid = `<g stroke="${INK}" stroke-width="1" opacity=".08">`;
-    for (let x = 40; x < 360; x += 40) grid += `<line x1="${x}" y1="0" x2="${x}" y2="520"/>`;
-    for (let y = 40; y < 520; y += 40) grid += `<line x1="0" y1="${y}" x2="360" y2="${y}"/>`;
+    for (let x = 40; x < 360; x += 40) grid += `<line x1="${x}" y1="0" x2="${x}" y2="740"/>`;
+    for (let y = 40; y < 740; y += 40) grid += `<line x1="0" y1="${y}" x2="360" y2="${y}"/>`;
     grid += `</g>`;
     g += grid;
     g +=
       `<g fill="none" stroke="${INK}" stroke-width="2.5" opacity=".4">` +
       `<path d="M8,26 L8,8 L26,8"/>` +
       `<path d="M334,8 L352,8 L352,26"/>` +
-      `<path d="M352,494 L352,512 L334,512"/>` +
-      `<path d="M26,512 L8,512 L8,494"/>` +
+      `<path d="M352,714 L352,732 L334,732"/>` +
+      `<path d="M26,732 L8,732 L8,714"/>` +
       `</g>`;
-    g += `<text x="16" y="502" font-family="inherit" font-weight="800" font-size="10" fill="${INK}" opacity=".5" stroke="none">SAT-VIEW 37.4°N</text>`;
+    g += `<text x="16" y="722" font-family="inherit" font-weight="800" font-size="10" fill="${INK}" opacity=".5" stroke="none">SAT-VIEW 37.4°N</text>`;
   }
   return g;
 }
@@ -1136,7 +1393,7 @@ function renderMap(P: ThemePalette, sites: SiteView[]): string {
   const sv = (id: string): SiteView => byId.get(id) ?? { id, status: 'free', label: '' };
   const parts: string[] = [];
   parts.push(
-    `<svg class="city-map" viewBox="0 0 360 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="City map">`,
+    `<svg class="city-map" viewBox="0 0 360 740" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="City map">`,
   );
   parts.push(defsSection(P));
   // everything inherits the cartoon ink outline from this wrapper
@@ -1152,6 +1409,9 @@ function renderMap(P: ThemePalette, sites: SiteView[]): string {
   parts.push(sitePaloAlto(P, sv('paloalto'))); // site: paloalto
   parts.push(siteLoft(P, sv('loft'))); // site: loft
   parts.push(siteGarage(P, sv('garage'))); // site: garage
+  parts.push(siteSeattle(P, sv('seattle'))); // site: seattle
+  parts.push(siteNyc(P, sv('nyc'))); // site: nyc
+  parts.push(siteOrbital(P, sv('orbital'))); // site: orbital
   parts.push(overlaySection(P)); // dusk cast / satellite HUD
   parts.push(cloudsSection(P)); // clouds (CSS-animated)
   parts.push(carsSection(P)); // cars (CSS-animated)

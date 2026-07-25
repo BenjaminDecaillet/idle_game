@@ -31,6 +31,10 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [x] **Wallpapers & decor** — 7 wallpapers + 3 map themes bought once with project money, applied per company / player default / map
 - [x] **QoL & sinks** — free x1/x2/x4 live speed toggle, marketing campaign (paid 2× boost, extendable), per-company renaming
 - [x] **Refonte graphique cartoon** (voir [design-system.md](design-system.md)) — thème « sunny valley » (Baloo 2 embarquée, boutons 3D, cartes crème contours ink) ; carte de ville illustrée cliquable + bottom sheet (`cityMap.ts`, 3 thèmes) ; bureau en coupe dollhouse avec 7 wallpapers-scènes (`officeScene.ts`) ; illustrations d'objets/upgrades/projets + postes spécifiques par workstation + props d'upgrades au rez-de-chaussée (`itemArt.ts`, `persona.ts`) ; set de 30 icônes UI (`icons.ts`), HUD/tab bar redessinés, nouveau favicon/PWA icons
+- [x] **Company progression difficulty** — exponential per-company cost multiplier (`COMPANY_COST_GROWTH`), 3 new late-game sites (Seattle/NYC/Orbital, 8 total, new map art), per-site contract scaling (`projectScale`: bigger rewards/unlock costs, sub-linear work), 4 upgrades gated at 2/3/5/7 companies (synergy, mentorship, talent, moonshot)
+- [x] **Story + Gabriel tutorial + i18n foundation** (save v4) — 19-beat earnest AGI-dream arc (`story.ts`), skippable/resumable first-launch tutorial with Gabriel persona (`tutorial.ts`, `gabriel.ts`), typed EN/FR i18n layer (`src/i18n/`, auto-detect + settings toggle); veterans' saves skip tutorial & backfill beats
+- [x] **Missions + VsCoin** (save v5) — 23 missions in 6 derived-metric chains, claim flow, `grantVsCoin`/`spendVsCoin` audited ledger (monetization-ready hooks), premium sinks (Founder's Aura, Diamond Penthouse, Golden Sprint), Missions tab + HUD badge
+- [x] **Founder office + avatar customization** (save v6) — customizable player avatar (`player.ts` + persona art), founder office scene evolving with the global goal (4 stages), richer employee personas (per-tier outfits, more expressions, desk micro-details, blink/bob idle animations)
 - [ ] **Monetization Phase 0** — analytics (PostHog/Plausible) + privacy policy → see [monetization.md](monetization.md)
 - [ ] **Shop/Boost tab** — UI for boost & time-skip offers over the existing engine hooks (mock "ad" in dev)
 - [ ] **Rewarded ads** — portal SDK (CrazyGames/Poki) or H5 Games Ads + consent banner
@@ -43,7 +47,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [ ] **Worker traits** — rare candidates with quirks (night owl, coffee addict)
 - [ ] **Cloud saves** — optional backend or Google Drive sync
 - [ ] **Capacitor wrapper** — App Store / Play Store with AdMob + RevenueCat (monetization Phase 4)
-- [ ] **i18n** — EN/FR/DE
+- [ ] **i18n** — EN/FR done for story/tutorial/missions/settings via `src/i18n/`; remaining: migrate the rest of the UI strings + DE (see improvements.md #16)
 - [ ] **Lighthouse pass** — PWA/perf/a11y audit on the deployed URL
 
 ## Engineering conventions

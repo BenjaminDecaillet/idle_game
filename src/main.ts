@@ -2,6 +2,7 @@ import './style.css';
 import { grantBoost, tick, timeSkip } from './game/engine';
 import { loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
+import { resolveLang, setCurrentLang } from './i18n';
 import { Fx } from './ui/fx';
 import { UI } from './ui/ui';
 
@@ -10,6 +11,7 @@ const fxCanvas = document.getElementById('fx-canvas') as HTMLCanvasElement;
 
 const { state: loaded, offlineSec, offlineEarnings } = loadGame();
 let state: GameState = loaded;
+setCurrentLang(resolveLang(state.settings.language, navigator.language));
 
 const fx = new Fx(fxCanvas);
 fx.soundEnabled = state.settings.sound;

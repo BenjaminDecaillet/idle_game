@@ -1,4 +1,7 @@
 import {
+  AURA_OUTPUT_PER_LEVEL,
+  COMPANY_COST_GROWTH,
+  DEFAULT_PLAYER_LOOK,
   COMPANY_SITES,
   FIRST_NAMES,
   FLOOR_BASE_COST,
@@ -9,12 +12,21 @@ import {
   MARKETING_MIN_COST,
   MARKETING_MULT,
   MAX_FLOORS,
+  MENTORSHIP_SPEED_FACTOR,
+  MOONSHOT_OUTPUT_PER_LEVEL,
   TIME_SCALES,
   LAST_NAMES,
+  PROJECT_WORK_SCALE_EXP,
   PROJECTS,
   SKILL_OUTPUT_PER_LEVEL,
   SPEC_MATCH_BONUS,
   SPECIALIZATIONS,
+  SYNERGY_OUTPUT_PER_COMPANY,
+  TALENT_HIRE_DISCOUNT,
+  VSCOIN_BOOST_COST,
+  VSCOIN_BOOST_DURATION_SEC,
+  VSCOIN_BOOST_MULT,
+  VSCOIN_LEDGER_CAP,
   TRAIN_COST_LEVEL_RAMP,
   TRAIN_COST_RATE_FACTOR,
   TRAIN_DURATION_SEC,
@@ -37,7 +49,11 @@ import type {
   WorkerState,
 } from './types';
 
-export const SAVE_VERSION = 3; // v3: multiple companies on a map (shared wallet)
+// v3: multiple companies on a map (shared wallet)
+// v4: story beats, Gabriel tutorial, player identity, language setting
+// v5: missions + VsCoin premium currency with ledger
+// v6: customizable player avatar look (founder office)
+export const SAVE_VERSION = 6;
 
 // ---------------------------------------------------------------------------
 // State creation
@@ -59,7 +75,13 @@ export function createInitialState(now = Date.now()): GameState {
     ownedMapThemes: ['daylight'],
     mapThemeId: 'daylight',
     boosts: [],
-    settings: { sound: true, particles: true, timeScale: 1 },
+    settings: { sound: true, particles: true, timeScale: 1, language: 'auto' },
+    story: { seen: [], queue: [] },
+    tutorial: { step: 0, done: false, giftGiven: false },
+    player: { name: 'Founder', look: { ...DEFAULT_PLAYER_LOOK } },
+    vsCoin: 0,
+    vsCoinLedger: [],
+    missionsClaimed: [],
     nextEntityId: 1,
   };
   const company = createCompany(state, 'garage', 'My Startup');
@@ -69,6 +91,7 @@ export function createInitialState(now = Date.now()): GameState {
 
 /** Build a fresh company at a site and add it to the state. */
 export function createCompany(state: GameState, siteId: string, name: string): CompanyState {
+  const scale = siteById(siteId).projectScale;
   const company: CompanyState = {
     id: state.nextEntityId++,
     name,
@@ -77,7 +100,7 @@ export function createCompany(state: GameState, siteId: string, name: string): C
     wallpaperId: null,
     workers: [],
     workstations: [],
-    projects: PROJECTS.map(newProjectState),
+    projects: PROJECTS.map((def) => newProjectState(def, scale)),
     activeProjectId: PROJECTS[0].id,
     upgrades: {},
     candidates: [],
@@ -89,18 +112,26 @@ export function createCompany(state: GameState, siteId: string, name: string): C
   return company;
 }
 
-export function newProjectState(def: {
-  id: string;
-  baseWork: number;
-  baseReward: number;
-}): ProjectState {
+/** Required work for a project at a site with the given projectScale. */
+export function scaledProjectWork(baseWork: number, projectScale: number): number {
+  return baseWork * Math.pow(projectScale, PROJECT_WORK_SCALE_EXP);
+}
+
+export function newProjectState(
+  def: {
+    id: string;
+    baseWork: number;
+    baseReward: number;
+  },
+  projectScale = 1,
+): ProjectState {
   return {
     defId: def.id,
     unlocked: false,
     progress: 0,
     completions: 0,
-    currentWork: def.baseWork,
-    currentReward: def.baseReward,
+    currentWork: scaledProjectWork(def.baseWork, projectScale),
+    currentReward: def.baseReward * projectScale,
   };
 }
 
@@ -133,9 +164,13 @@ export function skillMultiplier(worker: WorkerState): number {
 export function globalOutputMultiplier(state: GameState, company: CompanyState): number {
   const coffee = 1 + 0.1 * (company.upgrades['coffee'] ?? 0);
   const fiber = 1 + 0.15 * (company.upgrades['fiber'] ?? 0);
+  const synergy =
+    1 + SYNERGY_OUTPUT_PER_COMPANY * (company.upgrades['synergy'] ?? 0) * state.companies.length;
+  const moonshot = 1 + MOONSHOT_OUTPUT_PER_LEVEL * (company.upgrades['moonshot'] ?? 0);
+  const aura = 1 + AURA_OUTPUT_PER_LEVEL * (company.upgrades['aura'] ?? 0);
   let boost = 1;
   for (const b of state.boosts) boost *= b.mult;
-  return coffee * fiber * boost * siteById(company.siteId).outputBonus;
+  return coffee * fiber * synergy * moonshot * aura * boost * siteById(company.siteId).outputBonus;
 }
 
 /** Strongest currently-active boost, for HUD display. Null if none. */
@@ -291,6 +326,44 @@ export function availableSites(state: GameState): string[] {
   return COMPANY_SITES.filter((s) => !companyAtSite(state, s.id)).map((s) => s.id);
 }
 
+/**
+ * Price of founding a company at a site right now. Every company already
+ * owned past the first multiplies the site's list price by
+ * COMPANY_COST_GROWTH, so each additional company is a bigger commitment
+ * than the previous one regardless of purchase order.
+ */
+export function companyCost(state: GameState, siteId: string): number {
+  const site = siteById(siteId);
+  const extraCompanies = Math.max(0, state.companies.length - 1);
+  return Math.round(site.cost * Math.pow(COMPANY_COST_GROWTH, extraCompanies));
+}
+
+/** Hire price for a tier in a company (Talent Network discount applied). */
+export function hireCost(company: CompanyState, tierId: string): number {
+  const discount = Math.max(
+    0.1,
+    1 - TALENT_HIRE_DISCOUNT * (company.upgrades['talent'] ?? 0),
+  );
+  return Math.round(tierById(tierId).hireCost * discount);
+}
+
+/** Training duration for a company (Mentorship Program speeds it up). */
+export function trainDurationSec(company: CompanyState): number {
+  return TRAIN_DURATION_SEC * Math.pow(MENTORSHIP_SPEED_FACTOR, company.upgrades['mentorship'] ?? 0);
+}
+
+/** Unlock price of a project in a company (scaled by the site's contracts). */
+export function projectUnlockCost(company: CompanyState, projectId: string): number {
+  return Math.round(
+    projectDefById(projectId).unlockCost * siteById(company.siteId).projectScale,
+  );
+}
+
+/** Companies the player must own before an upgrade appears (1 = always). */
+export function upgradeCompanyRequirement(upgradeId: string): number {
+  return upgradeDefById(upgradeId).requiresCompanies ?? 1;
+}
+
 // ---------------------------------------------------------------------------
 // Tick — the heart of the idle loop
 // ---------------------------------------------------------------------------
@@ -417,9 +490,9 @@ export function hireWorker(state: GameState, candidateIndex: number): string | n
   const company = activeCompany(state);
   const candidate = company.candidates[candidateIndex];
   if (!candidate) return 'Candidate not found';
-  const tier = tierById(candidate.tierId);
-  if (state.money < tier.hireCost) return 'Not enough money';
-  state.money -= tier.hireCost;
+  const cost = hireCost(company, candidate.tierId);
+  if (state.money < cost) return 'Not enough money';
+  state.money -= cost;
   company.workers.push({
     id: state.nextEntityId++,
     name: candidate.name,
@@ -458,9 +531,10 @@ export function trainWorker(state: GameState, workerId: number): string | null {
   const cost = trainCost(worker);
   if (state.money < cost) return 'Not enough money';
   state.money -= cost;
+  const duration = trainDurationSec(company);
   worker.training = {
-    remainingSec: TRAIN_DURATION_SEC,
-    totalSec: TRAIN_DURATION_SEC,
+    remainingSec: duration,
+    totalSec: duration,
     levels: trainLevels(worker),
   };
   autoSeat(company); // frees their desk for a colleague
@@ -504,9 +578,9 @@ export function unlockProject(state: GameState, projectId: string): string | nul
   const company = activeCompany(state);
   const project = getProject(company, projectId);
   if (project.unlocked) return 'Already unlocked';
-  const def = projectDefById(projectId);
-  if (state.money < def.unlockCost) return 'Not enough money';
-  state.money -= def.unlockCost;
+  const cost = projectUnlockCost(company, projectId);
+  if (state.money < cost) return 'Not enough money';
+  state.money -= cost;
   project.unlocked = true;
   return null;
 }
@@ -514,11 +588,20 @@ export function unlockProject(state: GameState, projectId: string): string | nul
 export function buyUpgrade(state: GameState, upgradeId: string): string | null {
   const company = activeCompany(state);
   const def = upgradeDefById(upgradeId);
+  const required = def.requiresCompanies ?? 1;
+  if (state.companies.length < required) {
+    return `Requires ${required} companies`;
+  }
   const level = company.upgrades[upgradeId] ?? 0;
   if (level >= def.maxLevel) return 'Already at max level';
-  const cost = upgradeCost(company, upgradeId);
-  if (state.money < cost) return 'Not enough money';
-  state.money -= cost;
+  if (def.vsCoinCost !== undefined) {
+    const err = spendVsCoin(state, upgradeVsCoinCost(company, upgradeId)!, `shop:${upgradeId}`);
+    if (err) return err;
+  } else {
+    const cost = upgradeCost(company, upgradeId);
+    if (state.money < cost) return 'Not enough money';
+    state.money -= cost;
+  }
   company.upgrades[upgradeId] = level + 1;
   return null;
 }
@@ -540,8 +623,9 @@ export function buyCompany(
 ): string | null {
   const site = siteById(siteId);
   if (companyAtSite(state, siteId)) return 'Site already occupied';
-  if (state.money < site.cost) return 'Not enough money';
-  state.money -= site.cost;
+  const cost = companyCost(state, siteId);
+  if (state.money < cost) return 'Not enough money';
+  state.money -= cost;
   const company = createCompany(state, siteId, name?.trim().slice(0, 30) || `${site.name} Branch`);
   state.activeCompanyId = company.id;
   return null;
@@ -551,6 +635,56 @@ export function setActiveCompany(state: GameState, companyId: number): string | 
   if (!companyById(state, companyId)) return 'Company not found';
   state.activeCompanyId = companyId;
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// VsCoin — the premium second currency (earned in-game; monetization-ready)
+// ---------------------------------------------------------------------------
+
+/**
+ * Grant VsCoin from any source. THE entry point for every future
+ * monetization flow too (source 'iap:<sku>' / 'ad:<placement>') — new
+ * flows plug in here without touching anything else. Every movement is
+ * recorded in the ledger for restore/debug/analytics.
+ */
+export function grantVsCoin(state: GameState, amount: number, source: string): string | null {
+  if (!Number.isFinite(amount) || amount <= 0) return 'Invalid amount';
+  state.vsCoin += amount;
+  pushLedger(state, { amount, source });
+  return null;
+}
+
+/** Spend VsCoin on a sink (premium upgrades, cosmetics, boosts). */
+export function spendVsCoin(state: GameState, amount: number, sink: string): string | null {
+  if (!Number.isFinite(amount) || amount <= 0) return 'Invalid amount';
+  if (state.vsCoin < amount) return 'Not enough VsCoin';
+  state.vsCoin -= amount;
+  pushLedger(state, { amount: -amount, source: sink });
+  return null;
+}
+
+function pushLedger(state: GameState, entry: { amount: number; source: string }): void {
+  state.vsCoinLedger.push(entry);
+  if (state.vsCoinLedger.length > VSCOIN_LEDGER_CAP) {
+    state.vsCoinLedger.splice(0, state.vsCoinLedger.length - VSCOIN_LEDGER_CAP);
+  }
+}
+
+/** VsCoin price of the next level of a premium upgrade (null = money one). */
+export function upgradeVsCoinCost(company: CompanyState, upgradeId: string): number | null {
+  const def = upgradeDefById(upgradeId);
+  if (def.vsCoinCost === undefined) return null;
+  const level = company.upgrades[upgradeId] ?? 0;
+  return Math.round(def.vsCoinCost * Math.pow(def.costGrowth, level));
+}
+
+/** Buy the premium output boost with VsCoin. */
+export function buyVsCoinBoost(state: GameState): string | null {
+  const existing = state.boosts.find((b) => b.source === 'vscoin');
+  if (!existing && state.boosts.length >= 5) return 'Too many active boosts';
+  const err = spendVsCoin(state, VSCOIN_BOOST_COST, 'shop:boost');
+  if (err) return err;
+  return grantBoost(state, VSCOIN_BOOST_MULT, VSCOIN_BOOST_DURATION_SEC, 'vscoin');
 }
 
 /**
@@ -621,6 +755,15 @@ export function setTimeScale(state: GameState, scale: number): string | null {
   return null;
 }
 
+/** Persist the UI language choice ('auto' follows the browser). */
+export function setLanguage(state: GameState, language: string): string | null {
+  if (language !== 'auto' && language !== 'en' && language !== 'fr') {
+    return 'Unknown language';
+  }
+  state.settings.language = language;
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Cosmetics — wallpapers & map themes (one purchase unlocks everywhere)
 // ---------------------------------------------------------------------------
@@ -634,8 +777,13 @@ export function effectiveWallpaper(state: GameState, company: CompanyState): str
 export function buyWallpaper(state: GameState, wallpaperId: string): string | null {
   const def = wallpaperById(wallpaperId);
   if (state.ownedWallpapers.includes(wallpaperId)) return 'Already owned';
-  if (state.money < def.cost) return 'Not enough money';
-  state.money -= def.cost;
+  if (def.vsCoinCost !== undefined) {
+    const err = spendVsCoin(state, def.vsCoinCost, `shop:wallpaper-${wallpaperId}`);
+    if (err) return err;
+  } else {
+    if (state.money < def.cost) return 'Not enough money';
+    state.money -= def.cost;
+  }
   state.ownedWallpapers.push(wallpaperId);
   return null;
 }

@@ -1,6 +1,7 @@
 import type {
   CompanySiteDef,
   MapThemeDef,
+  MissionDef,
   ProjectDef,
   Specialization,
   UpgradeDef,
@@ -26,6 +27,46 @@ export const TRAIN_COST_LEVEL_RAMP = 0.15;
 // Free simulation-speed toggle (live play only, offline stays wall-clock).
 export const TIME_SCALES = [1, 2, 4];
 
+// Gabriel's one-time seed-money gift, paid when the tutorial's upgrade step
+// starts so a fresh player can afford their first upgrade right away.
+export const TUTORIAL_ANGEL_GIFT = 250;
+
+// VsCoin — the premium second currency. Earned only through gameplay for
+// now (missions + story milestones); the grantVsCoin() ledger API is the
+// future hook for real-money purchases (see docs/monetization.md).
+export const VSCOIN_PER_STORY_BEAT = 2;
+export const VSCOIN_LEDGER_CAP = 200;
+// Premium boost sold for VsCoin in the Missions tab.
+export const VSCOIN_BOOST_COST = 3;
+export const VSCOIN_BOOST_MULT = 3;
+export const VSCOIN_BOOST_DURATION_SEC = 3_600;
+// Founder's Aura premium upgrade effect.
+export const AURA_OUTPUT_PER_LEVEL = 0.25;
+
+// Player avatar customization: number of options per look field. Must match
+// the art option lists in src/ui/persona.ts (which clamp defensively).
+export const PLAYER_LOOK_OPTIONS = {
+  skin: 9,
+  hair: 11,
+  hairstyle: 8,
+  eyeStyle: 3,
+  mouthStyle: 4,
+  facialHair: 4,
+  outfit: 8,
+  accessory: 6,
+} as const;
+
+export const DEFAULT_PLAYER_LOOK = {
+  skin: 2,
+  hair: 1,
+  hairstyle: 1,
+  eyeStyle: 0,
+  mouthStyle: 0,
+  facialHair: 0,
+  outfit: 0,
+  accessory: 0,
+} as const;
+
 // Marketing campaign: a purchasable output boost — the money sink twin of
 // the ad/IAP boosts. Cost is ~MARKETING_COST_SEC seconds of current gross
 // income, for MARKETING_DURATION_SEC seconds of MARKETING_MULT x output.
@@ -33,6 +74,24 @@ export const MARKETING_MULT = 2;
 export const MARKETING_DURATION_SEC = 600;
 export const MARKETING_COST_SEC = 300;
 export const MARKETING_MIN_COST = 500;
+
+// Company progression difficulty: buying your Nth company multiplies the
+// site's list price by COMPANY_COST_GROWTH^(N-2) (the 2nd company costs list
+// price, the 3rd costs list * growth, ...). Combined with the site ladder
+// this makes every additional company a real long-term goal (~1 week of
+// active play to afford the final Orbital HQ).
+export const COMPANY_COST_GROWTH = 2.2;
+
+// Later sites run bigger contracts: reward & unlock cost scale linearly with
+// site.projectScale while required work grows with this sub-linear exponent,
+// so each site tier roughly doubles the $/work of the previous one.
+export const PROJECT_WORK_SCALE_EXP = 0.5;
+
+// Company-count upgrade effects (see UPGRADES entries with requiresCompanies).
+export const SYNERGY_OUTPUT_PER_COMPANY = 0.04; // per level, per owned company
+export const MENTORSHIP_SPEED_FACTOR = 0.85; // training duration mult per level
+export const TALENT_HIRE_DISCOUNT = 0.1; // hire cost reduction per level
+export const MOONSHOT_OUTPUT_PER_LEVEL = 0.5;
 
 // Buildings: every company building starts with 1 floor; each floor holds
 // FLOOR_CAPACITY desks. floor cost = base * site.floorCostFactor * growth^(floors-1)
@@ -70,11 +129,14 @@ export const WORKSTATIONS: WorkstationDef[] = [
  * outputBonus rewards later, pricier sites so a fresh company can catch up.
  */
 export const COMPANY_SITES: CompanySiteDef[] = [
-  { id: 'garage', name: 'The Garage', cost: 0, outputBonus: 1, floorCostFactor: 1, emoji: '🏚️', blurb: 'Every empire starts between a lawnmower and a surfboard.' },
-  { id: 'loft', name: 'SoMa Loft', cost: 200_000, outputBonus: 1.1, floorCostFactor: 5, emoji: '🏬', blurb: 'Exposed brick, cold brew on tap, rent that hurts.' },
-  { id: 'paloalto', name: 'Palo Alto Office', cost: 3_000_000, outputBonus: 1.25, floorCostFactor: 25, emoji: '🏢', blurb: 'Walking distance from three VC firms and a Nobel laureate.' },
-  { id: 'campus', name: 'Mountain View Campus', cost: 40_000_000, outputBonus: 1.5, floorCostFactor: 125, emoji: '🏛️', blurb: 'Free lunches, nap pods, and a climbing wall nobody uses.' },
-  { id: 'tower', name: 'SF Skyline Tower', cost: 500_000_000, outputBonus: 2, floorCostFactor: 625, emoji: '🌆', blurb: 'Your logo, visible from two bridges.' },
+  { id: 'garage', name: 'The Garage', cost: 0, outputBonus: 1, floorCostFactor: 1, projectScale: 1, emoji: '🏚️', blurb: 'Every empire starts between a lawnmower and a surfboard.' },
+  { id: 'loft', name: 'SoMa Loft', cost: 200_000, outputBonus: 1.1, floorCostFactor: 5, projectScale: 4, emoji: '🏬', blurb: 'Exposed brick, cold brew on tap, rent that hurts.' },
+  { id: 'paloalto', name: 'Palo Alto Office', cost: 3_000_000, outputBonus: 1.25, floorCostFactor: 25, projectScale: 16, emoji: '🏢', blurb: 'Walking distance from three VC firms and a Nobel laureate.' },
+  { id: 'campus', name: 'Mountain View Campus', cost: 40_000_000, outputBonus: 1.5, floorCostFactor: 125, projectScale: 64, emoji: '🏛️', blurb: 'Free lunches, nap pods, and a climbing wall nobody uses.' },
+  { id: 'tower', name: 'SF Skyline Tower', cost: 500_000_000, outputBonus: 2, floorCostFactor: 625, projectScale: 256, emoji: '🌆', blurb: 'Your logo, visible from two bridges.' },
+  { id: 'seattle', name: 'Seattle Cloud Campus', cost: 6_000_000_000, outputBonus: 2.5, floorCostFactor: 3_125, projectScale: 1_024, emoji: '🌲', blurb: 'Rain outside, servers inside, espresso everywhere.' },
+  { id: 'nyc', name: 'NYC Flatiron Hub', cost: 75_000_000_000, outputBonus: 3, floorCostFactor: 15_625, projectScale: 4_096, emoji: '🗽', blurb: 'Wall Street money meets your changelog.' },
+  { id: 'orbital', name: 'Orbital HQ', cost: 1_000_000_000_000, outputBonus: 4, floorCostFactor: 78_125, projectScale: 16_384, emoji: '🛰️', blurb: 'Zero gravity, zero distractions — the lab your dream deserves.' },
 ];
 
 export const PROJECTS: ProjectDef[] = [
@@ -104,6 +166,7 @@ export const WALLPAPERS: WallpaperDef[] = [
   { id: 'neon', name: 'Neon Arcade', cost: 1_000_000, emoji: '🕹️', css: 'linear-gradient(160deg, #1a1038, #2a0f2e)' },
   { id: 'zen', name: 'Zen Garden', cost: 5_000_000, emoji: '🎋', css: 'linear-gradient(160deg, #1e2b23, #26221a)' },
   { id: 'gold', name: 'Gold Executive', cost: 50_000_000, emoji: '🏆', css: 'linear-gradient(160deg, #33270e, #241a08)' },
+  { id: 'diamond', name: 'Diamond Penthouse', cost: 0, vsCoinCost: 8, emoji: '💎', css: 'linear-gradient(160deg, #14273a, #1d1a38)' },
 ];
 
 /** Looks for the map screen (player-level, purchasable). */
@@ -159,7 +222,96 @@ export const UPGRADES: UpgradeDef[] = [
     maxLevel: 10,
     emoji: '💺',
   },
+  // --- Company-count unlocks: long-term goals for the multi-company game ---
+  {
+    id: 'synergy',
+    name: 'Holding Synergy',
+    description: '+4% output per company you own, per level',
+    baseCost: 50_000,
+    costGrowth: 3,
+    maxLevel: 10,
+    emoji: '🤝',
+    requiresCompanies: 2,
+  },
+  {
+    id: 'mentorship',
+    name: 'Mentorship Program',
+    description: 'Training programs finish 15% faster per level',
+    baseCost: 250_000,
+    costGrowth: 3,
+    maxLevel: 5,
+    emoji: '🧑‍🏫',
+    requiresCompanies: 3,
+  },
+  {
+    id: 'talent',
+    name: 'Talent Network',
+    description: 'Hiring costs 10% less per level',
+    baseCost: 5_000_000,
+    costGrowth: 3,
+    maxLevel: 6,
+    emoji: '🧲',
+    requiresCompanies: 5,
+  },
+  {
+    id: 'moonshot',
+    name: 'Moonshot Lab',
+    description: '+50% output from all workers per level',
+    baseCost: 250_000_000,
+    costGrowth: 4,
+    maxLevel: 5,
+    emoji: '🌙',
+    requiresCompanies: 7,
+  },
+  // --- Premium (VsCoin) upgrade: exclusive, gameplay-earned currency ------
+  {
+    id: 'aura',
+    name: "Founder's Aura",
+    description: '+25% output from all workers per level',
+    baseCost: 0,
+    costGrowth: 2,
+    maxLevel: 4,
+    emoji: '💎',
+    vsCoinCost: 2,
+  },
 ];
+
+/**
+ * Missions: concrete objectives rewarding VsCoin. Grouped in chains per
+ * metric; the UI shows the first unclaimed mission of each chain. Progress
+ * is always derived from durable state counters — no extra bookkeeping.
+ */
+export const MISSIONS: MissionDef[] = [
+  { id: 'ship-10', metric: 'projectsCompleted', target: 10, reward: 1, emoji: '📦' },
+  { id: 'ship-100', metric: 'projectsCompleted', target: 100, reward: 2, emoji: '📦' },
+  { id: 'ship-1000', metric: 'projectsCompleted', target: 1_000, reward: 4, emoji: '📦' },
+  { id: 'ship-10000', metric: 'projectsCompleted', target: 10_000, reward: 8, emoji: '📦' },
+  { id: 'earn-1k', metric: 'totalEarned', target: 1_000, reward: 1, emoji: '💰' },
+  { id: 'earn-100k', metric: 'totalEarned', target: 100_000, reward: 2, emoji: '💰' },
+  { id: 'earn-10m', metric: 'totalEarned', target: 10_000_000, reward: 4, emoji: '💰' },
+  { id: 'earn-1b', metric: 'totalEarned', target: 1_000_000_000, reward: 6, emoji: '💰' },
+  { id: 'earn-100b', metric: 'totalEarned', target: 100_000_000_000, reward: 10, emoji: '💰' },
+  { id: 'team-3', metric: 'workers', target: 3, reward: 1, emoji: '🧑‍💻' },
+  { id: 'team-5', metric: 'workers', target: 5, reward: 2, emoji: '🧑‍💻' },
+  { id: 'team-12', metric: 'workers', target: 12, reward: 3, emoji: '🧑‍💻' },
+  { id: 'team-30', metric: 'workers', target: 30, reward: 6, emoji: '🧑‍💻' },
+  { id: 'company-2', metric: 'companies', target: 2, reward: 2, emoji: '🏬' },
+  { id: 'company-3', metric: 'companies', target: 3, reward: 3, emoji: '🏢' },
+  { id: 'company-5', metric: 'companies', target: 5, reward: 5, emoji: '🌆' },
+  { id: 'company-8', metric: 'companies', target: 8, reward: 12, emoji: '🛰️' },
+  { id: 'upgrade-5', metric: 'upgradeLevels', target: 5, reward: 1, emoji: '⚙️' },
+  { id: 'upgrade-20', metric: 'upgradeLevels', target: 20, reward: 3, emoji: '⚙️' },
+  { id: 'upgrade-50', metric: 'upgradeLevels', target: 50, reward: 6, emoji: '⚙️' },
+  { id: 'desk-8', metric: 'desks', target: 8, reward: 1, emoji: '🪑' },
+  { id: 'desk-20', metric: 'desks', target: 20, reward: 3, emoji: '🪑' },
+  { id: 'desk-48', metric: 'desks', target: 48, reward: 6, emoji: '🪑' },
+];
+
+export function missionById(id: string): MissionDef {
+  const m = MISSIONS.find((m) => m.id === id);
+  if (!m) throw new Error(`Unknown mission: ${id}`);
+  return m;
+}
 
 export const FIRST_NAMES = [
   'Ada', 'Linus', 'Grace', 'Alan', 'Margaret', 'Elon', 'Sundar', 'Satya',

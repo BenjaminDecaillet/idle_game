@@ -40,7 +40,9 @@ export type IconName =
   | 'speed'
   | 'save-export'
   | 'save-import'
-  | 'trash';
+  | 'trash'
+  | 'missions'
+  | 'vscoin';
 
 // ---------------------------------------------------------------------------
 // Palette (design system tokens + local cel tones)
@@ -392,6 +394,31 @@ const DRAW: Record<IconName, () => string> = {
     `<path d="M9.6 10.6l.3 7.6M12 10.6v7.6M14.4 10.6l-.3 7.6" fill="none" stroke="#ffd0cd" stroke-width="1.4" stroke-linecap="round"/>` +
     `<rect x="4.4" y="4.2" width="15.2" height="2.8" rx="1.4" fill="${RED}" ${O}/>` +
     hi('M5.8 5.4h3.4'),
+
+  // Mission clipboard: cream board, gold clip, green ticks.
+  missions: () =>
+    lg('ic-missions-board', CREAM, '#f3e6cc') +
+    `<rect x="4.6" y="4" width="14.8" height="17" rx="2.4" fill="url(#ic-missions-board)" ${O}/>` +
+    `<rect x="15.6" y="4" width="3.8" height="17" rx="1.9" fill="#f0e2c4" stroke="none"/>` +
+    `<rect x="8.6" y="2.2" width="6.8" height="4" rx="1.6" fill="${GOLD}" ${O}/>` +
+    `<path d="M7.4 9.4l1.3 1.4 2.2-2.5" fill="none" stroke="${GREEN}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<path d="M12.6 9.6h4.6" stroke="${INK}" stroke-width="1.5" stroke-linecap="round" opacity="0.55"/>` +
+    `<path d="M7.4 13.8l1.3 1.4 2.2-2.5" fill="none" stroke="${GREEN}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<path d="M12.6 14h4.6" stroke="${INK}" stroke-width="1.5" stroke-linecap="round" opacity="0.55"/>` +
+    `<circle cx="8.4" cy="18" r="1.1" fill="none" stroke="${INK}" stroke-width="1.4"/>` +
+    `<path d="M12.6 18.2h4.6" stroke="${INK}" stroke-width="1.5" stroke-linecap="round" opacity="0.55"/>` +
+    hi('M6.2 6.4v3'),
+
+  // VsCoin: a cut diamond in premium cyan-blue with gold sparkle.
+  vscoin: () =>
+    lg('ic-vscoin-top', '#b8f1ff', CYAN) +
+    lg('ic-vscoin-body', CYAN, BLUE_DEEP) +
+    `<path d="M6 4.8h12l3.4 5L12 21.4 2.6 9.8Z" fill="url(#ic-vscoin-body)" ${O}/>` +
+    `<path d="M6 4.8h12l1.8 2.6H4.2Z" fill="url(#ic-vscoin-top)" stroke="none"/>` +
+    `<path d="M2.6 9.8h18.8M6 4.8l2.6 5L12 21.4M18 4.8l-2.6 5L12 21.4" fill="none" stroke="${INK}" stroke-width="1.2" opacity="0.55"/>` +
+    `<path d="M6 4.8h12l3.4 5L12 21.4 2.6 9.8Z" fill="none" ${O}/>` +
+    spark4(18.6, 3.6, 2.1, GOLD) +
+    hi('M5.2 6.4l1.2-1'),
 };
 
 // ---------------------------------------------------------------------------
