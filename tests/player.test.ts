@@ -80,6 +80,25 @@ describe('save migration v6', () => {
     expect(migrated.player.look).toEqual(DEFAULT_PLAYER_LOOK);
   });
 
+  it('v7: v6 saves without a portrait field default to the drawn look', () => {
+    const state = createInitialState(NOW);
+    const raw = JSON.parse(JSON.stringify(state)) as { player: { look: Record<string, unknown> } };
+    delete raw.player.look.portrait; // v6 shape
+    const migrated = migrate(raw as never, NOW);
+    expect(migrated.player.look.portrait).toBe(0);
+  });
+
+  it('v7: valid portrait picks survive, corrupt ones reset', () => {
+    const state = createInitialState(NOW);
+    setPlayerLook(state, { portrait: 5 });
+    const roundTrip = migrate(JSON.parse(JSON.stringify(state)), NOW);
+    expect(roundTrip.player.look.portrait).toBe(5);
+
+    const raw = JSON.parse(JSON.stringify(state));
+    raw.player.look.portrait = PLAYER_LOOK_OPTIONS.portrait; // out of range
+    expect(migrate(raw, NOW).player.look.portrait).toBe(DEFAULT_PLAYER_LOOK.portrait);
+  });
+
   it('repairs corrupt look indexes field by field', () => {
     const state = createInitialState(NOW);
     setPlayerLook(state, { hair: 3, outfit: 5 });

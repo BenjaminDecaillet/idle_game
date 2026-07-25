@@ -45,6 +45,11 @@ export const AURA_OUTPUT_PER_LEVEL = 0.25;
 
 // Player avatar customization: number of options per look field. Must match
 // the art option lists in src/ui/persona.ts (which clamp defensively).
+// `portrait` selects the raster portrait card: 0 = the drawn look built
+// from the other fields, 1..PLAYER_PORTRAIT_COUNT = public/portraits/
+// player-NN image (see docs/portraits.md).
+export const PLAYER_PORTRAIT_COUNT = 16;
+
 export const PLAYER_LOOK_OPTIONS = {
   skin: 9,
   hair: 11,
@@ -54,6 +59,7 @@ export const PLAYER_LOOK_OPTIONS = {
   facialHair: 4,
   outfit: 8,
   accessory: 6,
+  portrait: PLAYER_PORTRAIT_COUNT + 1,
 } as const;
 
 export const DEFAULT_PLAYER_LOOK = {
@@ -65,6 +71,7 @@ export const DEFAULT_PLAYER_LOOK = {
   facialHair: 0,
   outfit: 0,
   accessory: 0,
+  portrait: 0,
 } as const;
 
 // Marketing campaign: a purchasable output boost — the money sink twin of
