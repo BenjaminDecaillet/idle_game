@@ -97,20 +97,20 @@ import {
 } from '../game/tutorial';
 import type { CompanyState, GameState, WorkerState } from '../game/types';
 import { lookup, resolveLang, setCurrentLang, t } from '../i18n';
+import { placeCoach } from './coachPlacement';
 import type { Fx } from './fx';
-import { gabriel, type GabrielPose } from './gabriel';
+import { type GabrielPose } from './gabriel';
+import {
+  employeePortrait,
+  gabrielDialogPortrait,
+  initPortraits,
+  playerPortrait,
+} from './portraits';
 import { cityMapSvg, type SiteView } from './cityMap';
 import { icon } from './icons';
 import { lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
 import { projectArt, stationArt, upgradeArt, upgradeProp } from './itemArt';
-import {
-  emptyDeskSvg,
-  founderOffice,
-  personaAtDesk,
-  personaAvatar,
-  personaStanding,
-  playerAvatar,
-} from './persona';
+import { emptyDeskSvg, founderOffice, personaAtDesk, personaStanding } from './persona';
 
 const SPEECH_LINES = [
   'Shipping it! 🚀',
@@ -149,6 +149,10 @@ export class UI {
   private sheetSiteId: string | null = null;
   /** Tutorial step currently rendered in the coach card ('' = force redraw). */
   private coachStep: string | null | '' = '';
+  /** Element the coach popup is currently anchored to / highlighting. */
+  private coachTargetEl: Element | null = null;
+  /** step:tab key of the last target auto-scrolled into view. */
+  private coachScrollKey = '';
   private onStateReplaced: (next: GameState) => void;
 
   constructor(
@@ -161,9 +165,14 @@ export class UI {
     this.state = state;
     this.fx = fx;
     this.onStateReplaced = onStateReplaced;
+    initPortraits();
     this.buildSkeleton();
     this.rebuildTab();
     this.root.addEventListener('click', (e) => this.handleClick(e));
+    // The coach popup anchors to on-screen elements: track every layout
+    // change (resize, any panel scrolling) so it never drifts over its target.
+    window.addEventListener('resize', () => this.positionCoach());
+    window.addEventListener('scroll', () => this.positionCoach(), true);
   }
 
   // -------------------------------------------------------------------------
@@ -350,7 +359,7 @@ export class UI {
         : '';
     zone.innerHTML = `
       <div class="coach card">
-        <div class="coach-gabriel">${gabriel(pose, 62)}</div>
+        <div class="coach-gabriel">${gabrielDialogPortrait(pose, 62)}</div>
         <div class="coach-main">
           <div class="coach-head">
             <strong>${t('ui.gabriel')}</strong>
@@ -366,6 +375,68 @@ export class UI {
           </div>
         </div>
       </div>`;
+    this.positionCoach();
+  }
+
+  /**
+   * Anchor the coach card next to the current step's target and keep the
+   * target highlighted — the popup must never cover the element it is
+   * explaining. Target resolution: the step's own target selector (when
+   * visible) → the step's tab button (player is on another tab) → docked
+   * bottom card (steps with no target, e.g. naming). Re-run on every 2 Hz
+   * rebuild, resize and scroll: tab re-renders replace target nodes freely.
+   */
+  private positionCoach(): void {
+    const card = document.querySelector<HTMLElement>('#coach-zone .coach');
+    const step = card ? currentTutorialStep(this.state) : null;
+    let el: Element | null = null;
+    let inPage = false;
+    if (step) {
+      if (step.target) {
+        el = document.querySelector(step.target);
+        // Ignore matches hidden inside collapsed/other-tab containers.
+        if (el && (el as HTMLElement).offsetParent === null) el = null;
+        inPage = el !== null;
+      }
+      if (!el && step.tab && step.tab !== this.tab) {
+        el = document.getElementById(`tab-btn-${step.tab}`);
+      }
+    }
+    // Bring the in-page target into view once per step+tab, so popup and
+    // target are both visible when the step starts or the tab opens —
+    // without fighting the player's own scrolling afterwards.
+    const scrollKey = step && el && inPage ? `${step.id}:${this.tab}` : '';
+    if (scrollKey && scrollKey !== this.coachScrollKey) {
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    this.coachScrollKey = scrollKey;
+    if (this.coachTargetEl !== el) {
+      this.coachTargetEl?.classList.remove('coach-target');
+      this.coachTargetEl = el;
+    }
+    // Re-add every pass: innerHTML rebuilds recreate the node without it.
+    el?.classList.add('coach-target');
+    if (!card) return;
+    if (!el) {
+      card.classList.remove('coach-anchored');
+      card.style.left = '';
+      card.style.top = '';
+      card.style.width = '';
+      return;
+    }
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const width = Math.min(560, vw - 20);
+    card.classList.add('coach-anchored');
+    card.style.width = `${width}px`;
+    const t = el.getBoundingClientRect();
+    const pos = placeCoach(
+      { width, height: card.offsetHeight },
+      { left: t.left, top: t.top, width: t.width, height: t.height },
+      { width: vw, height: vh },
+    );
+    card.style.left = `${pos.left}px`;
+    card.style.top = `${pos.top}px`;
   }
 
   /** Avatar customization dialog (re-rendered in place on every change). */
@@ -373,22 +444,29 @@ export class UI {
     const zone = document.getElementById('modal-zone');
     if (!zone) return;
     const look = this.state.player.look;
-    const rows = PLAYER_LOOK_FIELDS.map(
-      (field) => `
+    const rows = PLAYER_LOOK_FIELDS.map((field) => {
+      // The portrait row picks a raster card: 0 = the drawn look below.
+      const value =
+        field === 'portrait'
+          ? look.portrait === 0
+            ? t('look.portraitClassic')
+            : `#${look.portrait}`
+          : String(look[field] + 1);
+      return `
       <div class="customizer-row">
         <span class="customizer-label">${t(`look.${field}`)}</span>
         <div class="customizer-controls">
           <button class="btn btn-small" data-action="look-prev:${field}">‹</button>
-          <span class="customizer-value">${look[field] + 1}</span>
+          <span class="customizer-value">${value}</span>
           <button class="btn btn-small" data-action="look-next:${field}">›</button>
         </div>
-      </div>`,
-    ).join('');
+      </div>`;
+    }).join('');
     zone.innerHTML = `
       <div class="modal-backdrop">
         <div class="modal card customizer-modal">
           <h2>${t('ui.customize')}</h2>
-          <div class="customizer-preview">${playerAvatar(look, 96)}</div>
+          <div class="customizer-preview">${playerPortrait(look, 96)}</div>
           <div class="customizer-rows">${rows}</div>
           <button class="btn btn-primary" data-action="close-modal">${t('ui.done')}</button>
         </div>
@@ -403,7 +481,7 @@ export class UI {
     zone.innerHTML = `
       <div class="modal-backdrop">
         <div class="modal card story-modal">
-          <div class="story-gabriel">${gabriel(pose, 84)}</div>
+          <div class="story-gabriel">${gabrielDialogPortrait(pose, 84)}</div>
           <span class="story-kicker">${t('ui.storyTitle')}</span>
           <h2>${lookup(`story.${beatId}.title`)}</h2>
           <p class="story-text">${lookup(`story.${beatId}.text`)}</p>
@@ -491,6 +569,8 @@ export class UI {
         content.innerHTML = this.renderStats();
         break;
     }
+    // Tab content just changed under the coach popup — re-anchor it.
+    this.positionCoach();
   }
 
   /** The map: an illustrated city where every site is a tappable building. */
@@ -674,7 +754,7 @@ export class UI {
         const affordable = s.money >= price;
         return `
         <div class="card candidate-card">
-          <span class="card-emoji persona-slot">${personaAvatar(`c:${cand.name}:${cand.tierId}`, cand.specialization, cand.tierId)}</span>
+          <span class="card-emoji persona-slot">${employeePortrait(`c:${cand.name}:${cand.tierId}`, cand.specialization, cand.tierId)}</span>
           <div class="card-main">
             <h3>${cand.name}</h3>
             <span class="muted">${tier.title} · ${formatRate(tier.baseRate)} · salary ${formatMoney(tier.salary)}/s</span>
@@ -748,7 +828,7 @@ export class UI {
     return `
       <div class="card worker-card ${station || training ? '' : 'benched'} ${training ? 'training' : ''}">
         <div class="card-row">
-          <span class="card-emoji persona-slot">${personaAvatar(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}</span>
+          <span class="card-emoji persona-slot">${employeePortrait(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}</span>
           <div class="card-main">
             <h3>${w.name} <span class="lvl">Lv ${w.skillLevel}</span></h3>
             <span class="muted">${statusLabel}</span>

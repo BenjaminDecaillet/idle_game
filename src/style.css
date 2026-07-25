@@ -545,14 +545,19 @@ button.project-card {
 
 #coach-zone {
   position: fixed;
-  left: 10px;
-  right: 10px;
-  bottom: calc(var(--tabbar-h) + 12px);
+  inset: 0;
   z-index: 40;
   pointer-events: none;
 }
 
+/* Docked by default (steps with no on-screen target); .coach-anchored
+   switches to explicit left/top set from JS (see UI.positionCoach), placed
+   by placeCoach() so the card never covers the element it explains. */
 .coach {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: calc(var(--tabbar-h) + 12px);
   display: flex;
   gap: 10px;
   align-items: flex-start;
@@ -562,6 +567,25 @@ button.project-card {
   box-shadow: 0 6px 0 rgba(45, 36, 64, 0.22);
   max-width: 560px;
   margin: 0 auto;
+}
+
+.coach.coach-anchored {
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  transition: left 0.18s ease-out, top 0.18s ease-out;
+}
+
+/* Pulsing ring on the element the current tutorial step explains. */
+.coach-target {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+  animation: coach-target-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes coach-target-pulse {
+  0%, 100% { outline-color: var(--gold); outline-offset: 2px; }
+  50% { outline-color: var(--primary); outline-offset: 5px; }
 }
 
 @keyframes coach-in {
@@ -1215,6 +1239,21 @@ button.site-card {
 .persona-avatar {
   display: block;
   border-radius: 12px;
+}
+
+/* Painted character portraits (raster card or SVG placeholder) — the one
+   deliberately non-cartoon visual family (see docs/design-system.md). */
+.portrait-img,
+.portrait-svg {
+  display: block;
+  border-radius: 12px;
+  border: 2px solid rgba(45, 36, 64, 0.9);
+  box-shadow: 0 2px 0 rgba(45, 36, 64, 0.18);
+  background: #241c36;
+}
+
+.portrait-img {
+  object-fit: cover;
 }
 
 .office-grid {

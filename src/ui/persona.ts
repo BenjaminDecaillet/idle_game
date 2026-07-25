@@ -23,6 +23,7 @@ import type { Specialization } from '../game/types';
  *   h >>> 12  % 8                  -> desk micro-prop (mug/stickies/plant/duck, 4..7 = none)
  *   h >>> 13  % 40                 -> blink animation phase (tenths of a second)
  *   h >>> 14  % 3                  -> eyebrow style
+ *   h >>> 16  % pool               -> raster portrait slot (see portraits.ts)
  *   h >>> 17  % 4                  -> base mouth style
  *   h >>> 20  % 4                  -> facial hair (none/moustache/beard/goatee)
  *   h >>> 23  % 3                  -> cheek blemish (none/freckles/blush)
@@ -84,6 +85,16 @@ export function hashSeed(seed: string): number {
     h = Math.imul(h, 16777619);
   }
   return h >>> 0;
+}
+
+/**
+ * Which raster portrait file (0-based) a worker maps to, out of a pool of
+ * `poolSize` interchangeable portraits. Rides its own hash shift (>>> 16)
+ * so existing face traits keep their derivation — same worker, same
+ * portrait, forever (see docs/portraits.md).
+ */
+export function portraitSlot(seed: string, poolSize: number): number {
+  return (hashSeed(seed) >>> 16) % poolSize;
 }
 
 export interface PersonaLook {
@@ -650,6 +661,8 @@ function safeIndex(n: number, m: number): number {
  * (head centered around 16,13 — same space as the tier `accessory`). */
 function playerAccessory(idx: number): string {
   switch (idx) {
+    case 0: // none
+      return '';
     case 1: // forward baseball cap
       return `<path d="M8.7 10.2 a7.4 7.4 0 0 1 14.6 0 l0 0.6 h-14.6 z" fill="#ff5d55" stroke="#b91c1c" stroke-width="0.5"/>
               <rect x="7" y="10.4" width="18" height="1.7" rx="0.85" fill="#c73128"/>
@@ -680,8 +693,9 @@ function playerAccessory(idx: number): string {
 }
 
 /** Resolve raw player-chosen indexes into a concrete PersonaLook (all
- * indexes wrapped safely into range) + the resolved accessory index. */
-function resolvePlayer(input: PlayerLookInput): {
+ * indexes wrapped safely into range) + the resolved accessory index.
+ * Exported so the portrait layer can paint the same resolved look. */
+export function resolvePlayer(input: PlayerLookInput): {
   look: PersonaLook;
   accessoryIdx: number;
   key: string;

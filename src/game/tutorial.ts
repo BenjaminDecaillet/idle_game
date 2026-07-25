@@ -15,6 +15,13 @@ export interface TutorialStepDef {
   id: string;
   /** Tab the step directs the player to (UI highlights that tab button). */
   tab?: 'map' | 'projects' | 'team' | 'office' | 'upgrades' | 'stats';
+  /**
+   * CSS selector of the element the step explains. The coach popup anchors
+   * next to it (never covering it) and highlights it. When the selector
+   * matches nothing (player is on another tab), the UI falls back to
+   * anchoring on the step's tab button, then to the docked position.
+   */
+  target?: string;
   /** Auto-advance condition. Undefined = manual step (Next button). */
   isComplete?: (state: GameState) => boolean;
   /** Special input rendering: name the avatar / the company. */
@@ -28,21 +35,25 @@ export const TUTORIAL_STEPS: TutorialStepDef[] = [
   {
     id: 'hire',
     tab: 'team',
+    target: '[data-action^="hire:"]',
     isComplete: (s) => activeCompany(s).workers.length >= 1,
   },
   {
     id: 'desk',
     tab: 'office',
+    target: '[data-action^="buy-station:"]',
     isComplete: (s) => activeCompany(s).workstations.length >= 1,
   },
   {
     id: 'upgrade',
     tab: 'upgrades',
+    target: '[data-action^="buy-upgrade:"]',
     isComplete: (s) => Object.values(activeCompany(s).upgrades).some((lvl) => lvl > 0),
   },
   {
     id: 'train',
     tab: 'team',
+    target: '[data-action^="train:"]',
     isComplete: (s) =>
       activeCompany(s).workers.some((w) => w.training !== null || w.skillLevel > 1),
   },

@@ -187,6 +187,8 @@ export interface PlayerLook {
   facialHair: number;
   outfit: number;
   accessory: number;
+  /** Portrait card: 0 = drawn from the fields above, 1..N = raster file. */
+  portrait: number;
 }
 
 /** The player themself (named in the tutorial; look fully customizable). */

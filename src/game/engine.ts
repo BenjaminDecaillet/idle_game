@@ -53,7 +53,8 @@ import type {
 // v4: story beats, Gabriel tutorial, player identity, language setting
 // v5: missions + VsCoin premium currency with ledger
 // v6: customizable player avatar look (founder office)
-export const SAVE_VERSION = 6;
+// v7: player.look.portrait — raster portrait picker (0 = drawn look)
+export const SAVE_VERSION = 7;
 
 // ---------------------------------------------------------------------------
 // State creation

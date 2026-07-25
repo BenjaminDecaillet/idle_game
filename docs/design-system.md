@@ -1,8 +1,17 @@
-# Idle Silicon Valley — design system (v1)
+# Idle Silicon Valley — design system (v2)
 
-Direction artistique : **cartoon détaillé, lumineux et coloré** (esprit Two Point
-Hospital). Tous les visuels sont des **SVG codés à la main**, inline dans le DOM.
-Aucun PNG, aucune requête réseau, aucune dépendance.
+Direction artistique double :
+
+- **Tout l'univers** (bâtiments, bureaux, icônes, objets, scènes) :
+  **cartoon détaillé, lumineux et coloré** (esprit Two Point Hospital),
+  SVG codés à la main, inline dans le DOM.
+- **Les personnages en contexte "portrait"** (cartes d'employés/candidats,
+  aperçu de l'avatar joueur, Gabriel dans les dialogues/tutoriel) :
+  **portraits peints semi-réalistes** (direction "Idle Angels") — voir
+  « Portraits de personnages » plus bas. Les personnages *en scène*
+  (figurines assises aux bureaux, silhouettes debout) restent cartoon.
+
+Hors portraits : aucun PNG, aucune requête réseau, aucune dépendance.
 
 ## Palette
 
@@ -55,6 +64,24 @@ Backend `#4f8df9`, DevOps `#2fbf7f`, Data Science `#ffb02e`.
   poignée, animation slide-up 0.22s.
 - **Typo** : « Baloo 2 » (variable 400–800, woff2 embarqué) partout.
   Titres/HUD/prix : 700–800. Corps : 500. Chiffres : `tabular-nums`.
+
+## Portraits de personnages (exception peinte)
+
+Pipeline hybride (`src/ui/portraits.ts`, guide complet : `docs/portraits.md`) :
+
+- **Raster d'abord** : si `public/portraits/<nom>.webp|png` existe, une
+  `<img>` l'affiche (512×512, cartes peintes générées par IA). C'est la
+  seule exception autorisée à la règle « aucun PNG » — uniquement pour les
+  portraits de personnages.
+- **Placeholder SVG peint sinon** : `src/ui/portraitArt.ts` (humains) et
+  `src/ui/gabrielPortrait.ts` (Gabriel) poussent le SVG vers le rendu peint :
+  proportions réalistes, peau/cheveux en dégradés superposés, yeux détaillés
+  (iris en dégradé radial + reflets), lumière de bord. Les règles cartoon
+  (contours ink épais, cel shading 2 tons) **ne s'appliquent pas** à ces
+  fichiers ; restent obligatoires : **pas de filtres SVG**, builders
+  **mémoïsés**, **IDs de dégradés uniques** (préfixe par variante).
+- Le style `.portrait-img` / `.portrait-svg` (cadre sombre arrondi) fait le
+  pont visuel avec les cartes cartoon.
 
 ## Fichiers
 

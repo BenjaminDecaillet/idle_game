@@ -50,6 +50,8 @@ export const fr: Record<keyof typeof en, string> = {
   'look.facialHair': 'Pilosité',
   'look.outfit': 'Tenue',
   'look.accessory': 'Accessoire',
+  'look.portrait': 'Portrait',
+  'look.portraitClassic': 'Look dessiné',
 
   // --- Tutoriel (Gabriel parle) -------------------------------------------
   'tutorial.welcome.text':

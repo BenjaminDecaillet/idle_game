@@ -54,6 +54,8 @@ export const en = {
   'look.facialHair': 'Facial hair',
   'look.outfit': 'Outfit',
   'look.accessory': 'Accessory',
+  'look.portrait': 'Portrait',
+  'look.portraitClassic': 'Drawn look',
 
   // --- Tutorial (Gabriel speaking) ----------------------------------------
   'tutorial.welcome.text':
