@@ -1241,6 +1241,21 @@ button.site-card {
   border-radius: 12px;
 }
 
+/* Painted character portraits (raster card or SVG placeholder) — the one
+   deliberately non-cartoon visual family (see docs/design-system.md). */
+.portrait-img,
+.portrait-svg {
+  display: block;
+  border-radius: 12px;
+  border: 2px solid rgba(45, 36, 64, 0.9);
+  box-shadow: 0 2px 0 rgba(45, 36, 64, 0.18);
+  background: #241c36;
+}
+
+.portrait-img {
+  object-fit: cover;
+}
+
 .office-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
