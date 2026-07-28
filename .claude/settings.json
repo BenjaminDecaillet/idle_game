@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./package-lock.json)",
+      "Read(./node_modules/**)",
+      "Read(./dist/**)",
+      "Read(./dev-dist/**)",
+      "Read(./docs/screenshots/**)",
+      "Read(./src/assets/fonts/**)",
+      "Read(./public/**/*.png)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/filter-verbose-output.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "jq -r '\"[\\(.model.display_name)] ctx \\(.context_window.used_percentage // 0)% | 5h \\(.rate_limits.five_hour.used_percentage // \"–\")% · 7d \\(.rate_limits.seven_day.used_percentage // \"–\")%\"'"
+  }
+}

@@ -9,19 +9,21 @@ Idle game as a TypeScript PWA (Vite, no frameworks). Deployed to GitHub Pages vi
 - `npm run build` — `tsc --noEmit` (includes `tests/`) + vite build
 - `node scripts/gen-icons.mjs` — regenerate PWA PNGs after editing `public/favicon.svg` (needs Chromium at `/opt/pw-browsers/chromium` or `CHROMIUM_PATH`)
 
-## Architecture rules
+## Hard rules
 
-- `src/game/**` is **pure logic** — no DOM, no timers, no `Math.random()` outside injectable `rand` params where determinism matters. All game rules live here so tests and offline simulation share one code path.
-- `tick(state, dt)` in `engine.ts` is the single source of progression truth. Offline progress = `simulateOffline()` which calls `tick` in 60s chunks. Never duplicate progression math in the UI.
-- Player actions in `engine.ts` return `string | null` (error message or success). UI shows errors as toasts.
-- `src/ui/ui.ts` re-renders the active tab at 2 Hz via innerHTML and updates HUD/hero at 60 fps via targeted `textContent` writes. Clicks use event delegation on `[data-action="verb:arg"]`.
-- Save format: bump `SAVE_VERSION` and extend `migrate()` in `save.ts` when changing `GameState` — old saves must keep loading. New projects/upgrades added to `data.ts` appear in old saves automatically via `migrate`. Full checklist: `.claude/skills/bump-save-version`.
-- Balance values (costs, rates, growth factors) all live in `src/game/data.ts` — tune there only.
-- **i18n** (`src/i18n/`): `en.ts` is the key source of truth, `fr.ts` is compile-checked complete against it. All *new* user-facing text goes through `t()`/`lookup()` with EN **and** FR content. `src/game/**` stays language-agnostic (ids/error strings only; the UI maps ids to keys like `story.<id>.title`). See `.claude/skills/add-translation`.
-- **Narrative** — `src/game/story.ts` (one-shot beats on *durable* state milestones, shown as Gabriel dialogs; grants VsCoin) and `src/game/tutorial.ts` (declarative step list, skippable/resumable, persisted). Never trigger narrative from transient flags — offline simulation would skip them. See `.claude/skills/add-story-beat`.
-- **Missions & VsCoin** — mission defs in `data.ts` (chains per metric), progress always *derived* from durable counters in `src/game/missions.ts`. All VsCoin movement goes through `grantVsCoin(state, n, source)` / `spendVsCoin(state, n, sink)` (audited ledger; future IAP/ad flows plug in via `source` tags only). See `.claude/skills/add-mission`.
-- **Art**: hand-drawn cartoon SVG per `docs/design-system.md` (ink outlines, cel shading, no filters, memoised builders, unique gradient-id prefixes). Employee personas are deterministic-per-worker (`src/ui/persona.ts`, FNV-1a hash + `>>>` shifts — extend with new shifts, never change existing ones). Player avatar is explicit state (`state.player.look`, validated in `src/game/player.ts`). **Exception — character portraits** (`src/ui/portraits.ts`, `docs/portraits.md`): worker/candidate cards, the customizer preview and Gabriel dialogs use painted semi-realistic portraits — raster from `public/portraits/` when present, painted SVG placeholder otherwise (no filters / memoised / unique gradient ids still apply; cartoon ink-outline rules do not).
+- `src/game/**` is pure logic — no DOM, no timers, no `Math.random()` outside injectable `rand` params. `tick(state, dt)` in `engine.ts` is the single source of progression truth; offline progress = `simulateOffline()` calling `tick`. Never duplicate progression math in the UI.
+- Player actions in `engine.ts` return `string | null` (error message or success); UI shows errors as toasts.
+- `src/ui/ui.ts` re-renders the active tab at 2 Hz via innerHTML and updates HUD at 60 fps via targeted `textContent`. Clicks use event delegation on `[data-action="verb:arg"]`.
+- Changing `GameState` → bump `SAVE_VERSION` and extend `migrate()` in `save.ts`; old saves must keep loading. Use the **bump-save-version** skill.
+- Balance values (costs, rates, growth factors) live only in `src/game/data.ts`.
+- All user-facing text goes through i18n (`src/i18n/`, EN + FR, compile-checked complete). `src/game/**` stays language-agnostic (ids only). Use the **add-translation** skill.
+- Story beats and missions trigger only on durable state (counters, ownership) — never transient flags, or offline simulation skips them. VsCoin moves only through `grantVsCoin`/`spendVsCoin`. Use the **add-story-beat** / **add-mission** skills.
+- SVG art has strict conventions (deterministic personas, portrait exception, no filters). Read the **art-svg** skill before touching any art builder in `src/ui/`.
 
-## Docs
+## Orientation
 
-`docs/plan.md` holds the roadmap/todos; keep its status list updated when finishing features. `docs/improvements.md` is the curated future-improvement backlog. Repeatable workflows are documented as skills in `.claude/skills/` (add-story-beat, add-mission, add-translation, bump-save-version) — keep them accurate when the underlying systems change.
+Invoke the **codebase-overview** skill instead of reading files to reconstruct the architecture; delegate searches to the **explore** agent and test/build runs to the **test-runner** agent. `docs/plan.md` = roadmap (keep its status updated when finishing features); `docs/improvements.md` = backlog. Keep `.claude/skills/` accurate when the underlying systems change.
+
+# Compact instructions
+
+When compacting, preserve: the current task and acceptance criteria; which files were edited and why; failing tests with exact failure text; any in-flight `SAVE_VERSION`/`migrate()` change; i18n keys still missing their EN or FR entry. Drop: contents of files already committed, passing test output, and exploration dead ends.
