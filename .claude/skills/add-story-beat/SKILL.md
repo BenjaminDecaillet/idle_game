@@ -11,9 +11,12 @@ state milestones. Three places must stay in sync:
 1. **Trigger** — `src/game/story.ts`, `STORY_BEATS` array (order = display
    priority when several fire together). Rules:
    - Trigger predicates must be **durable**: derived from counters/ownership
-     (`totalEarned`, `projectsCompleted`, `companyAtSite(...)`, project
-     `completions`) — never from transient flags like `training !== null`,
-     or beats can be missed during offline simulation.
+     (`totalEarned`, `projectsCompleted`, `anyCompanyAtSite(...)`, project
+     `completions`, `s.countries.length`, debt helpers `inDebt`/`inDebtCrisis`)
+     — never from transient flags like an in-flight timed action, or beats
+     can be missed during offline simulation. Beats are global: aggregate
+     across countries via `allCompanies`/`anyCompanyAtSite`, not the
+     active-country accessors.
    - Insert the beat in chronological story position, not at the end.
 2. **Text** — `src/i18n/en.ts` AND `src/i18n/fr.ts`: add BOTH
    `story.<id>.title` and `story.<id>.text`. `fr.ts` is type-checked against
@@ -26,10 +29,11 @@ state milestones. Three places must stay in sync:
 
 Notes:
 - Firing a beat auto-grants `VSCOIN_PER_STORY_BEAT` (data.ts) — no extra code.
-- Old saves: beats already satisfied at migration time are backfilled as
-  *seen without dialog and without VsCoin* via `backfillStory()` only for
-  pre-story saves. A beat added later will fire (dialog + coins) for existing
-  players the first time its condition holds — that is intended.
+- A beat added in an update will fire (dialog + coins) for existing
+  same-version players the first time its condition holds — that is intended.
+  (`backfillStory()` exists for marking already-passed beats seen without
+  dialogs/coins if a future flow needs it; the beta reset made the old
+  pre-story-save backfill path moot.)
 - The UI needs no changes; dialogs render from the queue automatically
   (`ui.ts` → `updateNarrative`). Gabriel's pose is 'think' except ids listed
   in `showStoryModal` (add yours there if it deserves 'cheer').

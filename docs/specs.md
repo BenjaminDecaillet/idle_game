@@ -41,42 +41,49 @@ idle_game/
 
 | Entity | State | Defined in |
 |---|---|---|
-| Company | `GameState` — money, totals, settings, entity lists | `types.ts` |
-| Worker | tier, specialization, skill level, experience, desk | `WorkerState` |
-| Workstation | instance of a workstation type | `WorkstationState` |
-| Project | unlocked, progress, completions, scaled work/reward | `ProjectState` |
-| Upgrade | level per upgrade id | `upgrades: Record<string, number>` |
+| Game | `GameState` — countries, global lifetime totals, VsCoin, story/missions, cosmetics, settings | `types.ts` |
+| Country | `CountryState` — own money (may be < 0 = debt), companies, per-country totals, used parody names | `CountryState` |
+| Company | site, floors, teams/desks/projects, upgrades, timed actions, rename/slot state | `CompanyState` |
+| Worker | tier (grade cap), specialization, skill, experience, desk, timesTrained, promotions | `WorkerState` |
+| Workstation | instance of a workstation type (upgradable in place) | `WorkstationState` |
+| Project | unlocked, progress, completions, scaled work/reward (soft-capped) | `ProjectState` |
+| Timed action | training / promotion / desk-upgrade in flight | `TimedAction` |
+| Upgrade | level per upgrade id (cash = per company; VsCoin = global) | `upgrades` / `globalUpgrades` |
 
 ### The tick (single source of truth)
 
-`tick(state, dt)` in `engine.ts`, called every animation frame (dt clamped to 2 s) **and** by offline simulation in 60 s chunks:
+`tick(state, dt)` in `engine.ts`, called every animation frame (dt clamped to 2 s) **and** by offline simulation in 60 s chunks. Every country advances in parallel:
 
-1. Pay salaries: `money = max(0, money − totalSalaries·dt)`
-2. Add work to the active project: `progress += Σ workerRate · dt`
-3. Grant experience to seated workers; handle level-ups
-4. Complete the project while `progress ≥ currentWork`: payout, `completions++`, `currentWork ×= workGrowth`, `currentReward ×= rewardGrowth`, progress rolls over (auto-repeat)
+1. Pay salaries from the country wallet — the balance **can go negative** (debt). While negative: interest compounds (`DEBT_INTEREST_PER_SEC`), the balance is clamped at a salary-scaled cap, and past the crisis threshold one employee resigns per interval (never the country's last; with zero workers the debt decays instead so recovery is always possible).
+2. Add work per assigned project: each seated worker contributes to their desk's floor project (`floorProjects`, default the company's main project).
+3. Grant experience to seated workers; level-ups clamp at the tier's `maxSkill` grade cap.
+4. Count down timed actions (training / promotion / desk upgrades); apply effects exactly once on completion.
+5. Complete projects while `progress ≥ currentWork`: payout to the country wallet + global lifetime totals, growth applies until the per-site reward soft cap, where reward *and* work freeze (plateau → the next company is the way forward).
 
-Returns `TickEvents` (completions, level-ups) that the UI turns into confetti/sounds — logic never touches the DOM.
+Returns `TickEvents` (completions, level-ups, trainings/promotions/desk upgrades done, debt resignations) that the UI turns into confetti/toasts — logic never touches the DOM.
 
 ## Game rules
 
 - **Worker output**: `baseRate × skillMult × stationMult × globalMult × specBonus`
-  - `skillMult = 1 + 0.1·(level−1)`; levels from experience (90 s × 1.5^level per level) or paid training
-  - `stationMult`: 0 without a desk; desk multiplier (1×–2.2×), amplified by the Chairs upgrade
-  - `globalMult`: Espresso (+10%/lvl) × Fiber (+15%/lvl)
+  - `skillMult = 1 + 0.1·(level−1)`; levels from experience (90 s × 1.5^level per level, capped at the tier's `maxSkill`) or paid training (ramped duration ×1.6 per completed program)
+  - `stationMult`: 0 without a desk; desk multiplier (1×–2.2×), amplified by the Chairs upgrade; desks upgrade in place (money + time)
+  - `globalMult`: Espresso (+10%/lvl) × Fiber (+15%/lvl) × world bonus (+25% per extra unlocked country) × global VsCoin upgrades
   - `specBonus = 1.5` when worker specialization matches the project
-- **Seating**: automatic — workers sorted by potential output take desks sorted by multiplier (`autoSeat`). Runs on hire/fire/buy/project-switch.
-- **Salaries**: per-second drain, reduced by HR upgrade (−6%/lvl, floor 40%).
-- **Costs**: workstations `base × 1.18–1.22^owned`; upgrades `base × 2.4–3^level` with level caps; training `150 × 4^tierIndex × level²`; candidate reroll ×1.5 each time.
-- **Candidates**: 3 rolled at a time, tier pool weighted by what the player can roughly afford.
-- **Projects**: 12 defs in `data.ts`, unlock with money; exactly one active; switching is free.
+- **Grades & promotion**: each tier has a skill cap (intern 10 → principal 100); at the cap a Promote timed action (0.6× next tier's hire cost, 180 s × 2^tierIndex) moves the worker up a grade keeping their skill.
+- **Timed actions & fast-forward**: training, promotion and desk upgrades run through one system (`CompanyState.timedActions`, ticked in `tick()`); any action can be completed instantly for VsCoin (1 per started 10 min remaining, first-ever skip free). See the add-timed-action skill.
+- **Seating**: automatic — workers sorted by potential output take desks sorted by multiplier (`autoSeat`). Runs on hire/fire/buy/project-switch; busy workers (training/promotion) hold no desk.
+- **Salaries**: per-second drain, reduced by HR upgrade (−6%/lvl, floor 40%); unpayable wages create debt (see the tick section).
+- **Costs**: workstations `base × 1.18–1.22^owned`; upgrades `base × 2.4–3^level` with level caps; training `baseRate·45·(1+0.15·(lvl−1))`; candidate reroll ×1.5 each time; renames cash+VsCoin doubling per rename (first cash rename ≥ purchase price).
+- **Candidates**: 3 rolled at a time, tier pool weighted by what the player can roughly afford; during the tutorial the first candidate is always the intern "Steve Gates".
+- **Projects**: 12 defs in `data.ts`, unlock with money; one project per unlocked slot (slot 2 at ≥4 floors, slot 3 at 8, paid per site scale); upper floors assignable per project; rewards soft-cap at `baseReward × projectScale × 50`.
+- **Countries**: 8 (`COUNTRIES` in data.ts); starting country chosen in the tutorial; owning all 8 city sites unlocks International Business — further countries cost `5e13 × 3^(countries−1)` from the active wallet, travel is free, each country is a fresh economy (companies auto-named from per-country parody pools); VsCoin/missions/story/cosmetics/avatar are global. See the add-country skill.
 - **Boosts** (monetization delivery, see `docs/monetization.md`): `grantBoost(state, mult, sec, source)` adds a timed output multiplier (max 5 sources, same source extends); counted down inside `tick` with mid-tick expiry pro-rating, so online/offline behave identically. `timeSkip(state, sec)` fast-forwards through real ticks. HUD shows a pulsing 🚀 badge while boosted. Save format v2.
 
 ## Persistence
 
 - Auto-save every 10 s + on tab hide/close (`visibilitychange`/`pagehide`) to `localStorage` under `idle-silicon-valley-save`.
 - **Offline progress**: on load, elapsed time (capped 24 h) is simulated through the real `tick`, so offline and online rules can never diverge. A "Welcome back" modal shows earnings.
-- `migrate()` merges old saves onto a fresh state: new fields get defaults, new projects appear automatically. Bump `SAVE_VERSION` on breaking changes.
+- **Beta reset policy** (v8): saves below `SAVE_VERSION` are discarded on load with a translated notice (`betaReset` in `LoadResult`); `migrate()` is a same-version hygiene pass only (defaults for new fields, corrupt-value repair, unknown-id cleanup). See the bump-save-version skill.
 - Export/import: base64 save codes (Settings tab).
 
 ## UI

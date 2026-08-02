@@ -29,9 +29,11 @@ Edit `MISSIONS` in `src/game/data.ts` only:
 1. Extend the `MissionMetric` union in `src/game/types.ts`.
 2. Add the case to `metricValue()` in `src/game/missions.ts`. The metric MUST
    be derived from durable state (counters, lengths, ownership) — never add
-   per-tick bookkeeping. If the quantity isn't derivable, add a monotonic
-   counter to `GameState` instead (then: bump `SAVE_VERSION`, default it in
-   `createInitialState` + `migrate()` — see the /bump-save-version skill).
+   per-tick bookkeeping. Cross-country metrics aggregate via
+   `allCompanies(state)` / `state.countries`. If the quantity isn't
+   derivable, add a monotonic counter to `GameState` instead (default it in
+   `createInitialState` + a hygiene fallback in `migrate()` — additive
+   fields need no version bump; see the bump-save-version skill).
 3. Add label keys `mission.<metric>` to `src/i18n/en.ts` AND `fr.ts`
    (placeholder `{target}` is formatted as money for `totalEarned`-like
    metrics in `ui.ts` → `renderMissions`; extend that ternary if needed).

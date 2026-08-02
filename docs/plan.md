@@ -37,6 +37,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [x] **Founder office + avatar customization** (save v6) — customizable player avatar (`player.ts` + persona art), founder office scene evolving with the global goal (4 stages), richer employee personas (per-tier outfits, more expressions, desk micro-details, blink/bob idle animations)
 - [x] **Anchored tutorial coach** — the Gabriel popup anchors next to the element each step explains (pure `placeCoach()` flip/clamp logic, per-step target selectors, pulsing highlight, scroll-into-view) instead of covering the bottom of the screen
 - [x] **Painted character portraits** (save v7) — hybrid raster/SVG portrait pipeline (`portraits.ts`): drop-in WebP/PNG cards in `public/portraits/` (see [portraits.md](portraits.md)) with painted SVG placeholders (`portraitArt.ts`, `gabrielPortrait.ts`); employee hash slot mapping, player portrait picker, Gabriel dialog portraits
+- [x] **Progression & international expansion** (save v8, beta reset — see [plan-expansion.md](plan-expansion.md), [balance.md](balance.md), [decisions.md](decisions.md)) — per-country economies (8 countries, starting-country choice, International Business unlock, free travel, +25%/country world bonus), generic timed actions (training/promotion/desk upgrades) with VsCoin fast-forward (first free, tutorial freebie), employee grade caps + promotions, training-duration ramp, Steve Gates scripted first hire, in-place desk renovations, per-project reward soft caps (plateau pushing toward the next company), multi-project floor assignment, parody company auto-naming per country + escalating paid renames (cash + VsCoin), debt with interest/crisis resignations/Gabriel warnings, missions badge dot + new promotion/country mission chains, per-country city-map themes
 - [ ] **Monetization Phase 0** — analytics (PostHog/Plausible) + privacy policy → see [monetization.md](monetization.md)
 - [ ] **Shop/Boost tab** — UI for boost & time-skip offers over the existing engine hooks (mock "ad" in dev)
 - [ ] **Rewarded ads** — portal SDK (CrazyGames/Poki) or H5 Games Ads + consent banner
@@ -45,7 +46,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [ ] **Achievements** (first hire, $1M, 100 completions…) with small permanent bonuses
 - [ ] **Statistics graphs** — money-over-time sparkline on the Stats tab
 - [ ] **Random events** — "Investor visit: 2× output for 60 s", outage debuffs
-- [ ] **Multiple concurrent projects** — one active project per specialization team
+- [x] **Multiple concurrent projects** — project slots unlocked by building height; upper floors assignable to their own projects (v8 expansion)
 - [ ] **Worker traits** — rare candidates with quirks (night owl, coffee addict)
 - [ ] **Cloud saves** — optional backend or Google Drive sync
 - [ ] **Capacitor wrapper** — App Store / Play Store with AdMob + RevenueCat (monetization Phase 4)
@@ -54,4 +55,4 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 
 ## Engineering conventions
 
-See `CLAUDE.md`: pure logic in `src/game`, all balance in `data.ts`, saves must migrate, tests must stay green (`npm test`), CI deploys `master` to Pages.
+See `CLAUDE.md`: pure logic in `src/game`, all balance in `data.ts`, save policy = beta reset (pre-v8 saves discarded with a translated notice; same-version hygiene only — see the bump-save-version skill), tests must stay green (`npm test`), CI deploys `master` to Pages.

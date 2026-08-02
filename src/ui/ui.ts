@@ -1587,7 +1587,9 @@ export class UI {
         // No naming prompt: only the very first company is player-named;
         // every other company auto-assigns a local parody name.
         error = buyCompany(s, arg);
-        if (!error) this.toast(`🏗️ ${activeCompany(s).name} founded!`, 'info');
+        if (!error) {
+          this.toast(`🏗️ ${t('ui.companyFounded', { name: activeCompany(s).name })}`, 'info');
+        }
         break;
       case 'unlock-project':
         error = unlockProject(s, arg);

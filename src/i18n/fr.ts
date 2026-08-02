@@ -72,6 +72,8 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.mainProject': 'Projet principal',
   'ui.renameCostConfirm': 'Renommer coûte {cash} + {coins} VsCoin. Continuer ?',
 
+  'ui.companyFounded': '{name} est fondée !',
+
   // --- International Business -----------------------------------------------
   'ui.world': 'International Business',
   'ui.worldHint':
@@ -79,7 +81,7 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.travel': 'Voyager',
   'ui.youAreHere': 'ICI',
   'ui.freshEconomyHint': 'Un marché vierge — repartez de zéro, grandissez plus vite',
-  'ui.countryUnlocked': 'Bienvenue en destination : {name} !',
+  'ui.countryUnlocked': 'Nouvelle destination : {name} !',
 
   // --- Réinitialisation bêta ------------------------------------------------
   'ui.betaResetTitle': 'Un nouveau départ (bêta)',

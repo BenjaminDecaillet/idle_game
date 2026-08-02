@@ -76,6 +76,8 @@ export const en = {
   'ui.mainProject': 'Main project',
   'ui.renameCostConfirm': 'Renaming costs {cash} + {coins} VsCoin. Proceed?',
 
+  'ui.companyFounded': '{name} founded!',
+
   // --- International Business -----------------------------------------------
   'ui.world': 'International Business',
   'ui.worldHint':
