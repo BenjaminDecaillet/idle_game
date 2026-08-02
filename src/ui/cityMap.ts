@@ -706,6 +706,503 @@ function fillerSection(P: ThemePalette): string {
 }
 
 // ---------------------------------------------------------------------------
+// Country themes (per-country skin over the shared city geometry)
+// ---------------------------------------------------------------------------
+//
+// HOW TO ADD A COUNTRY (full checklist: the add-country skill):
+//  1. Add a `COUNTRY_THEMES` entry keyed by the country id ('ch', 'us', …).
+//  2. `palette` — Partial<ThemePalette> merged over the base theme palette
+//     (daylight / dusk / satellite). Stick to terrain & vegetation tones plus
+//     gentle road/sidewalk tints; never restructure geometry, and keep the
+//     river and roads readable against the ground.
+//  3. `skyline(P)` — a flat distant-silhouette band in the top strip
+//     (y 0–60), wrapped in stroke="none" opacity=".35", 1–2 colours. The
+//     river and clouds are drawn over it, which is fine.
+//  4. `landmarks(P)` — 2–3 small signature props in the verified free zones:
+//       SE meadow      x 256–334, y 662–734
+//       NE bay side    x 246–350, y  65–145
+//       mid-map pocket x 202–226, y 338–376
+//     Flat shapes, ≤ 6 colours each, ink outline inherited from the wrapper
+//     group (only soft shadows / silhouettes opt out with stroke="none").
+//  Everything must be deterministic: literal coordinates, no randomness.
+
+interface CountryTheme {
+  id: string;
+  palette: Partial<ThemePalette>;
+  skyline: (P: ThemePalette) => string;
+  landmarks: (P: ThemePalette) => string;
+}
+
+// --- ch: Alps ridge, chalet + flag, alpine cow ------------------------------
+
+function chSkyline(): string {
+  const cap = (px: number, py: number) =>
+    `<path d="M${px - 8},${py + 6} L${px},${py} L${px + 8},${py + 6} L${px + 5},${py + 4.5} L${px + 2},${py + 7.5} L${px - 2},${py + 5} L${px - 5},${py + 7.5} Z" fill="#eef4fb"/>`;
+  return (
+    `<g stroke="none" opacity=".35">` +
+    `<path d="M0,60 L0,36 L34,14 L64,38 L102,6 L138,32 L174,12 L212,38 L252,8 L292,34 L326,16 L360,34 L360,60 Z" fill="#4e5f82"/>` +
+    cap(34, 14) +
+    cap(102, 6) +
+    cap(174, 12) +
+    cap(252, 8) +
+    cap(326, 16) +
+    `</g>`
+  );
+}
+
+function chLandmarks(P: ThemePalette): string {
+  // chalet with Swiss flag on the ridge — SE meadow
+  let g =
+    `<g>` +
+    shadow(292, 726, 36, 6) +
+    `<rect x="266" y="700" width="52" height="24" fill="${P.trunk}"/>` +
+    shadeRect(306, 700, 12, 24) +
+    `<rect x="272" y="708" width="10" height="14" fill="${P.window}"/>` +
+    `<rect x="287" y="708" width="10" height="14" fill="${P.door}"/>` +
+    `<rect x="302" y="708" width="10" height="14" fill="${P.window}"/>` +
+    `<rect x="268" y="704" width="48" height="2.5" rx="1" fill="${CREAM}" stroke-width="1"/>` +
+    `<g stroke-width="1">` +
+    `<circle cx="274" cy="707" r="1.6" fill="#e63946"/>` +
+    `<circle cx="285" cy="707" r="1.6" fill="#e63946"/>` +
+    `<circle cx="299" cy="707" r="1.6" fill="#e63946"/>` +
+    `<circle cx="310" cy="707" r="1.6" fill="#e63946"/>` +
+    `</g>` +
+    `<polygon points="258,702 292,676 326,702" fill="#6f4a2e"/>` +
+    `<polygon points="292,676 326,702 292,702" fill="${INK}" opacity=".12" stroke="none"/>` +
+    `<line x1="292" y1="676" x2="292" y2="660" stroke-width="2"/>` +
+    `<rect x="292" y="660" width="12" height="12" fill="#e63946"/>` +
+    `<g fill="${CREAM}" stroke="none"><rect x="296.5" y="662.5" width="3" height="7"/><rect x="294.5" y="664.5" width="7" height="3"/></g>` +
+    `</g>`;
+  // grazing cow — NE bay-side pasture
+  g +=
+    `<g>` +
+    shadow(296, 117, 15, 3.5) +
+    `<rect x="288" y="108" width="3.5" height="8" rx="1.5" fill="${CREAM}"/>` +
+    `<rect x="302" y="108" width="3.5" height="8" rx="1.5" fill="${CREAM}"/>` +
+    `<ellipse cx="296" cy="104" rx="13" ry="8" fill="${CREAM}"/>` +
+    `<path d="M290,99 q6,-3 9,2 q-1,5 -7,4 q-4,-2 -2,-6 Z" fill="#6b4a30" stroke="none"/>` +
+    `<path d="M301,107 q4,-2 6,1 q0,4 -5,3 Z" fill="#6b4a30" stroke="none"/>` +
+    `<path d="M307,100 q4,2 3,7" fill="none" stroke-width="1.5"/>` +
+    `<circle cx="282" cy="99" r="5.5" fill="${CREAM}"/>` +
+    `<ellipse cx="280" cy="102" rx="3.5" ry="2.5" fill="#e8b4ab"/>` +
+    `<path d="M278,94.5 q-3,-2.5 -1.5,-5" fill="none" stroke-width="1.5"/>` +
+    `<path d="M286,94.5 q1,-3.5 4,-3.5" fill="none" stroke-width="1.5"/>` +
+    `<line x1="283" y1="104.5" x2="283" y2="108" stroke-width="1.5"/>` +
+    `<circle cx="283" cy="110" r="2" fill="${GOLD}" stroke-width="1"/>` +
+    `</g>`;
+  return g;
+}
+
+// --- ca: pine ridge + CN-Tower spire, maples, moose sign, canoe -------------
+
+function caSkyline(): string {
+  return (
+    `<g stroke="none" opacity=".35">` +
+    `<path d="M0,60 L0,42 L10,26 L20,42 L30,30 L40,44 L52,24 L64,42 L74,32 L86,44 L98,26 L110,42 L122,30 L134,44 L148,24 L160,42 L172,32 L184,44 L196,28 L208,42 L220,32 L232,44 L246,26 L258,42 L270,32 L282,44 L316,44 L316,30 L328,44 L340,26 L352,42 L360,36 L360,60 Z" fill="#2d5b4c"/>` +
+    `<path d="M295,60 L298.5,12 L301.5,12 L305,60 Z" fill="#54677a"/>` +
+    `<rect x="292" y="20" width="16" height="7" rx="3.5" fill="#54677a"/>` +
+    `<rect x="299" y="2" width="2" height="12" fill="#54677a"/>` +
+    `</g>`
+  );
+}
+
+function caLandmarks(P: ThemePalette): string {
+  const maple = (x: number, y: number, s: number) =>
+    `<g>` +
+    `<ellipse cx="${x}" cy="${y}" rx="${(9 * s).toFixed(1)}" ry="${(3 * s).toFixed(1)}" fill="${INK}" opacity=".12" stroke="none"/>` +
+    `<rect x="${(x - 2 * s).toFixed(1)}" y="${(y - 10 * s).toFixed(1)}" width="${4 * s}" height="${10 * s}" rx="${1.5 * s}" fill="${P.trunk}"/>` +
+    `<circle cx="${x}" cy="${(y - 18 * s).toFixed(1)}" r="${11 * s}" fill="#e34f33"/>` +
+    `<path d="M${x},${(y - 29 * s).toFixed(1)} A${11 * s},${11 * s} 0 0 1 ${x},${(y - 7 * s).toFixed(1)} Z" fill="#c73e26" stroke="none"/>` +
+    `<circle cx="${(x - 4 * s).toFixed(1)}" cy="${(y - 22 * s).toFixed(1)}" r="${3 * s}" fill="#ff8a70" opacity=".5" stroke="none"/>` +
+    `</g>`;
+  // two red maples — SE meadow
+  let g = maple(282, 706, 1) + maple(316, 684, 0.75);
+  // moose road sign — mid-map pocket
+  g +=
+    `<g>` +
+    shadow(214, 365, 8, 2.5) +
+    `<line x1="214" y1="364" x2="214" y2="348" stroke-width="2.5"/>` +
+    `<rect x="206" y="329" width="16" height="16" rx="2.5" transform="rotate(45 214 337)" fill="#ffcf3f"/>` +
+    `<g fill="${INK}" stroke="none">` +
+    `<rect x="209" y="335" width="10" height="4.5" rx="1.5"/>` +
+    `<rect x="210" y="339" width="2" height="4"/>` +
+    `<rect x="216" y="339" width="2" height="4"/>` +
+    `<rect x="217.5" y="332" width="3.5" height="4"/>` +
+    `</g>` +
+    `<g stroke-width="1.2" fill="none"><path d="M218,331.5 q-1,-3 -3,-3.5"/><path d="M220.5,331.5 q1,-3 3,-3.5"/></g>` +
+    `</g>`;
+  // beached canoe — NE bay side, by the river bank
+  g +=
+    `<g>` +
+    shadow(258, 124, 17, 3) +
+    `<path d="M242,113 Q258,123 274,113 Q270,120 258,120 Q246,120 242,113 Z" fill="#d9452e"/>` +
+    `<line x1="264" y1="106" x2="268" y2="118" stroke-width="2"/>` +
+    `<ellipse cx="263" cy="104" rx="2.5" ry="4" fill="${P.trunk}"/>` +
+    `</g>`;
+  return g;
+}
+
+// --- it: hills + dome + leaning campanile, fountain, trattoria, Vespa -------
+
+function itSkyline(): string {
+  return (
+    `<g stroke="none" opacity=".35">` +
+    `<path d="M0,60 L0,46 Q42,28 88,42 Q134,54 176,40 Q220,26 262,40 Q312,52 360,42 L360,60 Z" fill="#7d9a4e"/>` +
+    `<rect x="108" y="42" width="28" height="8" fill="#a58a68"/>` +
+    `<path d="M108,42 Q108,24 122,24 Q136,24 136,42 Z" fill="#a58a68"/>` +
+    `<rect x="120" y="16" width="4" height="8" fill="#a58a68"/>` +
+    `<circle cx="122" cy="14.5" r="1.6" fill="#a58a68"/>` +
+    `<g transform="rotate(4 160 46)">` +
+    `<rect x="155" y="16" width="10" height="30" fill="#a58a68"/>` +
+    `<rect x="153.5" y="11.5" width="13" height="5" fill="#a58a68"/>` +
+    `</g>` +
+    `</g>`
+  );
+}
+
+function itLandmarks(P: ThemePalette): string {
+  // piazza fountain — SE meadow
+  let g =
+    `<g>` +
+    shadow(292, 706, 26, 5) +
+    `<ellipse cx="292" cy="698" rx="24" ry="9" fill="#cfd4dc"/>` +
+    `<ellipse cx="292" cy="696" rx="19" ry="6.5" fill="${P.pool}"/>` +
+    `<rect x="288" y="678" width="8" height="16" rx="2" fill="#cfd4dc"/>` +
+    `<ellipse cx="292" cy="678" rx="8" ry="3" fill="#bfc6d1"/>` +
+    `<g stroke="${P.riverGlint}" stroke-width="1.8" fill="none" opacity=".9">` +
+    `<path d="M292,674 q-6,6 -8,16"/>` +
+    `<path d="M292,674 q6,6 8,16"/>` +
+    `<line x1="292" y1="671" x2="292" y2="675"/>` +
+    `</g>` +
+    `</g>`;
+  // mint Vespa — SE meadow, by the fountain
+  g +=
+    `<g>` +
+    shadow(319, 726, 12, 3) +
+    `<circle cx="310" cy="722" r="4" fill="${INK}"/>` +
+    `<circle cx="310" cy="722" r="1.5" fill="${CREAM}" stroke="none"/>` +
+    `<circle cx="328" cy="722" r="4" fill="${INK}"/>` +
+    `<circle cx="328" cy="722" r="1.5" fill="${CREAM}" stroke="none"/>` +
+    `<path d="M306,708 q-3,8 4,13 l8,0 0,-3 -6,0 q-4,-6 -2,-10 Z" fill="#69c3b4"/>` +
+    `<path d="M321,710 q10,1 9,10 l-9,2 q-6,-1 -6,-6 Z" fill="#69c3b4"/>` +
+    `<rect x="318" y="705" width="9" height="4" rx="2" fill="${INK}"/>` +
+    `<line x1="306" y1="708" x2="303" y2="703" stroke-width="2"/>` +
+    `<circle cx="302.5" cy="701.5" r="1.5" fill="${GOLD}" stroke-width="1"/>` +
+    `</g>`;
+  // trattoria kiosk with striped awning — mid-map pocket
+  g +=
+    `<g>` +
+    shadow(214, 376, 15, 3.5) +
+    `<rect x="202" y="352" width="24" height="22" fill="${P.wall}"/>` +
+    shadeRect(220, 352, 6, 22) +
+    `<rect x="205" y="360" width="8" height="14" fill="${P.door}"/>` +
+    `<rect x="216" y="360" width="7" height="7" fill="${P.window}"/>` +
+    `<path d="M200,352 L204,345 L224,345 L228,352 Z" fill="#d0342c"/>` +
+    `<g fill="${CREAM}" stroke="none" opacity=".9">` +
+    `<path d="M206.6,345 L203.6,352 L208.2,352 L210.8,345 Z"/>` +
+    `<path d="M215,345 L213.4,352 L218,352 L219.2,345 Z"/>` +
+    `</g>` +
+    `</g>`;
+  return g;
+}
+
+// --- fr: Haussmann rooftops + Eiffel lattice, café terrace, Arc -------------
+
+function frSkyline(): string {
+  return (
+    `<g stroke="none" opacity=".35" fill="#5f6b85">` +
+    `<path d="M0,60 L0,42 L6,36 L20,36 L26,42 L26,44 L34,44 L34,40 L40,34 L54,34 L60,40 L60,44 L70,44 L98,44 L104,38 L118,38 L124,44 L132,44 L132,40 L138,34 L152,34 L158,40 L158,44 L168,44 L174,38 L188,38 L194,44 L246,44 L252,38 L266,38 L272,44 L282,44 L288,36 L302,36 L308,44 L318,44 L324,38 L338,38 L344,44 L360,44 L360,60 Z"/>` +
+    `<rect x="10" y="31" width="3" height="5"/>` +
+    `<rect x="44" y="29" width="3" height="5"/>` +
+    `<rect x="143" y="29" width="3" height="5"/>` +
+    `<rect x="293" y="31" width="3" height="5"/>` +
+    `<path d="M70,60 C77,46 81,32 83,16 L87,16 C89,32 93,46 100,60 L94,60 C90,48 88,42 85,34 C82,42 80,48 76,60 Z"/>` +
+    `<rect x="76" y="38" width="18" height="3" rx="1.5"/>` +
+    `<rect x="80" y="24" width="10" height="2.5" rx="1"/>` +
+    `<rect x="84" y="10" width="2" height="6"/>` +
+    `</g>`
+  );
+}
+
+function frLandmarks(P: ThemePalette): string {
+  // café terrace — SE meadow
+  let g =
+    `<g>` +
+    shadow(290, 712, 30, 5) +
+    `<line x1="268" y1="710" x2="268" y2="692" stroke-width="2"/>` +
+    `<line x1="312" y1="710" x2="312" y2="692" stroke-width="2"/>` +
+    `<rect x="262" y="684" width="56" height="9" rx="2" fill="#c0392b"/>` +
+    `<path d="M262,693 a3.5,3.5 0 0 0 7,0 a3.5,3.5 0 0 0 7,0 a3.5,3.5 0 0 0 7,0 a3.5,3.5 0 0 0 7,0 a3.5,3.5 0 0 0 7,0 a3.5,3.5 0 0 0 7,0 a3.5,3.5 0 0 0 7,0 a3.5,3.5 0 0 0 7,0 Z" fill="#c0392b"/>` +
+    `<g fill="${CREAM}" stroke="none" opacity=".85">` +
+    `<rect x="269" y="685" width="6" height="7"/>` +
+    `<rect x="283" y="685" width="6" height="7"/>` +
+    `<rect x="297" y="685" width="6" height="7"/>` +
+    `</g>` +
+    `<line x1="276" y1="704" x2="276" y2="710" stroke-width="2"/>` +
+    `<circle cx="276" cy="702" r="5" fill="${CREAM}"/>` +
+    `<line x1="300" y1="708" x2="300" y2="714" stroke-width="2"/>` +
+    `<circle cx="300" cy="706" r="5" fill="${CREAM}"/>` +
+    `<rect x="285" y="700" width="5" height="4" rx="1" fill="${P.bridge}"/>` +
+    `<rect x="308" y="704" width="5" height="4" rx="1" fill="${P.bridge}"/>` +
+    `<circle cx="276" cy="701.5" r="1.3" fill="#c0392b" stroke-width="1"/>` +
+    `</g>`;
+  // Arc-style monument with tricolour — NE bay side
+  g +=
+    `<g>` +
+    shadow(300, 134, 18, 4) +
+    `<path d="M286,132 L286,102 Q286,94 293,94 L307,94 Q314,94 314,102 L314,132 L306,132 L306,114 Q306,107 300,107 Q294,107 294,114 L294,132 Z" fill="#d6cdbc"/>` +
+    `<rect x="284" y="88" width="32" height="6" rx="1.5" fill="#c4b9a4"/>` +
+    `<g stroke-width="1" opacity=".35"><line x1="290" y1="100" x2="290" y2="128"/><line x1="310" y1="100" x2="310" y2="128"/></g>` +
+    `<line x1="300" y1="88" x2="300" y2="79" stroke-width="1.5"/>` +
+    `<g stroke-width="1">` +
+    `<rect x="300" y="79" width="3.4" height="7" fill="#2b4d9b"/>` +
+    `<rect x="303.4" y="79" width="3.3" height="7" fill="${CREAM}"/>` +
+    `<rect x="306.7" y="79" width="3.3" height="7" fill="#c0392b"/>` +
+    `</g>` +
+    `</g>`;
+  return g;
+}
+
+// --- de: gabled roofs + TV-tower sphere, beer garden, castle turret ---------
+
+function deSkyline(): string {
+  return (
+    `<g stroke="none" opacity=".35">` +
+    `<path d="M0,60 L0,44 L10,34 L20,44 L20,40 L32,40 L32,44 L42,32 L52,44 L64,44 L64,38 L74,28 L84,38 L84,44 L98,44 L106,34 L114,44 L128,44 L128,38 L138,30 L148,38 L148,44 L162,44 L170,36 L178,44 L192,44 L200,34 L208,44 L220,44 L228,36 L236,44 L252,44 L260,32 L270,44 L284,44 L292,36 L300,44 L310,44 L336,44 L344,34 L352,44 L360,44 L360,60 Z" fill="#6b7488"/>` +
+    `<path d="M318,60 L321,16 L323,16 L326,60 Z" fill="#7d879a"/>` +
+    `<circle cx="322" cy="14" r="6.5" fill="#7d879a"/>` +
+    `<rect x="321" y="0" width="2" height="8" fill="#7d879a"/>` +
+    `</g>`
+  );
+}
+
+function deLandmarks(P: ThemePalette): string {
+  // beer garden with Bavarian parasol — SE meadow
+  let g =
+    `<g>` +
+    shadow(288, 722, 26, 5) +
+    `<line x1="288" y1="706" x2="288" y2="678" stroke-width="2"/>` +
+    `<path d="M268,685 Q288,667 308,685 Z" fill="#3a6fb0"/>` +
+    `<g fill="${CREAM}" stroke="none" opacity=".85">` +
+    `<path d="M275,679.5 Q281,671.5 288,670.5 L288,685 L275,685 Z"/>` +
+    `<path d="M296,673.5 Q301,677 304,682.5 L296,685 Z"/>` +
+    `</g>` +
+    `<rect x="271" y="706" width="34" height="9" rx="2" fill="${P.bridge}"/>` +
+    `<rect x="269" y="718" width="38" height="4" rx="2" fill="${P.bridgeDark}"/>` +
+    `<line x1="276" y1="715" x2="276" y2="718" stroke-width="2"/>` +
+    `<line x1="300" y1="715" x2="300" y2="718" stroke-width="2"/>` +
+    `<rect x="277" y="699" width="5" height="7" rx="1" fill="${GOLD}"/>` +
+    `<rect x="276.5" y="697" width="6" height="2.5" rx="1" fill="${CREAM}"/>` +
+    `<rect x="294" y="699" width="5" height="7" rx="1" fill="${GOLD}"/>` +
+    `<rect x="293.5" y="697" width="6" height="2.5" rx="1" fill="${CREAM}"/>` +
+    `</g>`;
+  // fairy-tale castle turret — NE bay side
+  g +=
+    `<g>` +
+    shadow(299, 136, 14, 3.5) +
+    `<rect x="284" y="112" width="9" height="22" fill="${CREAM}"/>` +
+    `<polygon points="282,112 288.5,99 295,112" fill="#4a6fa5"/>` +
+    `<rect x="292" y="100" width="16" height="34" fill="${CREAM}"/>` +
+    shadeRect(303, 100, 5, 34) +
+    `<polygon points="288,100 300,76 312,100" fill="#4a6fa5"/>` +
+    `<polygon points="300,76 312,100 300,100" fill="${INK}" opacity=".12" stroke="none"/>` +
+    `<rect x="297" y="106" width="6" height="8" rx="3" fill="${P.window}"/>` +
+    `<rect x="286.5" y="117" width="4" height="6" rx="2" fill="${P.window}"/>` +
+    `<rect x="296" y="124" width="8" height="10" rx="4" fill="${P.door}"/>` +
+    `<line x1="300" y1="76" x2="300" y2="68" stroke-width="1.5"/>` +
+    `<path d="M300,68 l8,2.5 -8,2.5 Z" fill="#4a6fa5"/>` +
+    `</g>`;
+  return g;
+}
+
+// --- sa: dunes + arched skyscraper, palm oasis, camel, tent -----------------
+
+function saSkyline(): string {
+  return (
+    `<g stroke="none" opacity=".35">` +
+    `<path d="M0,60 L0,48 Q46,32 96,46 Q150,58 204,44 Q258,32 308,46 Q336,52 360,46 L360,60 Z" fill="#d3a960"/>` +
+    `<rect x="40" y="26" width="11" height="34" fill="#8a7a96"/>` +
+    `<path d="M58,60 L58,18 Q66,4 74,18 L74,60 L69,60 L69,24 Q66,17 63,24 L63,60 Z" fill="#8a7a96"/>` +
+    `<rect x="86" y="20" width="12" height="40" fill="#8a7a96"/>` +
+    `<rect x="102" y="30" width="9" height="30" fill="#8a7a96"/>` +
+    `</g>`
+  );
+}
+
+function saLandmarks(P: ThemePalette): string {
+  // palm oasis — SE meadow
+  let g = palm(264, 716, P) + palm(280, 720, P, true) + bush(272, 722, 0.8, P);
+  // camel — SE meadow
+  g +=
+    `<g>` +
+    shadow(313, 720, 14, 3.5) +
+    `<rect x="305" y="709" width="3" height="10" rx="1.2" fill="#c89a5f"/>` +
+    `<rect x="316" y="709" width="3" height="10" rx="1.2" fill="#c89a5f"/>` +
+    `<circle cx="308" cy="700" r="4.5" fill="#c89a5f"/>` +
+    `<circle cx="316" cy="700" r="4.5" fill="#c89a5f"/>` +
+    `<ellipse cx="312" cy="706" rx="10" ry="5.5" fill="#c89a5f"/>` +
+    `<rect x="309" y="700" width="6" height="6" rx="1" fill="#b03a2e"/>` +
+    `<path d="M319,704 q4,-1 4,-8 l3.5,0 q0,9 -5,11 Z" fill="#c89a5f"/>` +
+    `<ellipse cx="325" cy="694.5" rx="3.5" ry="2.5" fill="#c89a5f"/>` +
+    `<path d="M302,704 q-3,2 -2,6" fill="none" stroke-width="1.5"/>` +
+    `</g>`;
+  // striped desert tent — NE bay side
+  g +=
+    `<g>` +
+    shadow(300, 134, 20, 4) +
+    `<path d="M282,132 L296,104 Q300,100 304,104 L318,132 Z" fill="${CREAM}"/>` +
+    `<path d="M285,126 L315,126 L318,132 L282,132 Z" fill="#b03a2e" stroke-width="1"/>` +
+    `<path d="M295,132 L300,116 L305,132 Z" fill="${P.door}"/>` +
+    `<line x1="300" y1="101" x2="300" y2="94" stroke-width="1.5"/>` +
+    `<path d="M300,94 l7,2 -7,2 Z" fill="#b03a2e"/>` +
+    `</g>`;
+  return g;
+}
+
+// --- cn: karst mist + pagoda + pearl tower, paifang gate, lanterns ----------
+
+function cnSkyline(): string {
+  return (
+    `<g stroke="none" opacity=".35">` +
+    `<rect x="0" y="52" width="360" height="8" rx="4" fill="#7e94a6" opacity=".5"/>` +
+    `<path d="M0,60 L0,44 Q8,16 20,44 Q26,24 38,46 Q48,12 62,44 Q70,26 80,46 L80,60 Z" fill="#7e94a6"/>` +
+    `<path d="M310,60 L310,46 Q318,20 330,46 Q338,26 350,48 Q354,36 360,44 L360,60 Z" fill="#7e94a6"/>` +
+    `<path d="M106,50 L134,50 L120,42 Z" fill="#8c4a3e"/>` +
+    `<path d="M109,42 L131,42 L120,34 Z" fill="#8c4a3e"/>` +
+    `<path d="M112,34 L128,34 L120,27 Z" fill="#8c4a3e"/>` +
+    `<rect x="119" y="21" width="2" height="6" fill="#8c4a3e"/>` +
+    `<path d="M282,60 L284.5,20 L286.5,20 L289,60 Z" fill="#8c4a3e"/>` +
+    `<circle cx="285.5" cy="26" r="6" fill="#8c4a3e"/>` +
+    `<circle cx="285.5" cy="12" r="3.5" fill="#8c4a3e"/>` +
+    `<rect x="284.8" y="2" width="1.4" height="7" fill="#8c4a3e"/>` +
+    `</g>`
+  );
+}
+
+function cnLandmarks(): string {
+  // red paifang gate — SE meadow
+  let g =
+    `<g>` +
+    shadow(294, 724, 34, 5) +
+    `<rect x="268" y="688" width="7" height="34" fill="#c0392b"/>` +
+    `<rect x="313" y="688" width="7" height="34" fill="#c0392b"/>` +
+    `<path d="M258,688 L274,688 L272,682 L261,682 Z" fill="#3d5a66"/>` +
+    `<path d="M314,688 L330,688 L327,682 L316,682 Z" fill="#3d5a66"/>` +
+    `<rect x="262" y="686" width="64" height="6" rx="2" fill="#c0392b"/>` +
+    `<rect x="270" y="674" width="48" height="5" rx="2" fill="#c0392b"/>` +
+    `<rect x="288" y="676" width="12" height="9" rx="1" fill="${GOLD}"/>` +
+    `<path d="M262,674 Q268,670 294,670 Q320,670 326,674 L318,664 Q294,660 270,664 Z" fill="#3d5a66"/>` +
+    `<path d="M262,674 q-5,-1 -7,-6" fill="none" stroke-width="2"/>` +
+    `<path d="M326,674 q5,-1 7,-6" fill="none" stroke-width="2"/>` +
+    `</g>`;
+  // lantern pair — mid-map pocket
+  const lantern = (x: number) =>
+    `<g>` +
+    `<ellipse cx="${x}" cy="374" rx="5" ry="2" fill="${INK}" opacity=".12" stroke="none"/>` +
+    `<line x1="${x}" y1="373" x2="${x}" y2="347" stroke-width="2"/>` +
+    `<line x1="${x}" y1="347" x2="${x + 6}" y2="349" stroke-width="2"/>` +
+    `<ellipse cx="${x + 6}" cy="355" rx="4.5" ry="5.5" fill="#e04a3a"/>` +
+    `<rect x="${x + 4}" y="348.5" width="4" height="2.5" rx="1" fill="${GOLD}" stroke-width="1"/>` +
+    `<rect x="${x + 4}" y="360" width="4" height="2" rx="1" fill="${GOLD}" stroke-width="1"/>` +
+    `<line x1="${x + 6}" y1="362" x2="${x + 6}" y2="366" stroke="${GOLD}" stroke-width="1.5"/>` +
+    `</g>`;
+  g += lantern(202) + lantern(214);
+  return g;
+}
+
+const COUNTRY_THEMES: Record<string, CountryTheme> = {
+  // The Valley itself — the reference look, no extra dressing.
+  us: { id: 'us', palette: {}, skyline: () => '', landmarks: () => '' },
+  ch: {
+    id: 'ch',
+    palette: {
+      grass: '#7ecb7f',
+      grassDark: '#6cb96e',
+      grassLight: '#90d791',
+      treeA: '#42a866',
+      treeADark: '#358c55',
+      treeB: '#2b7f52',
+      treeBDark: '#226844',
+    },
+    skyline: chSkyline,
+    landmarks: chLandmarks,
+  },
+  ca: {
+    id: 'ca',
+    palette: {
+      grass: '#79c47d',
+      grassDark: '#68b16c',
+      grassLight: '#8bd18e',
+      treeA: '#3aa15e',
+      treeADark: '#2f884f',
+      treeB: '#1e7a49',
+      treeBDark: '#17633c',
+    },
+    skyline: caSkyline,
+    landmarks: caLandmarks,
+  },
+  it: {
+    id: 'it',
+    palette: {
+      grass: '#9ccb69',
+      grassDark: '#8bb958',
+      grassLight: '#add87a',
+      treeA: '#6ca94e',
+      treeADark: '#5a903f',
+      treeB: '#55893c',
+      treeBDark: '#467232',
+    },
+    skyline: itSkyline,
+    landmarks: itLandmarks,
+  },
+  fr: {
+    id: 'fr',
+    palette: { road: '#a4aec6', sidewalk: '#f0e8dc' },
+    skyline: frSkyline,
+    landmarks: frLandmarks,
+  },
+  de: {
+    id: 'de',
+    palette: { road: '#9fa8b4', sidewalk: '#ece5d2' },
+    skyline: deSkyline,
+    landmarks: deLandmarks,
+  },
+  sa: {
+    id: 'sa',
+    palette: {
+      grass: '#e3cd96',
+      grassDark: '#d6bc7f',
+      grassLight: '#efdcab',
+      path: '#cdb083',
+      sand: '#f2e2b0',
+      court: '#d69a62',
+      sidewalk: '#f0e3c2',
+      treeA: '#57a555',
+      treeADark: '#478c47',
+      treeB: '#3f8a4c',
+      treeBDark: '#347241',
+      trunk: '#9a6b3d',
+    },
+    skyline: saSkyline,
+    landmarks: saLandmarks,
+  },
+  cn: {
+    id: 'cn',
+    palette: {
+      grass: '#7ed964',
+      grassDark: '#6cc951',
+      grassLight: '#91e378',
+      treeA: '#3cbd58',
+      treeADark: '#31a04a',
+      treeB: '#279a4d',
+      treeBDark: '#1f7f3f',
+    },
+    skyline: cnSkyline,
+    landmarks: cnLandmarks,
+  },
+};
+
+// ---------------------------------------------------------------------------
 // The eight interactive sites
 // ---------------------------------------------------------------------------
 
@@ -1388,7 +1885,7 @@ function carsSection(P: ThemePalette): string {
 // Assembly + memoisation
 // ---------------------------------------------------------------------------
 
-function renderMap(P: ThemePalette, sites: SiteView[]): string {
+function renderMap(P: ThemePalette, sites: SiteView[], theme: CountryTheme): string {
   const byId = new Map(sites.map((s) => [s.id, s]));
   const sv = (id: string): SiteView => byId.get(id) ?? { id, status: 'free', label: '' };
   const parts: string[] = [];
@@ -1401,9 +1898,11 @@ function renderMap(P: ThemePalette, sites: SiteView[]): string {
     `<g stroke="${INK}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">`,
   );
   parts.push(groundSection(P)); // ground
+  parts.push(theme.skyline(P)); // country skyline silhouette (distant band)
   parts.push(riverSection(P)); // river
   parts.push(roadsSection(P)); // roads + bridge
   parts.push(fillerSection(P)); // parks, houses, courts, parking, lamps
+  parts.push(theme.landmarks(P)); // country signature landmarks
   parts.push(siteCampus(P, sv('campus'))); // site: campus
   parts.push(siteTower(P, sv('tower'))); // site: tower
   parts.push(sitePaloAlto(P, sv('paloalto'))); // site: paloalto
@@ -1422,12 +1921,16 @@ function renderMap(P: ThemePalette, sites: SiteView[]): string {
 let memoKey: string | null = null;
 let memoSvg = '';
 
-/** Full SVG (string) of the city map. Memoised on (themeId, sites). */
-export function cityMapSvg(themeId: string, sites: SiteView[]): string {
-  const key = themeId + JSON.stringify(sites);
+/** Full SVG (string) of the city map. Memoised on (themeId, countryId, sites). */
+export function cityMapSvg(themeId: string, sites: SiteView[], countryId = 'us'): string {
+  const key = themeId + ':' + countryId + ':' + JSON.stringify(sites);
   if (key === memoKey) return memoSvg;
-  const palette = PALETTES[themeId] ?? DAYLIGHT;
-  memoSvg = renderMap(palette, sites);
+  const base = PALETTES[themeId] ?? DAYLIGHT;
+  const theme = COUNTRY_THEMES[countryId] ?? COUNTRY_THEMES.us;
+  // country palette overrides + a merged id so gradient ids stay unique
+  // per (theme, country) combination
+  const palette: ThemePalette = { ...base, ...theme.palette, id: base.id + '-' + countryId };
+  memoSvg = renderMap(palette, sites, theme);
   memoKey = key;
   return memoSvg;
 }

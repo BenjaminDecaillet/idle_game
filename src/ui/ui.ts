@@ -686,7 +686,7 @@ export class UI {
         <div class="section-head"><h2>${lookup(`country.${country.id}.name`)}</h2>
           <span class="muted">${country.companies.length}/${COMPANY_SITES.length} sites owned</span>
         </div>
-        ${cityMapSvg(s.mapThemeId, sites)}
+        ${cityMapSvg(s.mapThemeId, sites, country.id)}
         ${this.renderWorld()}
         <div class="section-head"><h2>Map style</h2></div>
         <div class="settings-row">${themes}</div>
