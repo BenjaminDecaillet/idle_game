@@ -8,6 +8,7 @@ import {
   VSCOIN_PER_STORY_BEAT,
 } from '../src/game/data';
 import {
+  activeCountry,
   buyCompany,
   buyUpgrade,
   buyVsCoinBoost,
@@ -42,7 +43,8 @@ function makeWorker(id: number): WorkerState {
     skillLevel: 1,
     experience: 0,
     stationId: null,
-    training: null,
+    timesTrained: 0,
+    promotions: 0,
   };
 }
 
@@ -84,9 +86,10 @@ describe('mission progress', () => {
     const state = createInitialState(NOW);
     state.projectsCompleted = 7;
     state.totalEarned = 1234;
-    state.companies[0].workers.push(makeWorker(900), makeWorker(901));
-    state.companies[0].upgrades = { coffee: 2, fiber: 1 };
-    state.money = 1_000;
+    const country = activeCountry(state);
+    country.companies[0].workers.push(makeWorker(900), makeWorker(901));
+    country.companies[0].upgrades = { coffee: 2, fiber: 1 };
+    country.money = 1_000;
     buyWorkstation(state, 'basic');
     expect(metricValue(state, 'projectsCompleted')).toBe(7);
     expect(metricValue(state, 'totalEarned')).toBe(1234);
@@ -161,17 +164,17 @@ describe('vsCoin sinks', () => {
 
   it("sells Founder's Aura levels for growing VsCoin prices, not money", () => {
     const state = createInitialState(NOW);
-    const company = state.companies[0];
-    expect(upgradeVsCoinCost(company, 'aura')).toBe(2);
-    expect(upgradeVsCoinCost(company, 'coffee')).toBeNull();
+    const country = activeCountry(state);
+    expect(upgradeVsCoinCost(state, 'aura')).toBe(2);
+    expect(upgradeVsCoinCost(state, 'coffee')).toBeNull();
     expect(buyUpgrade(state, 'aura')).toBe('Not enough VsCoin');
     grantVsCoin(state, 6, 'test');
-    const moneyBefore = state.money;
+    const moneyBefore = country.money;
     expect(buyUpgrade(state, 'aura')).toBeNull();
-    expect(company.upgrades['aura']).toBe(1);
+    expect(state.globalUpgrades['aura']).toBe(1);
     expect(state.vsCoin).toBe(4);
-    expect(state.money).toBe(moneyBefore);
-    expect(upgradeVsCoinCost(company, 'aura')).toBe(4);
+    expect(country.money).toBe(moneyBefore);
+    expect(upgradeVsCoinCost(state, 'aura')).toBe(4);
     expect(buyUpgrade(state, 'aura')).toBeNull();
     expect(state.vsCoin).toBe(0);
   });
@@ -201,7 +204,7 @@ describe('story milestones grant VsCoin', () => {
     const state = createInitialState(NOW);
     skipTutorial(state);
     advanceStory(state);
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'loft');
     advanceStory(state);
     expect(state.story.seen).toContain('site-loft');

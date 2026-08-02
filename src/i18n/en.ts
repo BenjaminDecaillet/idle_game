@@ -40,6 +40,40 @@ export const en = {
   'mission.companies': 'Own {target} companies',
   'mission.upgradeLevels': 'Buy {target} upgrade levels',
   'mission.desks': 'Own {target} workstations',
+  'mission.promotions': 'Promote employees {target} times',
+  'mission.countries': 'Expand to {target} countries',
+
+  // --- Employees: training, promotion, fast-forward ------------------------
+  'ui.inTraining': 'In training · +{levels} levels in {time}',
+  'ui.inPromotion': 'Promotion to {title} · done in {time}',
+  'ui.promote': 'Promote',
+  'ui.promotionStarted': 'Leadership bootcamp started!',
+  'ui.promoted': 'Promotion complete!',
+  'ui.maxGrade': 'Top of the ladder',
+  'ui.fastForwarded': 'Done — time is money!',
+  'ui.free': 'Free',
+  'ui.workerQuit': '{name} quit over unpaid wages!',
+
+  // --- Desk upgrades --------------------------------------------------------
+  'ui.renovations': 'Renovations',
+  'ui.upgradeDesk': 'Upgrade',
+  'ui.deskUpgrading': 'Under renovation · done in {time}',
+  'ui.deskUpgradeStarted': 'Renovation started!',
+
+  // --- Beta reset ----------------------------------------------------------
+  'ui.betaResetTitle': 'A fresh start (beta)',
+  'ui.betaResetText':
+    'The world just got a lot bigger: countries, promotions, debt and more. This beta update rebuilds the game from the ground up, so your old save could not come along. Thank you for testing — your next empire will rise even faster!',
+
+  // --- Countries -----------------------------------------------------------
+  'country.ch.name': 'Switzerland',
+  'country.us.name': 'USA',
+  'country.ca.name': 'Canada',
+  'country.it.name': 'Italy',
+  'country.fr.name': 'France',
+  'country.de.name': 'Germany',
+  'country.sa.name': 'Saudi Arabia',
+  'country.cn.name': 'China',
 
   // --- Founder office & avatar customization -------------------------------
   'ui.founderOffice': 'Founder’s Office',
@@ -60,6 +94,10 @@ export const en = {
   // --- Tutorial (Gabriel speaking) ----------------------------------------
   'tutorial.welcome.text':
     'Hi! I’m Gabriel, your very own angel investor — the guardian kind. You dream of building an AI that helps everyone, and I’m here to get you from this garage to the stars. Ready?',
+  'tutorial.choose-country.text':
+    'Every legend starts somewhere on the map. Where in the world does your garage stand?',
+  'tutorial.fast-forward.text':
+    'Waiting is for people without angel investors. This first fast-forward is on me — tap the ⚡ button and your trainee is back instantly. After this one, skips cost VsCoin.',
   'tutorial.name-avatar.text':
     'First things first: every great founder story needs a name on the cover. What should I call you?',
   'tutorial.name-company.text':
@@ -99,6 +137,14 @@ export const en = {
   'story.first-upgrade.title': 'Investing in the crew',
   'story.first-upgrade.text':
     'You spent money on your people instead of yourself. Remember this feeling — it’s the exact habit that builds companies worth believing in.',
+
+  'story.debt-first.title': 'In the red',
+  'story.debt-first.text':
+    'Payday came and the account said no. Listen — every founder kisses zero at least once. But debt gathers interest like gossip gathers ears. Ship something, fast.',
+
+  'story.debt-crisis.title': 'The exodus begins',
+  'story.debt-crisis.text':
+    'People believe in dreams, not IOUs. Your best folks are updating their résumés while you read this. Cut costs or cash a contract — before the office echoes.',
 
   'story.hundred-k.title': 'Six figures',
   'story.hundred-k.text':
@@ -147,6 +193,18 @@ export const en = {
   'story.site-orbital.title': 'Orbital HQ',
   'story.site-orbital.text':
     'Zero gravity, zero distractions. From up here there are no borders on the planet — which is convenient, because your AI was never meant to stop at any.',
+
+  'story.world-unlocked.title': 'The world calls',
+  'story.world-unlocked.text':
+    'Every building in the city bears your name. The map on your wall suddenly looks small — and the globe next to it very, very interesting. International Business is open.',
+
+  'story.second-country.title': 'Stamped passport',
+  'story.second-country.text':
+    'A new country, a new garage, fifty bucks and jet lag. You’ve done this before — and this time the whole world already whispers your name. Faster, better, again.',
+
+  'story.world-conqueror.title': 'Eight flags',
+  'story.world-conqueror.text':
+    'Eight countries, eight time zones, one dream. Somewhere over the ocean you realize the company stopped being a company a while ago. It’s a movement now.',
 
   'story.dream-achieved.title': 'Free as sunlight',
   'story.dream-achieved.text':

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { PROJECTS } from '../src/game/data';
-import { activeCompany, createInitialState } from '../src/game/engine';
+import { activeCompany, activeCountry, createInitialState, SAVE_VERSION } from '../src/game/engine';
 import {
   SAVE_KEY,
   exportSave,
@@ -11,9 +11,22 @@ import {
   saveGame,
   serialize,
 } from '../src/game/save';
-import type { GameState } from '../src/game/types';
+import type { GameState, WorkerState } from '../src/game/types';
 
 const NOW = 1_700_000_000_000;
+
+function worker(partial: Partial<WorkerState> & { id: number; name: string }): WorkerState {
+  return {
+    tierId: 'intern',
+    specialization: 'Backend',
+    skillLevel: 1,
+    experience: 0,
+    stationId: null,
+    timesTrained: 0,
+    promotions: 0,
+    ...partial,
+  };
+}
 
 /** Minimal in-memory Storage mock implementing the full Storage interface. */
 class MemoryStorage implements Storage {
@@ -54,24 +67,16 @@ describe('saveGame / loadGame round trip', () => {
   it('restores money/workers/projects', () => {
     const state = createInitialState(NOW);
     const c = activeCompany(state);
-    state.money = 12_345;
-    c.workers.push({
-      id: 1,
-      name: 'Ada Lovelace',
-      tierId: 'senior',
-      specialization: 'Backend',
-      skillLevel: 3,
-      experience: 12,
-      stationId: null,
-      training: null,
-    });
+    activeCountry(state).money = 12_345;
+    c.workers.push(worker({ id: 1, name: 'Ada Lovelace', tierId: 'senior', skillLevel: 3 }));
     c.projects[1].unlocked = true; // unlock 'todo'
 
     saveGame(state, storage, NOW);
     const result = loadGame(storage, NOW); // same instant => offlineSec = 0, no offline sim
 
     expect(result.isNewGame).toBe(false);
-    expect(result.state.money).toBe(12_345);
+    expect(result.betaReset).toBe(false);
+    expect(activeCountry(result.state).money).toBe(12_345);
     const rc = activeCompany(result.state);
     expect(rc.workers).toHaveLength(1);
     expect(rc.workers[0].name).toBe('Ada Lovelace');
@@ -83,18 +88,9 @@ describe('saveGame / loadGame round trip', () => {
   it('applies offline progress when enough time passed, capped by OFFLINE_CAP_HOURS', () => {
     const state = createInitialState(NOW);
     const c = activeCompany(state);
-    state.money = 1000;
+    activeCountry(state).money = 1000;
     c.workstations.push({ id: 1, defId: 'basic' });
-    c.workers.push({
-      id: 1,
-      name: 'W',
-      tierId: 'mid',
-      specialization: 'Frontend',
-      skillLevel: 1,
-      experience: 0,
-      stationId: 1,
-      training: null,
-    });
+    c.workers.push(worker({ id: 1, name: 'W', tierId: 'mid', stationId: 1 }));
     saveGame(state, storage, NOW);
 
     const later = NOW + 60_000; // 60s later, > 5s threshold
@@ -107,37 +103,76 @@ describe('saveGame / loadGame round trip', () => {
   it('falls back to a fresh game on missing save data', () => {
     const result = loadGame(storage, NOW);
     expect(result.isNewGame).toBe(true);
-    expect(result.state.money).toBe(50);
+    expect(result.betaReset).toBe(false);
+    expect(activeCountry(result.state).money).toBe(50);
   });
 
   it('falls back to a fresh game on corrupt JSON', () => {
     storage.setItem(SAVE_KEY, '{not valid json!!!');
     const result = loadGame(storage, NOW);
     expect(result.isNewGame).toBe(true);
-    expect(result.state.money).toBe(50);
+    expect(activeCountry(result.state).money).toBe(50);
     expect(activeCompany(result.state).activeProjectId).toBe('landing');
   });
 
   it('serialize produces valid JSON that round-trips', () => {
     const state = createInitialState(NOW);
     const json = serialize(state);
-    const parsed = JSON.parse(json);
-    expect(parsed.money).toBe(state.money);
+    const parsed = JSON.parse(json) as GameState;
+    expect(parsed.countries[0].money).toBe(activeCountry(state).money);
   });
 });
 
-describe('migrate', () => {
-  it('adds project entries for defs missing from an old save', () => {
+describe('beta reset (pre-v8 saves are discarded)', () => {
+  it('discards a pre-v8 save and flags the reset for the UI notice', () => {
+    // A realistic v7 save: flat money/companies on the game state.
+    storage.setItem(
+      SAVE_KEY,
+      JSON.stringify({
+        version: 7,
+        money: 999_999,
+        totalEarned: 123_456,
+        companies: [{ id: 1, name: 'Old Corp', siteId: 'garage' }],
+        lastSeen: NOW - 1000,
+      }),
+    );
+    const result = loadGame(storage, NOW);
+    expect(result.isNewGame).toBe(true);
+    expect(result.betaReset).toBe(true);
+    // Fully fresh: nothing carried over.
+    expect(result.state.totalEarned).toBe(0);
+    expect(activeCountry(result.state).money).toBe(50);
+    expect(activeCompany(result.state).name).toBe('My Startup');
+  });
+
+  it('discards a save with no version field at all', () => {
+    storage.setItem(SAVE_KEY, JSON.stringify({ money: 5, workers: [] }));
+    const result = loadGame(storage, NOW);
+    expect(result.isNewGame).toBe(true);
+    expect(result.betaReset).toBe(true);
+  });
+
+  it('keeps loading current-version saves', () => {
     const state = createInitialState(NOW);
-    // Simulate an old save that predates the last project in PROJECTS.
+    expect(state.version).toBe(SAVE_VERSION);
+    saveGame(state, storage, NOW);
+    const result = loadGame(storage, NOW);
+    expect(result.isNewGame).toBe(false);
+    expect(result.betaReset).toBe(false);
+  });
+});
+
+describe('migrate (same-version hygiene)', () => {
+  it('adds project entries for defs missing from a save', () => {
+    const state = createInitialState(NOW);
     const missingDef = PROJECTS[PROJECTS.length - 1];
     const oldSave = JSON.parse(JSON.stringify(state)) as GameState;
-    const oc = oldSave.companies[0];
+    const oc = oldSave.countries[0].companies[0];
     oc.projects = oc.projects.filter((p) => p.defId !== missingDef.id);
     expect(oc.projects).toHaveLength(PROJECTS.length - 1);
 
     const migrated = migrate(oldSave, NOW);
-    const mc = migrated.companies[0];
+    const mc = migrated.countries[0].companies[0];
     expect(mc.projects).toHaveLength(PROJECTS.length);
     const restored = mc.projects.find((p) => p.defId === missingDef.id);
     expect(restored).toBeDefined();
@@ -155,8 +190,9 @@ describe('migrate', () => {
     landing.completions = 4;
 
     const migrated = migrate(JSON.parse(JSON.stringify(state)), NOW);
-    const mc = migrated.companies[0];
-    const landingAfter = mc.projects.find((p) => p.defId === 'landing')!;
+    const landingAfter = migrated.countries[0].companies[0].projects.find(
+      (p) => p.defId === 'landing',
+    )!;
     expect(landingAfter.progress).toBe(17);
     expect(landingAfter.completions).toBe(4);
   });
@@ -169,9 +205,41 @@ describe('migrate', () => {
     c.projects.forEach((p) => (p.unlocked = p.defId === 'landing' ? false : p.unlocked));
 
     const migrated = migrate(JSON.parse(JSON.stringify(state)), NOW);
-    const mc = migrated.companies[0];
+    const mc = migrated.countries[0].companies[0];
     expect(mc.projects[0].unlocked).toBe(true);
     expect(mc.activeProjectId).toBe(mc.projects[0].defId);
+  });
+
+  it('drops unknown countries and repairs the active country id', () => {
+    const state = createInitialState(NOW);
+    const save = JSON.parse(JSON.stringify(state)) as GameState;
+    (save.countries[0] as { id: string }).id = 'atlantis';
+    (save as { activeCountryId: string }).activeCountryId = 'atlantis';
+
+    const migrated = migrate(save, NOW);
+    expect(migrated.countries.length).toBeGreaterThan(0);
+    expect(migrated.countries.some((c) => (c.id as string) === 'atlantis')).toBe(false);
+    expect(migrated.countries.some((c) => c.id === migrated.activeCountryId)).toBe(true);
+  });
+
+  it('backfills timed-action and worker fields added after a save was written', () => {
+    const state = createInitialState(NOW);
+    const save = JSON.parse(JSON.stringify(state)) as GameState;
+    const company = save.countries[0].companies[0];
+    delete (company as Partial<typeof company>).timedActions;
+    delete (company as Partial<typeof company>).floorProjects;
+    company.workers = [
+      { id: 9, name: 'Old Timer', tierId: 'junior', specialization: 'DevOps', skillLevel: 2, experience: 1, stationId: null } as WorkerState,
+    ];
+
+    const migrated = migrate(save, NOW);
+    const mc = migrated.countries[0].companies[0];
+    expect(mc.timedActions).toEqual([]);
+    expect(mc.floorProjects).toEqual([]);
+    expect(mc.workers[0].timesTrained).toBe(0);
+    expect(mc.workers[0].promotions).toBe(0);
+    // nextEntityId stays above every restored id.
+    expect(migrated.nextEntityId).toBeGreaterThan(9);
   });
 });
 
@@ -183,8 +251,8 @@ describe('resetGame', () => {
 
     const fresh = resetGame(storage);
     expect(storage.getItem(SAVE_KEY)).toBeNull();
-    expect(fresh.money).toBe(50);
-    expect(fresh.companies).toHaveLength(1);
+    expect(activeCountry(fresh).money).toBe(50);
+    expect(activeCountry(fresh).companies).toHaveLength(1);
   });
 });
 
@@ -192,24 +260,15 @@ describe('exportSave / importSave', () => {
   it('round-trips a game state', () => {
     const state = createInitialState(NOW);
     const c = activeCompany(state);
-    state.money = 777;
+    activeCountry(state).money = 777;
     c.name = 'Café Corp';
-    c.workers.push({
-      id: 1,
-      name: 'Grace Hopper',
-      tierId: 'architect',
-      specialization: 'DevOps',
-      skillLevel: 4,
-      experience: 3,
-      stationId: null,
-      training: null,
-    });
+    c.workers.push(worker({ id: 1, name: 'Grace Hopper', tierId: 'architect', skillLevel: 4 }));
 
     const encoded = exportSave(state);
     expect(typeof encoded).toBe('string');
     const imported = importSave(encoded, NOW);
 
-    expect(imported.money).toBe(777);
+    expect(activeCountry(imported).money).toBe(777);
     const ic = activeCompany(imported);
     expect(ic.name).toBe('Café Corp');
     expect(ic.workers).toHaveLength(1);
@@ -228,5 +287,12 @@ describe('exportSave / importSave', () => {
   it('rejects valid JSON missing required save fields', () => {
     const bogus = btoa(JSON.stringify({ hello: 'world' }));
     expect(() => importSave(bogus)).toThrow('Not a valid save');
+  });
+
+  it('rejects pre-v8 exports (beta reset — no migration chain)', () => {
+    const legacy = btoa(
+      JSON.stringify({ version: 7, money: 100, companies: [], workers: [] }),
+    );
+    expect(() => importSave(legacy)).toThrow('Not a valid save');
   });
 });

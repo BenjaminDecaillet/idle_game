@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { TUTORIAL_ANGEL_GIFT } from '../src/game/data';
 import {
+  activeCompany,
+  activeCountry,
   buyCompany,
   buyUpgrade,
   buyWorkstation,
   createInitialState,
   setLanguage,
+  setStartingCountry,
+  tick,
   trainWorker,
 } from '../src/game/engine';
 import { migrate } from '../src/game/save';
@@ -40,7 +44,8 @@ function makeWorker(id: number, overrides: Partial<WorkerState> = {}): WorkerSta
     skillLevel: 1,
     experience: 0,
     stationId: null,
-    training: null,
+    timesTrained: 0,
+    promotions: 0,
     ...overrides,
   };
 }
@@ -57,6 +62,13 @@ describe('i18n', () => {
     }
     for (const step of TUTORIAL_STEPS) {
       expect(en[`tutorial.${step.id}.text` as keyof typeof en]).toBeTruthy();
+    }
+  });
+
+  it('has a translated name for every country', () => {
+    for (const id of ['ch', 'us', 'ca', 'it', 'fr', 'de', 'sa', 'cn']) {
+      expect(en[`country.${id}.name` as keyof typeof en]).toBeTruthy();
+      expect(fr[`country.${id}.name` as keyof typeof fr]).toBeTruthy();
     }
   });
 
@@ -86,9 +98,24 @@ describe('tutorial', () => {
     expect(currentTutorialStep(state)?.id).toBe('welcome');
   });
 
+  it('lets the player pick a starting country before any progress', () => {
+    const state = createInitialState(NOW);
+    advanceTutorial(state); // welcome
+    expect(currentTutorialStep(state)?.id).toBe('choose-country');
+    expect(setStartingCountry(state, 'ch')).toBeNull();
+    expect(state.activeCountryId).toBe('ch');
+    expect(activeCountry(state).money).toBe(50);
+    expect(activeCompany(state).name).toBe('My Startup');
+    // Once anything happened, the choice is locked.
+    activeCompany(state).workers.push(makeWorker(1));
+    expect(setStartingCountry(state, 'de')).toBe('The journey has already begun');
+  });
+
   it('walks through all steps, paying the angel gift exactly once', () => {
     const state = createInitialState(NOW);
+    const country = activeCountry(state);
     expect(advanceTutorial(state)).toBeNull(); // welcome
+    expect(advanceTutorial(state)).toBeNull(); // choose-country (keeps default)
     expect(setPlayerName(state, '  Benjamin  ')).toBeNull();
     expect(state.player.name).toBe('Benjamin');
     expect(advanceTutorial(state)).toBeNull(); // name-avatar
@@ -96,19 +123,24 @@ describe('tutorial', () => {
     expect(currentTutorialStep(state)?.id).toBe('hire');
     // Auto-steps refuse manual advancing until the deed is done.
     expect(advanceTutorial(state)).toBe('Step not finished yet');
-    state.companies[0].workers.push(makeWorker(500));
+    country.companies[0].workers.push(makeWorker(500));
     expect(refreshTutorial(state)).toBe(true);
     expect(currentTutorialStep(state)?.id).toBe('desk');
     expect(buyWorkstation(state, 'basic')).toBeNull();
-    const moneyBefore = state.money;
+    const moneyBefore = country.money;
     expect(refreshTutorial(state)).toBe(true);
     expect(currentTutorialStep(state)?.id).toBe('upgrade');
-    expect(state.money).toBe(moneyBefore + TUTORIAL_ANGEL_GIFT);
+    expect(country.money).toBe(moneyBefore + TUTORIAL_ANGEL_GIFT);
     expect(state.tutorial.giftGiven).toBe(true);
     expect(buyUpgrade(state, 'coffee')).toBeNull();
     refreshTutorial(state);
     expect(currentTutorialStep(state)?.id).toBe('train');
     expect(trainWorker(state, 500)).toBeNull();
+    refreshTutorial(state);
+    // Training started → the freebie fast-forward step; it completes once
+    // the training is over (waited out here — the freebie is a UI offer).
+    expect(currentTutorialStep(state)?.id).toBe('fast-forward');
+    tick(state, 150);
     refreshTutorial(state);
     expect(currentTutorialStep(state)?.id).toBe('outro');
     expect(advanceTutorial(state)).toBeNull();
@@ -164,7 +196,7 @@ describe('story', () => {
   it('fires milestone beats when their condition is reached', () => {
     const state = freshDone();
     advanceStory(state);
-    state.companies[0].workers.push(makeWorker(600));
+    activeCountry(state).companies[0].workers.push(makeWorker(600));
     expect(advanceStory(state)).toEqual(['first-hire']);
     state.projectsCompleted = 1;
     state.totalEarned = 150_000;
@@ -172,9 +204,18 @@ describe('story', () => {
     expect(fired).toEqual(['first-payout', 'first-thousand', 'hundred-k']);
   });
 
+  it('fires debt beats on durable debt conditions', () => {
+    const state = freshDone();
+    advanceStory(state);
+    activeCountry(state).money = -100;
+    expect(advanceStory(state)).toEqual(['debt-first']);
+    activeCountry(state).money = -100_000;
+    expect(advanceStory(state)).toEqual(['debt-crisis']);
+  });
+
   it('fires site beats when companies are founded', () => {
     const state = freshDone();
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     advanceStory(state);
     buyCompany(state, 'loft');
     expect(advanceStory(state)).toContain('site-loft');
@@ -182,10 +223,10 @@ describe('story', () => {
 
   it('ends with the dream once orbital HQ ships the AGI', () => {
     const state = freshDone();
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     advanceStory(state);
     buyCompany(state, 'orbital');
-    const orbital = state.companies.find((c) => c.siteId === 'orbital')!;
+    const orbital = activeCountry(state).companies.find((c) => c.siteId === 'orbital')!;
     orbital.projects.find((p) => p.defId === 'agi')!.completions = 1;
     const fired = advanceStory(state);
     expect(fired).toContain('agi-shipped');
@@ -195,7 +236,7 @@ describe('story', () => {
 
   it('dismisses beats in queue order', () => {
     const state = freshDone();
-    state.companies[0].workers.push(makeWorker(700));
+    activeCountry(state).companies[0].workers.push(makeWorker(700));
     advanceStory(state);
     expect(currentStoryBeat(state)).toBe('dawn');
     expect(dismissStoryBeat(state)).toBeNull();
@@ -213,28 +254,8 @@ describe('story', () => {
   });
 });
 
-describe('save migration v4', () => {
-  function legacySave(): Record<string, unknown> {
-    const state = createInitialState(NOW) as unknown as Record<string, unknown>;
-    delete state.story;
-    delete state.tutorial;
-    delete state.player;
-    delete (state.settings as Record<string, unknown>).language;
-    return JSON.parse(JSON.stringify(state));
-  }
-
-  it('marks the tutorial done for pre-v4 saves and backfills their story', () => {
-    const legacy = legacySave();
-    (legacy as { totalEarned: number }).totalEarned = 500_000;
-    const migrated = migrate(legacy, NOW);
-    expect(migrated.tutorial.done).toBe(true);
-    expect(migrated.story.seen).toContain('hundred-k');
-    expect(migrated.story.queue).toEqual([]);
-    expect(migrated.player.name).toBe('Founder');
-    expect(migrated.settings.language).toBe('auto');
-  });
-
-  it('keeps v4 fields through save/load round trips', () => {
+describe('narrative fields through save round trips', () => {
+  it('keeps tutorial/player/language/story through migrate', () => {
     const state = createInitialState(NOW);
     skipTutorial(state);
     setPlayerName(state, 'Ada');

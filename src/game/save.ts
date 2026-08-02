@@ -1,5 +1,7 @@
 import {
   COMPANY_SITES,
+  COUNTRIES,
+  DEFAULT_COUNTRY,
   DEFAULT_PLAYER_LOOK,
   FLOOR_CAPACITY,
   MAP_THEMES,
@@ -9,13 +11,14 @@ import {
   OFFLINE_CAP_HOURS,
   PROJECTS,
   TIME_SCALES,
+  UPGRADES,
   WALLPAPERS,
   siteById,
 } from './data';
 import { createInitialState, newProjectState, SAVE_VERSION, simulateOffline } from './engine';
-import { backfillStory, STORY_BEATS } from './story';
+import { STORY_BEATS } from './story';
 import { TUTORIAL_STEPS } from './tutorial';
-import type { CompanyState, GameState, PlayerLook } from './types';
+import type { CompanyState, CountryState, GameState, PlayerLook } from './types';
 
 export const SAVE_KEY = 'idle-silicon-valley-save';
 
@@ -24,6 +27,11 @@ export interface LoadResult {
   offlineSec: number;
   offlineEarnings: number;
   isNewGame: boolean;
+  /**
+   * A pre-v8 save was found and discarded (approved beta reset). The UI
+   * shows a friendly translated notice explaining the fresh start.
+   */
+  betaReset: boolean;
 }
 
 export function serialize(state: GameState): string {
@@ -40,8 +48,10 @@ export function saveGame(state: GameState, storage: Storage = localStorage, now 
 }
 
 /**
- * Load a save, migrate it against current game data, and apply offline
- * progress (capped). Falls back to a fresh game on corrupt/missing data.
+ * Load a save and apply offline progress (capped). Falls back to a fresh
+ * game on corrupt/missing data. BETA POLICY: saves below SAVE_VERSION are
+ * discarded (one-time approved reset for the big progression/expansion
+ * update) — the player starts fresh and the UI explains why.
  */
 export function loadGame(storage: Storage = localStorage, now = Date.now()): LoadResult {
   let raw: string | null = null;
@@ -51,10 +61,13 @@ export function loadGame(storage: Storage = localStorage, now = Date.now()): Loa
     raw = null;
   }
   if (!raw) {
-    return { state: createInitialState(now), offlineSec: 0, offlineEarnings: 0, isNewGame: true };
+    return fresh(now, false);
   }
   try {
-    const parsed = JSON.parse(raw) as GameState;
+    const parsed = JSON.parse(raw) as Partial<GameState>;
+    if (typeof parsed.version !== 'number' || parsed.version < SAVE_VERSION) {
+      return fresh(now, true);
+    }
     const state = migrate(parsed, now);
     const offlineSec = Math.max(0, (now - state.lastSeen) / 1000);
     let offlineEarnings = 0;
@@ -62,32 +75,30 @@ export function loadGame(storage: Storage = localStorage, now = Date.now()): Loa
       offlineEarnings = simulateOffline(state, offlineSec, OFFLINE_CAP_HOURS * 3600);
     }
     state.lastSeen = now;
-    return { state, offlineSec, offlineEarnings, isNewGame: false };
+    return { state, offlineSec, offlineEarnings, isNewGame: false, betaReset: false };
   } catch {
-    return { state: createInitialState(now), offlineSec: 0, offlineEarnings: 0, isNewGame: true };
+    return fresh(now, false);
   }
 }
 
-/**
- * Pre-v3 saves kept a single company's fields flat on the game state.
- * Only the fields the migration reads are listed.
- */
-interface LegacyFlatSave {
-  companyName: string;
-  workers: CompanyState['workers'];
-  workstations: CompanyState['workstations'];
-  projects: CompanyState['projects'];
-  activeProjectId: string;
-  upgrades: Record<string, number>;
-  candidates: CompanyState['candidates'];
-  candidateRerollCost: number;
+function fresh(now: number, betaReset: boolean): LoadResult {
+  return {
+    state: createInitialState(now),
+    offlineSec: 0,
+    offlineEarnings: 0,
+    isNewGame: true,
+    betaReset,
+  };
 }
 
-/** Merge a parsed save onto a fresh state so new fields/projects get defaults. */
-export function migrate(
-  parsed: Partial<GameState> & Partial<LegacyFlatSave>,
-  now = Date.now(),
-): GameState {
+/**
+ * Merge a current-version save onto a fresh state so fields added in later
+ * same-version builds get defaults, and repair corrupt/out-of-range values.
+ * There is no cross-version migration chain: pre-v8 saves are discarded by
+ * loadGame (beta reset), and future breaking changes decide their own
+ * policy when they land.
+ */
+export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState {
   const fresh = createInitialState(now);
   const state: GameState = {
     ...fresh,
@@ -111,71 +122,36 @@ export function migrate(
         : 0,
     vsCoinLedger: Array.isArray(parsed.vsCoinLedger) ? parsed.vsCoinLedger : [],
     missionsClaimed: Array.isArray(parsed.missionsClaimed) ? parsed.missionsClaimed : [],
-    companies: Array.isArray(parsed.companies) && parsed.companies.length > 0
-      ? parsed.companies
-      : fresh.companies,
+    globalUpgrades: { ...(parsed.globalUpgrades ?? {}) },
+    fastForwardsUsed:
+      typeof parsed.fastForwardsUsed === 'number' && parsed.fastForwardsUsed >= 0
+        ? parsed.fastForwardsUsed
+        : 0,
+    promotionsDone:
+      typeof parsed.promotionsDone === 'number' && parsed.promotionsDone >= 0
+        ? parsed.promotionsDone
+        : 0,
+    countries:
+      Array.isArray(parsed.countries) && parsed.countries.length > 0
+        ? parsed.countries
+        : fresh.countries,
   };
-  // Pre-v4 saves belong to players who already know the game: never show
-  // them the tutorial, and mark every already-passed story beat as seen so
-  // they don't get a wall of catch-up dialogs (done below, once companies
-  // are migrated).
-  const preStorySave = parsed.tutorial === undefined;
-  if (preStorySave) {
-    state.tutorial = { step: TUTORIAL_STEPS.length, done: true, giftGiven: true };
-  }
-  // Strip legacy flat fields that the spread may have copied onto the state.
-  for (const key of [
-    'companyName', 'workers', 'workstations', 'activeProjectId',
-    'upgrades', 'candidates', 'candidateRerollCost', 'projects',
-  ]) {
-    delete (state as unknown as Record<string, unknown>)[key];
-  }
 
-  // v2 → v3: fold the old flat single-company fields into company #1.
-  if (!Array.isArray(parsed.companies) || parsed.companies.length === 0) {
-    const home = state.companies[0];
-    if (typeof parsed.companyName === 'string') home.name = parsed.companyName;
-    if (Array.isArray(parsed.workers)) home.workers = parsed.workers;
-    if (Array.isArray(parsed.workstations)) home.workstations = parsed.workstations;
-    if (Array.isArray(parsed.projects)) home.projects = parsed.projects;
-    if (typeof parsed.activeProjectId === 'string') home.activeProjectId = parsed.activeProjectId;
-    if (parsed.upgrades) home.upgrades = { ...parsed.upgrades };
-    if (Array.isArray(parsed.candidates)) home.candidates = parsed.candidates;
-    if (typeof parsed.candidateRerollCost === 'number') {
-      home.candidateRerollCost = parsed.candidateRerollCost;
-    }
-    state.activeCompanyId = home.id;
-  }
-
-  // Per-company hygiene: fill defaults for fields added after a company was
-  // saved, sync project lists with data.ts, keep sites/active ids valid.
-  const template = fresh.companies[0];
-  const knownSites = new Set(COMPANY_SITES.map((s) => s.id));
-  state.companies = state.companies.map((c) => {
-    const company: CompanyState = { ...template, ...c, upgrades: { ...(c.upgrades ?? {}) } };
-    if (!knownSites.has(company.siteId)) company.siteId = 'garage';
-    // Fill in worker fields added after the save was written.
-    company.workers = (company.workers ?? []).map((w) => ({ ...w, training: w.training ?? null }));
-    // Saves that predate floors (or that own more desks than their floors
-    // hold) get enough floors for their desks, free of charge. Floor count
-    // is clamped to MAX_FLOORS unless the desks themselves require more.
-    const neededFloors = Math.ceil(company.workstations.length / FLOOR_CAPACITY);
-    const savedFloors = Math.max(1, Math.min(company.floors ?? 1, MAX_FLOORS));
-    company.floors = Math.max(savedFloors, neededFloors);
-    // Ensure every project defined in data.ts has a state entry (new content
-    // added in updates appears automatically in old saves), scaled to the
-    // company's site so late-game companies get late-game contracts.
-    const byId = new Map((company.projects ?? []).map((p) => [p.defId, p]));
-    const scale = siteById(company.siteId).projectScale;
-    company.projects = PROJECTS.map((def) => byId.get(def.id) ?? newProjectState(def, scale));
-    if (!company.projects.some((p) => p.defId === company.activeProjectId && p.unlocked)) {
-      company.projects[0].unlocked = true;
-      company.activeProjectId = company.projects[0].defId;
-    }
-    return company;
-  });
-  if (!state.companies.some((c) => c.id === state.activeCompanyId)) {
-    state.activeCompanyId = state.companies[0].id;
+  // Country hygiene: drop unknown countries, dedupe ids, fill defaults for
+  // fields added after the save was written, and keep active ids valid.
+  const knownCountries = new Set(COUNTRIES.map((c) => c.id));
+  const seenCountries = new Set<string>();
+  const freshCountry = fresh.countries[0];
+  state.countries = state.countries
+    .filter((c) => {
+      if (!knownCountries.has(c?.id) || seenCountries.has(c.id)) return false;
+      seenCountries.add(c.id);
+      return true;
+    })
+    .map((c) => migrateCountry(c, freshCountry));
+  if (state.countries.length === 0) state.countries = fresh.countries;
+  if (!state.countries.some((c) => c.id === state.activeCountryId)) {
+    state.activeCountryId = state.countries[0].id;
   }
 
   // Cosmetics hygiene: drop unknown ids, keep the free defaults owned, and
@@ -187,9 +163,11 @@ export function migrate(
   if (!state.ownedWallpapers.includes(state.defaultWallpaperId)) {
     state.defaultWallpaperId = 'concrete';
   }
-  for (const c of state.companies) {
-    if (c.wallpaperId !== null && !state.ownedWallpapers.includes(c.wallpaperId)) {
-      c.wallpaperId = null;
+  for (const c of state.countries) {
+    for (const company of c.companies) {
+      if (company.wallpaperId !== null && !state.ownedWallpapers.includes(company.wallpaperId)) {
+        company.wallpaperId = null;
+      }
     }
   }
   const themeIds = new Set(MAP_THEMES.map((t) => t.id));
@@ -199,8 +177,6 @@ export function migrate(
   if (!state.ownedMapThemes.includes(state.mapThemeId)) state.mapThemeId = 'daylight';
   if (!TIME_SCALES.includes(state.settings.timeScale)) state.settings.timeScale = 1;
 
-  // Story hygiene: drop unknown beat ids (content may change between
-  // versions), and backfill milestones a pre-story save already passed.
   // Player look hygiene: any out-of-range/corrupt index falls back to the
   // default so the avatar renderers always get valid data.
   for (const field of Object.keys(PLAYER_LOOK_OPTIONS) as (keyof PlayerLook)[]) {
@@ -210,9 +186,14 @@ export function migrate(
     }
   }
 
-  // Mission hygiene: drop claims for missions that no longer exist.
+  // Mission/upgrade hygiene: drop claims/levels for content that no longer
+  // exists (content may change between same-version builds).
   const knownMissions = new Set(MISSIONS.map((m) => m.id));
   state.missionsClaimed = state.missionsClaimed.filter((id) => knownMissions.has(id));
+  const knownUpgrades = new Set(UPGRADES.map((u) => u.id));
+  for (const id of Object.keys(state.globalUpgrades)) {
+    if (!knownUpgrades.has(id)) delete state.globalUpgrades[id];
+  }
 
   const knownBeats = new Set(STORY_BEATS.map((b) => b.id));
   state.story.seen = state.story.seen.filter((id) => knownBeats.has(id));
@@ -221,18 +202,72 @@ export function migrate(
   if (!['auto', 'en', 'fr'].includes(state.settings.language)) {
     state.settings.language = 'auto';
   }
-  if (preStorySave) backfillStory(state);
 
   // nextEntityId must stay above every id in the save (workers, desks,
-  // companies) so freshly created entities never collide.
+  // companies, timed actions) so fresh entities never collide.
   let maxId = 0;
-  for (const c of state.companies) {
-    maxId = Math.max(maxId, c.id);
-    for (const w of c.workers) maxId = Math.max(maxId, w.id);
-    for (const s of c.workstations) maxId = Math.max(maxId, s.id);
+  for (const country of state.countries) {
+    for (const c of country.companies) {
+      maxId = Math.max(maxId, c.id);
+      for (const w of c.workers) maxId = Math.max(maxId, w.id);
+      for (const s of c.workstations) maxId = Math.max(maxId, s.id);
+      for (const a of c.timedActions) maxId = Math.max(maxId, a.id);
+    }
   }
   state.nextEntityId = Math.max(state.nextEntityId, maxId + 1);
   return state;
+}
+
+/** Per-country hygiene: defaults, valid sites, project sync, active ids. */
+function migrateCountry(saved: CountryState, template: CountryState): CountryState {
+  const country: CountryState = {
+    ...template,
+    ...saved,
+    money: typeof saved.money === 'number' && Number.isFinite(saved.money) ? saved.money : 0,
+    usedCompanyNames: Array.isArray(saved.usedCompanyNames) ? saved.usedCompanyNames : [],
+    companies: Array.isArray(saved.companies) ? saved.companies : [],
+  };
+  const companyTemplate = template.companies[0];
+  const knownSites = new Set(COMPANY_SITES.map((s) => s.id));
+  country.companies = country.companies.map((c) => {
+    const company: CompanyState = {
+      ...companyTemplate,
+      ...c,
+      upgrades: { ...(c.upgrades ?? {}) },
+      timedActions: Array.isArray(c.timedActions) ? c.timedActions : [],
+      floorProjects: Array.isArray(c.floorProjects) ? c.floorProjects : [],
+    };
+    if (!knownSites.has(company.siteId)) company.siteId = 'garage';
+    // Fill in worker fields added after the save was written.
+    company.workers = (company.workers ?? []).map((w) => ({
+      ...w,
+      timesTrained: typeof w.timesTrained === 'number' ? w.timesTrained : 0,
+      promotions: typeof w.promotions === 'number' ? w.promotions : 0,
+    }));
+    // Saves that own more desks than their floors hold get enough floors
+    // for their desks, free of charge (clamped to MAX_FLOORS otherwise).
+    const neededFloors = Math.ceil(company.workstations.length / FLOOR_CAPACITY);
+    const savedFloors = Math.max(1, Math.min(company.floors ?? 1, MAX_FLOORS));
+    company.floors = Math.max(savedFloors, neededFloors);
+    company.projectSlots = Math.max(1, Math.min(company.projectSlots ?? 1, 3));
+    // Ensure every project defined in data.ts has a state entry (new content
+    // added in updates appears automatically), scaled to the company's site.
+    const byId = new Map((company.projects ?? []).map((p) => [p.defId, p]));
+    const scale = siteById(company.siteId).projectScale;
+    company.projects = PROJECTS.map((def) => byId.get(def.id) ?? newProjectState(def, scale));
+    if (!company.projects.some((p) => p.defId === company.activeProjectId && p.unlocked)) {
+      company.projects[0].unlocked = true;
+      company.activeProjectId = company.projects[0].defId;
+    }
+    return company;
+  });
+  if (country.companies.length === 0) {
+    country.companies = [structuredClone(companyTemplate)];
+  }
+  if (!country.companies.some((c) => c.id === country.activeCompanyId)) {
+    country.activeCompanyId = country.companies[0].id;
+  }
+  return country;
 }
 
 export function resetGame(storage: Storage = localStorage): GameState {
@@ -250,10 +285,17 @@ export function exportSave(state: GameState): string {
 
 export function importSave(encoded: string, now = Date.now()): GameState {
   const json = decodeURIComponent(escape(atob(encoded.trim())));
-  const parsed = JSON.parse(json) as Partial<GameState> & Partial<LegacyFlatSave>;
-  const hasRoster = Array.isArray(parsed.companies) || Array.isArray(parsed.workers);
-  if (typeof parsed.money !== 'number' || !hasRoster) {
+  const parsed = JSON.parse(json) as Partial<GameState>;
+  if (
+    typeof parsed.version !== 'number' ||
+    parsed.version < SAVE_VERSION ||
+    !Array.isArray(parsed.countries)
+  ) {
     throw new Error('Not a valid save');
   }
   return migrate(parsed, now);
 }
+
+// Re-export so existing imports keep working; DEFAULT_COUNTRY documents the
+// fresh-game fallback used by createInitialState.
+export { DEFAULT_COUNTRY };

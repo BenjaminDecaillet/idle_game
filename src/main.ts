@@ -1,15 +1,15 @@
 import './style.css';
-import { grantBoost, tick, timeSkip } from './game/engine';
+import { activeCompany, grantBoost, tick, timeSkip } from './game/engine';
 import { loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
-import { resolveLang, setCurrentLang } from './i18n';
+import { resolveLang, setCurrentLang, t } from './i18n';
 import { Fx } from './ui/fx';
 import { UI } from './ui/ui';
 
 const root = document.getElementById('app')!;
 const fxCanvas = document.getElementById('fx-canvas') as HTMLCanvasElement;
 
-const { state: loaded, offlineSec, offlineEarnings } = loadGame();
+const { state: loaded, offlineSec, offlineEarnings, betaReset } = loadGame();
 let state: GameState = loaded;
 setCurrentLang(resolveLang(state.settings.language, navigator.language));
 
@@ -23,7 +23,9 @@ const ui = new UI(root, state, fx, (next) => {
   saveGame(state);
 });
 
-if (offlineEarnings > 0) {
+if (betaReset) {
+  ui.notice(t('ui.betaResetTitle'), t('ui.betaResetText'));
+} else if (offlineEarnings > 0) {
   ui.welcomeBack(offlineSec, offlineEarnings);
 }
 
@@ -42,8 +44,9 @@ function loop(now: number): void {
   last = now;
 
   const events = tick(state, dt);
+  const shownCompanyId = activeCompany(state).id;
   // Payout FX only for the company currently on screen; money still counts.
-  const visible = events.completions.filter((c) => c.companyId === state.activeCompanyId);
+  const visible = events.completions.filter((c) => c.companyId === shownCompanyId);
   if (visible.length > 0) {
     const origin = ui.payoutOrigin();
     for (const c of visible.slice(0, 3)) {
@@ -51,11 +54,22 @@ function loop(now: number): void {
     }
     ui.moneyPulse();
   }
-  for (const t of events.trainingsDone) {
+  for (const done of events.trainingsDone) {
     ui.officeNeedsRebuild();
-    if (t.companyId === state.activeCompanyId) {
-      ui.toast(`🎓 Training complete — now Lv ${t.newLevel}!`, 'info');
+    if (done.companyId === shownCompanyId) {
+      ui.toast(`🎓 Training complete — now Lv ${done.newLevel}!`, 'info');
     }
+  }
+  for (const done of events.promotionsDone) {
+    ui.officeNeedsRebuild();
+    if (done.companyId === shownCompanyId) {
+      ui.toast(`🎖️ ${t('ui.promoted')}`, 'info');
+    }
+  }
+  if (events.deskUpgradesDone.length > 0) ui.officeNeedsRebuild();
+  for (const quit of events.quits) {
+    ui.officeNeedsRebuild();
+    ui.toast(`😞 ${t('ui.workerQuit', { name: quit.name })}`, 'error');
   }
 
   ui.frame(dt);

@@ -1,5 +1,5 @@
 import { PLAYER_LOOK_OPTIONS } from './data';
-import { companyAtSite, getProject } from './engine';
+import { allCompanies, anyCompanyAtSite, getProject } from './engine';
 import type { GameState, PlayerLook } from './types';
 
 /**
@@ -48,12 +48,13 @@ export function cyclePlayerLook(
  * 0 garage den → 1 startup loft → 2 valley penthouse → 3 orbital study
  */
 export function officeStage(state: GameState): number {
-  const orbital = companyAtSite(state, 'orbital');
-  const agiShipped = state.companies.some((c) => getProject(c, 'agi').completions >= 1);
+  const companies = allCompanies(state);
+  const orbital = anyCompanyAtSite(state, 'orbital');
+  const agiShipped = companies.some((c) => getProject(c, 'agi').completions >= 1);
   if (orbital && agiShipped) return 3;
-  if (state.companies.length >= 5 || state.companies.some((c) => getProject(c, 'agi').unlocked)) {
+  if (companies.length >= 5 || companies.some((c) => getProject(c, 'agi').unlocked)) {
     return 2;
   }
-  if (state.companies.length >= 2) return 1;
+  if (companies.length >= 2) return 1;
   return 0;
 }

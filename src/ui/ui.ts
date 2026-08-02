@@ -1,5 +1,6 @@
 import {
   COMPANY_SITES,
+  COUNTRIES,
   FLOOR_CAPACITY,
   MAP_THEMES,
   MARKETING_DURATION_SEC,
@@ -7,7 +8,6 @@ import {
   MAX_FLOORS,
   PROJECTS,
   TIME_SCALES,
-  TRAIN_DURATION_SEC,
   TUTORIAL_ANGEL_GIFT,
   UPGRADES,
   VSCOIN_BOOST_COST,
@@ -23,7 +23,23 @@ import {
 import {
   activeBoost,
   activeCompany,
+  activeCountry,
+  allCompanies,
+  atSkillCap,
   buyCompany,
+  deskUpgradeCost,
+  deskUpgradeDurationSec,
+  fastForwardAction,
+  fastForwardCost,
+  nextStationDef,
+  nextTier,
+  promoteCost,
+  promoteWorker,
+  setStartingCountry,
+  trainDurationSec,
+  upgradeDesk,
+  walletMoney,
+  workerBusy,
   buyFloor,
   buyMapTheme,
   buyMarketingCampaign,
@@ -246,7 +262,8 @@ export class UI {
 
   frame(dt: number): void {
     const s = this.state;
-    this.text('hud-money', formatMoney(s.money));
+    this.text('hud-money', formatMoney(walletMoney(s)));
+    document.getElementById('hud-money')?.classList.toggle('negative', walletMoney(s) < 0);
     const income = estimatedIncome(s);
     const incomeEl = document.getElementById('hud-income');
     if (incomeEl) {
@@ -343,16 +360,27 @@ export class UI {
       gift: formatMoney(TUTORIAL_ANGEL_GIFT),
       name: this.state.player.name,
     });
-    const input = step.input
-      ? `<div class="coach-input-row">
-           <input id="tut-input" class="coach-input" type="text"
-                  maxlength="${step.input === 'avatar-name' ? 20 : 30}"
-                  placeholder="${step.input === 'avatar-name' ? t('ui.namePlaceholder') : t('ui.companyPlaceholder')}" />
-           <button class="btn btn-primary btn-small" data-action="tutorial-submit">
-             ${t('ui.confirm')}
-           </button>
-         </div>`
-      : '';
+    const input =
+      step.input === 'country'
+        ? `<div class="coach-country-grid">
+             ${COUNTRIES.map(
+               (c) => `
+               <button class="btn btn-small ${this.state.activeCountryId === c.id ? 'btn-primary' : ''}"
+                       data-action="tutorial-country:${c.id}">
+                 ${c.emoji} ${lookup(`country.${c.id}.name`)}
+               </button>`,
+             ).join('')}
+           </div>`
+        : step.input
+          ? `<div class="coach-input-row">
+               <input id="tut-input" class="coach-input" type="text"
+                      maxlength="${step.input === 'avatar-name' ? 20 : 30}"
+                      placeholder="${step.input === 'avatar-name' ? t('ui.namePlaceholder') : t('ui.companyPlaceholder')}" />
+               <button class="btn btn-primary btn-small" data-action="tutorial-submit">
+                 ${t('ui.confirm')}
+               </button>
+             </div>`
+          : '';
     const next =
       !step.input && !step.isComplete
         ? `<button class="btn btn-primary btn-small" data-action="tutorial-next">${t('ui.next')}</button>`
@@ -509,6 +537,20 @@ export class UI {
     setTimeout(() => el.remove(), 2100);
   }
 
+  /** Generic informational modal (e.g. the one-time beta-reset notice). */
+  notice(title: string, text: string): void {
+    const zone = document.getElementById('modal-zone');
+    if (!zone) return;
+    zone.innerHTML = `
+      <div class="modal-backdrop" data-action="close-modal">
+        <div class="modal card">
+          <h2>${title}</h2>
+          <p>${text}</p>
+          <button class="btn btn-primary" data-action="close-modal">${t('ui.continue')}</button>
+        </div>
+      </div>`;
+  }
+
   welcomeBack(offlineSec: number, earnings: number): void {
     const zone = document.getElementById('modal-zone');
     if (!zone) return;
@@ -576,19 +618,20 @@ export class UI {
   /** The map: an illustrated city where every site is a tappable building. */
   private renderMap(): string {
     const s = this.state;
+    const country = activeCountry(s);
     const sites: SiteView[] = COMPANY_SITES.map((site) => {
       const company = companyAtSite(s, site.id);
       if (!company) return { id: site.id, status: 'free' as const, label: site.name };
       return {
         id: site.id,
-        status: company.id === s.activeCompanyId ? ('active' as const) : ('owned' as const),
+        status: company.id === country.activeCompanyId ? ('active' as const) : ('owned' as const),
         label: company.name,
       };
     });
     const themes = MAP_THEMES.map((def) => {
       const owned = s.ownedMapThemes.includes(def.id);
       const active = s.mapThemeId === def.id;
-      const affordable = s.money >= def.cost;
+      const affordable = country.money >= def.cost;
       if (owned) {
         return `<button class="btn btn-small ${active ? 'btn-primary' : ''}"
                         ${active ? 'disabled' : ''} data-action="set-map-theme:${def.id}">
@@ -603,8 +646,8 @@ export class UI {
 
     return `
       <div class="stack map-screen">
-        <div class="section-head"><h2>Silicon Valley</h2>
-          <span class="muted">${s.companies.length}/${COMPANY_SITES.length} sites owned</span>
+        <div class="section-head"><h2>${lookup(`country.${country.id}.name`)}</h2>
+          <span class="muted">${country.companies.length}/${COMPANY_SITES.length} sites owned</span>
         </div>
         ${cityMapSvg(s.mapThemeId, sites)}
         <div class="section-head"><h2>Map style</h2></div>
@@ -620,7 +663,7 @@ export class UI {
     const site = siteById(this.sheetSiteId!);
     const company = companyAtSite(s, site.id);
     if (company) {
-      const active = company.id === s.activeCompanyId;
+      const active = company.id === activeCountry(s).activeCompanyId;
       const income = companyIncome(s, company);
       const seats = company.workstations.length;
       return `
@@ -649,7 +692,7 @@ export class UI {
         </div>`;
     }
     const price = companyCost(s, site.id);
-    const affordable = s.money >= price;
+    const affordable = walletMoney(s) >= price;
     return `
       <div class="sheet-head"><h2>${site.name}</h2></div>
       <p class="sheet-blurb">${site.blurb}</p>
@@ -723,7 +766,7 @@ export class UI {
       }
       if (i <= lastUnlockedIdx + 2) {
         const unlockPrice = projectUnlockCost(c, def.id);
-        const affordable = s.money >= unlockPrice;
+        const affordable = walletMoney(s) >= unlockPrice;
         return `
         <div class="card project-card locked">
           <div class="card-row">
@@ -751,7 +794,7 @@ export class UI {
       .map((cand, i) => {
         const tier = tierById(cand.tierId);
         const price = hireCost(c, cand.tierId);
-        const affordable = s.money >= price;
+        const affordable = walletMoney(s) >= price;
         return `
         <div class="card candidate-card">
           <span class="card-emoji persona-slot">${employeePortrait(`c:${cand.name}:${cand.tierId}`, cand.specialization, cand.tierId)}</span>
@@ -778,7 +821,7 @@ export class UI {
         <div class="section-head">
           <h2>Candidates</h2>
           <button class="btn btn-ghost" data-action="reroll"
-                  ${s.money >= c.candidateRerollCost ? '' : 'disabled'}>
+                  ${walletMoney(s) >= c.candidateRerollCost ? '' : 'disabled'}>
             ${icon('dice', 16)} New batch ${formatMoney(c.candidateRerollCost)}
           </button>
         </div>
@@ -804,33 +847,55 @@ export class UI {
       : '⚠️ No desk — idle!';
     const expPct = Math.min(100, (w.experience / expToNextLevel(w.skillLevel)) * 100);
     const cost = trainCost(w);
-    const training = w.training;
-    const trainPct = training
-      ? Math.min(100, (1 - training.remainingSec / training.totalSec) * 100)
+    const action = c.timedActions.find(
+      (a) => a.targetId === w.id && (a.kind === 'training' || a.kind === 'promotion'),
+    );
+    const actionPct = action
+      ? Math.min(100, (1 - action.remainingSec / action.totalSec) * 100)
       : 0;
-    const statusLabel = training
-      ? `🎓 In training · +${training.levels} levels in ${formatDuration(training.remainingSec)}`
+    const capped = atSkillCap(w);
+    const statusLabel = action
+      ? action.kind === 'training'
+        ? `🎓 ${t('ui.inTraining', { levels: action.levels ?? 0, time: formatDuration(action.remainingSec) })}`
+        : `🎖️ ${t('ui.inPromotion', { title: tierById(action.toTierId!).title, time: formatDuration(action.remainingSec) })}`
       : `${tier.title} · ${deskLabel}`;
-    const progressBar = training
-      ? `<div class="progress mini training" title="Training progress">
-           <div class="progress-fill" style="width:${trainPct}%"></div>
+    const progressBar = action
+      ? `<div class="progress mini training" title="${action.kind}">
+           <div class="progress-fill" style="width:${actionPct}%"></div>
          </div>`
       : `<div class="progress mini exp" title="Experience to next level">
            <div class="progress-fill" style="width:${expPct}%"></div>
          </div>`;
-    const trainBtn = training
+    const ffCost = action ? fastForwardCost(s, action) : 0;
+    const ffBtn = action
+      ? `<button class="btn btn-small btn-primary" ${ffCost === 0 || s.vsCoin >= ffCost ? '' : 'disabled'}
+                 data-action="fast-forward:${action.id}">
+           ⚡ ${ffCost === 0 ? t('ui.free') : `${icon('vscoin', 14)} ${ffCost}`}
+         </button>`
+      : '';
+    const promote = capped && nextTier(w) !== null;
+    const actionBtn = action
       ? ''
-      : `<button class="btn btn-small" ${s.money >= cost ? '' : 'disabled'}
-                 data-action="train:${w.id}"
-                 title="+${trainLevels(w)} levels, ${formatDuration(TRAIN_DURATION_SEC)} off the floor">
-           ${icon('train', 15)} Train ${formatMoney(cost)}
-         </button>`;
+      : promote
+        ? `<button class="btn btn-small ${walletMoney(s) >= promoteCost(w)! ? 'btn-primary' : ''}"
+                   ${walletMoney(s) >= promoteCost(w)! ? '' : 'disabled'}
+                   data-action="promote:${w.id}"
+                   title="${tierById(nextTier(w)!).title}">
+             🎖️ ${t('ui.promote')} ${formatMoney(promoteCost(w)!)}
+           </button>`
+        : capped
+          ? `<span class="muted">🏔️ ${t('ui.maxGrade')}</span>`
+          : `<button class="btn btn-small" ${walletMoney(s) >= cost ? '' : 'disabled'}
+                     data-action="train:${w.id}"
+                     title="+${trainLevels(w)} levels, ${formatDuration(trainDurationSec(c, w))} off the floor">
+               ${icon('train', 15)} Train ${formatMoney(cost)}
+             </button>`;
     return `
-      <div class="card worker-card ${station || training ? '' : 'benched'} ${training ? 'training' : ''}">
+      <div class="card worker-card ${station || action ? '' : 'benched'} ${action ? 'training' : ''}">
         <div class="card-row">
           <span class="card-emoji persona-slot">${employeePortrait(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}</span>
           <div class="card-main">
-            <h3>${w.name} <span class="lvl">Lv ${w.skillLevel}</span></h3>
+            <h3>${w.name} <span class="lvl">Lv ${w.skillLevel}${capped ? ` / ${tier.maxSkill}` : ''}</span></h3>
             <span class="muted">${statusLabel}</span>
             <span class="spec-badge spec-${w.specialization.replace(' ', '')}">
               ${w.specialization}${specMatch ? ' ★1.5x' : ''}
@@ -843,7 +908,8 @@ export class UI {
         </div>
         ${progressBar}
         <div class="card-actions">
-          ${trainBtn}
+          ${actionBtn}
+          ${ffBtn}
           <button class="btn btn-small btn-danger" data-action="fire:${w.id}">Fire</button>
         </div>
       </div>`;
@@ -922,13 +988,13 @@ export class UI {
     const nextCost = floorCost(c);
     const floorBtn = atMax
       ? `<span class="muted">🏁 Max height reached</span>`
-      : `<button class="btn ${s.money >= nextCost ? 'btn-primary' : ''}"
-                 ${s.money >= nextCost ? '' : 'disabled'} data-action="buy-floor">
+      : `<button class="btn ${walletMoney(s) >= nextCost ? 'btn-primary' : ''}"
+                 ${walletMoney(s) >= nextCost ? '' : 'disabled'} data-action="buy-floor">
            ${icon('floor-up', 16)} Add floor ${formatMoney(nextCost)}
          </button>`;
 
     const standing = c.workers
-      .filter((w) => w.stationId === null && !w.training)
+      .filter((w) => w.stationId === null && !workerBusy(c, w.id))
       .map(
         (w) => `
         <button class="stand-slot" data-action="poke:${w.id}" title="${w.name} — needs a desk!">
@@ -939,15 +1005,18 @@ export class UI {
       .join('');
 
     const inTraining = c.workers
-      .filter((w) => w.training)
-      .map(
-        (w) => `
+      .filter((w) => workerBusy(c, w.id))
+      .map((w) => {
+        const action = c.timedActions.find(
+          (a) => a.targetId === w.id && (a.kind === 'training' || a.kind === 'promotion'),
+        )!;
+        return `
         <button class="stand-slot training" data-action="poke:${w.id}"
-                title="${w.name} — back in ${formatDuration(w.training!.remainingSec)}">
+                title="${w.name} — back in ${formatDuration(action.remainingSec)}">
           ${personaStanding(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}
-          <span class="desk-name">🎓 ${w.name.split(' ')[0]}</span>
-        </button>`,
-      )
+          <span class="desk-name">${action.kind === 'training' ? '🎓' : '🎖️'} ${w.name.split(' ')[0]}</span>
+        </button>`;
+      })
       .join('');
 
     return `
@@ -984,7 +1053,7 @@ export class UI {
     const shop = WORKSTATIONS.map((def) => {
       const owned = c.workstations.filter((w) => w.defId === def.id).length;
       const cost = stationCost(c, def.id);
-      const affordable = !full && s.money >= cost;
+      const affordable = !full && walletMoney(s) >= cost;
       return `
       <div class="card">
         <div class="card-row">
@@ -1006,8 +1075,71 @@ export class UI {
           ${full ? '<span class="muted">🈵 Office full — add a floor</span>' : ''}
         </div>
         ${shop}
+        ${this.renderDeskUpgrades()}
         ${this.renderDecorShop()}
       </div>`;
+  }
+
+  /** Renovations: upgrade owned desks in place (money + time per desk). */
+  private renderDeskUpgrades(): string {
+    const s = this.state;
+    const c = activeCompany(s);
+    const inFlight = c.timedActions.filter((a) => a.kind === 'desk-upgrade');
+    const upgradingIds = new Set(inFlight.map((a) => a.targetId));
+    const cards = WORKSTATIONS.map((def) => {
+      const to = nextStationDef(def.id);
+      if (!to) return '';
+      const candidates = c.workstations.filter(
+        (w) => w.defId === def.id && !upgradingIds.has(w.id),
+      );
+      if (candidates.length === 0) return '';
+      const toDef = stationDefById(to);
+      const cost = deskUpgradeCost(def.id)!;
+      const duration = deskUpgradeDurationSec(def.id)!;
+      const affordable = walletMoney(s) >= cost;
+      return `
+      <div class="card">
+        <div class="card-row">
+          <span class="card-emoji">${stationArt(def.id, 38)}</span>
+          <div class="card-main">
+            <h3>${def.name} → ${toDef.name}</h3>
+            <span class="muted">×${def.multiplier} → ×${toDef.multiplier} output ·
+              ${formatDuration(duration)} · ${candidates.length} available</span>
+          </div>
+          <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
+                  data-action="upgrade-desk:${candidates[0].id}">
+            ${t('ui.upgradeDesk')} ${formatMoney(cost)}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+    const running = inFlight
+      .map((a) => {
+        const station = c.workstations.find((w) => w.id === a.targetId);
+        if (!station || !a.toDefId) return '';
+        const pct = Math.min(100, (1 - a.remainingSec / a.totalSec) * 100);
+        const ffCost = fastForwardCost(s, a);
+        return `
+      <div class="card">
+        <div class="card-row">
+          <span class="card-emoji">🛠️</span>
+          <div class="card-main">
+            <h3>${stationDefById(station.defId).name} → ${stationDefById(a.toDefId).name}</h3>
+            <span class="muted">${t('ui.deskUpgrading', { time: formatDuration(a.remainingSec) })}</span>
+          </div>
+          <button class="btn btn-small btn-primary" ${ffCost === 0 || s.vsCoin >= ffCost ? '' : 'disabled'}
+                  data-action="fast-forward:${a.id}">
+            ⚡ ${ffCost === 0 ? t('ui.free') : `${icon('vscoin', 14)} ${ffCost}`}
+          </button>
+        </div>
+        <div class="progress mini training"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>`;
+      })
+      .join('');
+    if (!cards && !running) return '';
+    return `
+      <div class="section-head"><h2>${t('ui.renovations')}</h2></div>
+      ${running}${cards}`;
   }
 
   /** Wallpaper shop: buy once, then apply per company or as player default. */
@@ -1020,7 +1152,7 @@ export class UI {
       const isApplied = applied === def.id;
       const isDefault = s.defaultWallpaperId === def.id;
       const affordable =
-        def.vsCoinCost !== undefined ? s.vsCoin >= def.vsCoinCost : s.money >= def.cost;
+        def.vsCoinCost !== undefined ? s.vsCoin >= def.vsCoinCost : walletMoney(s) >= def.cost;
       const priceLabel =
         def.vsCoinCost !== undefined
           ? `${icon('vscoin', 14)} ${def.vsCoinCost}`
@@ -1069,7 +1201,7 @@ export class UI {
     const s = this.state;
     const c = activeCompany(s);
     const mkCost = marketingCost(s);
-    const mkAffordable = s.money >= mkCost;
+    const mkAffordable = walletMoney(s) >= mkCost;
     const marketing = `
       <div class="card">
         <div class="card-row">
@@ -1086,7 +1218,7 @@ export class UI {
           </button>
         </div>
       </div>`;
-    const owned = s.companies.length;
+    const owned = activeCountry(s).companies.length;
     const cards = UPGRADES.map((def) => {
       const required = def.requiresCompanies ?? 1;
       if (owned < required) {
@@ -1102,12 +1234,13 @@ export class UI {
         </div>
       </div>`;
       }
-      const level = c.upgrades[def.id] ?? 0;
+      const premium = def.vsCoinCost !== undefined;
+      const level = premium ? (s.globalUpgrades[def.id] ?? 0) : (c.upgrades[def.id] ?? 0);
       const maxed = level >= def.maxLevel;
-      const premiumCost = upgradeVsCoinCost(c, def.id);
+      const premiumCost = upgradeVsCoinCost(s, def.id);
       const cost = premiumCost ?? upgradeCost(c, def.id);
       const affordable =
-        !maxed && (premiumCost !== null ? s.vsCoin >= premiumCost : s.money >= cost);
+        !maxed && (premiumCost !== null ? s.vsCoin >= premiumCost : walletMoney(s) >= cost);
       const priceLabel =
         premiumCost !== null ? `${icon('vscoin', 14)} ${premiumCost}` : formatMoney(cost);
       return `
@@ -1187,12 +1320,13 @@ export class UI {
   private renderStats(): string {
     const s = this.state;
     const c = activeCompany(s);
-    const employees = s.companies.reduce((sum, co) => sum + co.workers.length, 0);
-    const desks = s.companies.reduce((sum, co) => sum + co.workstations.length, 0);
+    const companies = allCompanies(s);
+    const employees = companies.reduce((sum, co) => sum + co.workers.length, 0);
+    const desks = companies.reduce((sum, co) => sum + co.workstations.length, 0);
     const rows: [string, string, string][] = [
       [icon('coin', 16), 'Total earned', formatMoney(s.totalEarned)],
       [icon('check', 16), 'Projects completed', formatNumber(s.projectsCompleted)],
-      [icon('office', 16), 'Companies', String(s.companies.length)],
+      [icon('office', 16), 'Companies', String(companies.length)],
       [icon('team', 16), 'Employees', String(employees)],
       [icon('star', 16), 'Workstations', String(desks)],
       [icon('energy', 16), 'Team output (here)', formatRate(totalWorkRate(s))],
@@ -1299,12 +1433,12 @@ export class UI {
       case 'switch-company':
         error = setActiveCompany(s, Number(arg));
         break;
-      case 'found-company': {
-        const name = prompt('Name your new company:', '');
-        error = buyCompany(s, arg, name ?? undefined);
-        if (!error) this.toast('🏗️ New company founded!', 'info');
+      case 'found-company':
+        // No naming prompt: only the very first company is player-named;
+        // every other company auto-assigns a local parody name.
+        error = buyCompany(s, arg);
+        if (!error) this.toast(`🏗️ ${activeCompany(s).name} founded!`, 'info');
         break;
-      }
       case 'unlock-project':
         error = unlockProject(s, arg);
         if (!error) this.toast('🎉 Project unlocked!', 'info');
@@ -1320,6 +1454,14 @@ export class UI {
         error = trainWorker(s, Number(arg));
         if (!error) this.toast('🎓 Off to the workshop!', 'info');
         break;
+      case 'promote':
+        error = promoteWorker(s, Number(arg));
+        if (!error) this.toast(`🎖️ ${t('ui.promotionStarted')}`, 'info');
+        break;
+      case 'fast-forward':
+        error = fastForwardAction(s, Number(arg));
+        if (!error) this.toast(`⚡ ${t('ui.fastForwarded')}`, 'info');
+        break;
       case 'fire': {
         const worker = activeCompany(s).workers.find((w) => w.id === Number(arg));
         if (worker && confirm(`Fire ${worker.name}? There is no severance package.`)) {
@@ -1329,6 +1471,10 @@ export class UI {
       }
       case 'buy-station':
         error = buyWorkstation(s, arg);
+        break;
+      case 'upgrade-desk':
+        error = upgradeDesk(s, Number(arg));
+        if (!error) this.toast(`🛠️ ${t('ui.deskUpgradeStarted')}`, 'info');
         break;
       case 'buy-floor':
         error = buyFloor(s);
@@ -1448,6 +1594,12 @@ export class UI {
         const step = currentTutorialStep(s);
         error =
           step?.input === 'avatar-name' ? setPlayerName(s, value) : renameCompany(s, value);
+        if (!error) error = advanceTutorial(s);
+        if (!error) this.updateNarrative();
+        break;
+      }
+      case 'tutorial-country': {
+        error = setStartingCountry(s, arg);
         if (!error) error = advanceTutorial(s);
         if (!error) this.updateNarrative();
         break;

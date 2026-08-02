@@ -1,5 +1,13 @@
 import { VSCOIN_PER_STORY_BEAT } from './data';
-import { companyAtSite, getProject, grantVsCoin } from './engine';
+import {
+  allCompanies,
+  anyCompanyAtSite,
+  getProject,
+  grantVsCoin,
+  inDebt,
+  inDebtCrisis,
+  worldUnlocked,
+} from './engine';
 import type { GameState } from './types';
 
 /**
@@ -19,16 +27,16 @@ export interface StoryBeatDef {
 }
 
 function totalWorkers(state: GameState): number {
-  return state.companies.reduce((sum, c) => sum + c.workers.length, 0);
+  return allCompanies(state).reduce((sum, c) => sum + c.workers.length, 0);
 }
 
 function anyUpgrade(state: GameState): boolean {
-  return state.companies.some((c) => Object.values(c.upgrades).some((lvl) => lvl > 0));
+  return allCompanies(state).some((c) => Object.values(c.upgrades).some((lvl) => lvl > 0));
 }
 
 function agiCompletions(state: GameState): number {
   let sum = 0;
-  for (const c of state.companies) sum += getProject(c, 'agi').completions;
+  for (const c of allCompanies(state)) sum += getProject(c, 'agi').completions;
   return sum;
 }
 
@@ -39,24 +47,32 @@ export const STORY_BEATS: StoryBeatDef[] = [
   { id: 'first-thousand', trigger: (s) => s.totalEarned >= 1_000 },
   { id: 'full-garage', trigger: (s) => totalWorkers(s) >= 4 },
   { id: 'first-upgrade', trigger: anyUpgrade },
+  // Gabriel's debt warnings: one-shot per severity, on durable conditions
+  // (the HUD alarm carries the ongoing signal; see docs/decisions.md #9).
+  { id: 'debt-first', trigger: (s) => s.countries.some(inDebt) },
+  { id: 'debt-crisis', trigger: (s) => s.countries.some(inDebtCrisis) },
   { id: 'hundred-k', trigger: (s) => s.totalEarned >= 100_000 },
-  { id: 'site-loft', trigger: (s) => companyAtSite(s, 'loft') !== undefined },
-  { id: 'site-paloalto', trigger: (s) => companyAtSite(s, 'paloalto') !== undefined },
+  { id: 'site-loft', trigger: (s) => anyCompanyAtSite(s, 'loft') !== undefined },
+  { id: 'site-paloalto', trigger: (s) => anyCompanyAtSite(s, 'paloalto') !== undefined },
   { id: 'ten-million', trigger: (s) => s.totalEarned >= 10_000_000 },
-  { id: 'site-campus', trigger: (s) => companyAtSite(s, 'campus') !== undefined },
-  { id: 'site-tower', trigger: (s) => companyAtSite(s, 'tower') !== undefined },
+  { id: 'site-campus', trigger: (s) => anyCompanyAtSite(s, 'campus') !== undefined },
+  { id: 'site-tower', trigger: (s) => anyCompanyAtSite(s, 'tower') !== undefined },
   { id: 'one-billion', trigger: (s) => s.totalEarned >= 1_000_000_000 },
-  { id: 'site-seattle', trigger: (s) => companyAtSite(s, 'seattle') !== undefined },
-  { id: 'site-nyc', trigger: (s) => companyAtSite(s, 'nyc') !== undefined },
+  { id: 'site-seattle', trigger: (s) => anyCompanyAtSite(s, 'seattle') !== undefined },
+  { id: 'site-nyc', trigger: (s) => anyCompanyAtSite(s, 'nyc') !== undefined },
   {
     id: 'agi-unlocked',
-    trigger: (s) => s.companies.some((c) => getProject(c, 'agi').unlocked),
+    trigger: (s) => allCompanies(s).some((c) => getProject(c, 'agi').unlocked),
   },
   { id: 'agi-shipped', trigger: (s) => agiCompletions(s) >= 1 },
-  { id: 'site-orbital', trigger: (s) => companyAtSite(s, 'orbital') !== undefined },
+  { id: 'site-orbital', trigger: (s) => anyCompanyAtSite(s, 'orbital') !== undefined },
+  // International Business: the world opens up once a city is fully owned.
+  { id: 'world-unlocked', trigger: worldUnlocked },
+  { id: 'second-country', trigger: (s) => s.countries.length >= 2 },
+  { id: 'world-conqueror', trigger: (s) => s.countries.length >= 8 },
   {
     id: 'dream-achieved',
-    trigger: (s) => companyAtSite(s, 'orbital') !== undefined && agiCompletions(s) >= 1,
+    trigger: (s) => anyCompanyAtSite(s, 'orbital') !== undefined && agiCompletions(s) >= 1,
   },
 ];
 

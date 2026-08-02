@@ -1,11 +1,27 @@
 export type Specialization = 'Frontend' | 'Backend' | 'DevOps' | 'Data Science';
 
+/** Playable countries. Each is a fully independent economy (see CountryState). */
+export type CountryId = 'ch' | 'us' | 'ca' | 'it' | 'fr' | 'de' | 'sa' | 'cn';
+
+export interface CountryDef {
+  id: CountryId;
+  emoji: string; // flag
+  /**
+   * Parody company names auto-assigned to companies founded in this country
+   * (every company except the player's very first one). Recognizable riffs
+   * on real companies, never a real trademark verbatim.
+   */
+  parodyCompanyNames: string[];
+}
+
 export interface WorkerTierDef {
   id: string;
   title: string;
   baseRate: number; // work/sec at skill level 1
   salary: number; // $/sec
   hireCost: number;
+  /** Grade cap: skill can't grow past this; at the cap the worker can be promoted. */
+  maxSkill: number;
   emoji: string;
 }
 
@@ -93,7 +109,9 @@ export type MissionMetric =
   | 'workers'
   | 'companies'
   | 'upgradeLevels'
-  | 'desks';
+  | 'desks'
+  | 'promotions'
+  | 'countries';
 
 export interface MissionDef {
   id: string;
@@ -114,11 +132,27 @@ export interface VsCoinLedgerEntry {
   source: string;
 }
 
-/** An in-flight training program: the worker is away from their desk. */
-export interface TrainingState {
+/**
+ * A generic in-flight timed action. All time-consuming mechanics (training,
+ * promotion, desk upgrades, ...) run through this one system: they advance
+ * only inside tick() (so offline simulation is exact) and every one can be
+ * fast-forwarded with VsCoin. See .claude/skills/add-timed-action.
+ */
+export type TimedActionKind = 'training' | 'promotion' | 'desk-upgrade';
+
+export interface TimedAction {
+  id: number;
+  kind: TimedActionKind;
+  /** Worker id (training/promotion) or workstation id (desk-upgrade). */
+  targetId: number;
   remainingSec: number;
   totalSec: number;
-  levels: number; // skill levels granted on completion
+  /** training: skill levels granted on completion. */
+  levels?: number;
+  /** promotion: tier the worker graduates into. */
+  toTierId?: string;
+  /** desk-upgrade: workstation def the desk turns into. */
+  toDefId?: string;
 }
 
 export interface WorkerState {
@@ -129,7 +163,10 @@ export interface WorkerState {
   skillLevel: number;
   experience: number; // resets each level-up
   stationId: number | null; // assigned workstation instance
-  training: TrainingState | null;
+  /** Completed training programs — ramps the next training's duration. */
+  timesTrained: number;
+  /** Completed promotions (lifetime, feeds the promotions mission metric). */
+  promotions: number;
 }
 
 export interface WorkstationState {
@@ -200,7 +237,7 @@ export interface PlayerState {
 /**
  * Temporary output multiplier — the delivery vehicle for monetization
  * rewards (rewarded ads, purchased boosts). Counted down inside tick()
- * so it works identically online and offline.
+ * so it works identically online and offline. Global across countries.
  */
 export interface Boost {
   /** e.g. 2 for a "2x income" boost */
@@ -211,9 +248,9 @@ export interface Boost {
 }
 
 /**
- * One company on the map. Each company runs independently — its own team,
- * desks, projects and upgrades — but all money flows through the shared
- * player wallet on GameState.
+ * One company on a country's city map. Each company runs independently —
+ * its own team, desks, projects and upgrades — and all money flows through
+ * its country's wallet.
  */
 export interface CompanyState {
   id: number;
@@ -228,18 +265,50 @@ export interface CompanyState {
   upgrades: Record<string, number>;
   candidates: Candidate[];
   candidateRerollCost: number;
+  /** In-flight timed actions (training, promotions, desk upgrades). */
+  timedActions: TimedAction[];
+  /** What founding this company cost (floor for rename pricing). */
+  purchasePrice: number;
+  /** Paid renames so far — rename price escalates with it. */
+  renameCount: number;
+  /** Concurrent project slots unlocked (1 = single project). */
+  projectSlots: number;
+  /**
+   * Per-floor project assignment (index = floor). null/missing = the
+   * company's main activeProjectId. Distinct assigned projects are limited
+   * by projectSlots; desks on a floor work that floor's project.
+   */
+  floorProjects: (string | null)[];
+}
+
+/**
+ * One country = one fully independent economy: its own wallet (which CAN go
+ * below zero — debt), companies, employees, projects, floors and cash
+ * upgrades. VsCoin, story, missions, cosmetics and the avatar are global.
+ */
+export interface CountryState {
+  id: CountryId;
+  money: number;
+  totalEarned: number;
+  projectsCompleted: number;
+  companies: CompanyState[];
+  activeCompanyId: number;
+  /** Seconds until the next debt-driven resignation while in crisis. */
+  debtQuitCooldownSec: number;
+  /** Parody names already assigned in this country (never reused). */
+  usedCompanyNames: string[];
 }
 
 export interface GameState {
   version: number;
-  money: number; // shared wallet across all companies
+  countries: CountryState[];
+  activeCountryId: CountryId;
+  /** Lifetime aggregates across all countries (missions/story feed on these). */
   totalEarned: number;
   projectsCompleted: number;
   startedAt: number;
   lastSeen: number; // wall-clock ms, for offline progress
   playTimeSec: number;
-  companies: CompanyState[];
-  activeCompanyId: number; // company currently shown/managed in the UI
   ownedWallpapers: string[]; // bought once, usable in every company
   defaultWallpaperId: string; // player-level default for companies without one
   ownedMapThemes: string[];
@@ -255,6 +324,16 @@ export interface GameState {
   vsCoinLedger: VsCoinLedgerEntry[];
   /** Mission ids whose reward has been collected. */
   missionsClaimed: string[];
+  /**
+   * Levels of VsCoin-bought upgrades. Premium upgrades are global: one
+   * purchase applies in every company of every country (cash upgrades stay
+   * per-company).
+   */
+  globalUpgrades: Record<string, number>;
+  /** Lifetime fast-forwards bought — the very first one is free (tutorial). */
+  fastForwardsUsed: number;
+  /** Lifetime completed promotions (mission metric). */
+  promotionsDone: number;
   nextEntityId: number;
 }
 
@@ -269,4 +348,8 @@ export interface TickEvents {
   completions: { companyId: number; projectId: string; reward: number }[];
   levelUps: { workerId: number; newLevel: number }[];
   trainingsDone: { companyId: number; workerId: number; newLevel: number }[];
+  promotionsDone: { companyId: number; workerId: number; newTierId: string }[];
+  deskUpgradesDone: { companyId: number; stationId: number; newDefId: string }[];
+  /** Debt-crisis resignations (the UI toasts them). */
+  quits: { companyId: number; workerId: number; name: string }[];
 }

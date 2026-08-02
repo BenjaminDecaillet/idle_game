@@ -8,6 +8,7 @@ import {
 } from '../src/game/data';
 import {
   activeCompany,
+  activeCountry,
   buyCompany,
   buyFloor,
   buyWorkstation,
@@ -36,7 +37,7 @@ describe('buyWorkstation — desk capacity limits', () => {
   it('rejects with office space error once deskCapacity is reached', () => {
     const state = createInitialState(NOW);
     const c = activeCompany(state);
-    state.money = 100_000;
+    activeCountry(state).money = 100_000;
 
     // Fill all desks on the first floor
     for (let i = 0; i < FLOOR_CAPACITY; i++) {
@@ -54,7 +55,7 @@ describe('buyWorkstation — desk capacity limits', () => {
   it('succeeds after buying a floor', () => {
     const state = createInitialState(NOW);
     const c = activeCompany(state);
-    state.money = 100_000;
+    activeCountry(state).money = 100_000;
 
     // Fill first floor
     for (let i = 0; i < FLOOR_CAPACITY; i++) {
@@ -78,21 +79,21 @@ describe('buyFloor', () => {
   it('deducts floorCost and increments floors', () => {
     const state = createInitialState(NOW);
     const c = activeCompany(state);
-    state.money = 10_000;
+    activeCountry(state).money = 10_000;
 
     const cost = floorCost(c);
-    const moneyBefore = state.money;
+    const moneyBefore = activeCountry(state).money;
 
     const err = buyFloor(state);
     expect(err).toBeNull();
     expect(c.floors).toBe(2);
-    expect(state.money).toBe(moneyBefore - cost);
+    expect(activeCountry(state).money).toBe(moneyBefore - cost);
   });
 
   it('fails without enough money', () => {
     const state = createInitialState(NOW);
     const c = activeCompany(state);
-    state.money = 0;
+    activeCountry(state).money = 0;
 
     const err = buyFloor(state);
     expect(err).toBe('Not enough money');
@@ -102,7 +103,7 @@ describe('buyFloor', () => {
   it('fails at MAX_FLOORS with appropriate error', () => {
     const state = createInitialState(NOW);
     const c = activeCompany(state);
-    state.money = 100_000_000;
+    activeCountry(state).money = 100_000_000;
 
     // Max out floors
     for (let i = 0; i < MAX_FLOORS - 1; i++) {
@@ -121,7 +122,7 @@ describe('floorCost — growth and site scaling', () => {
   it('grows by FLOOR_COST_GROWTH per owned floor', () => {
     const state = createInitialState(NOW);
     const garage = activeCompany(state);
-    state.money = 100_000; // ensure we have enough to buy floors
+    activeCountry(state).money = 100_000; // ensure we have enough to buy floors
 
     const cost0 = floorCost(garage); // floors = 1
     expect(cost0).toBe(Math.round(FLOOR_BASE_COST * 1 * Math.pow(FLOOR_COST_GROWTH, 0)));
@@ -141,7 +142,7 @@ describe('floorCost — growth and site scaling', () => {
 
   it('is scaled by site floorCostFactor', () => {
     const state = createInitialState(NOW);
-    state.money = 1_000_000;
+    activeCountry(state).money = 1_000_000;
 
     // Garage company (floorCostFactor = 1)
     const garage = activeCompany(state);
@@ -153,7 +154,7 @@ describe('floorCost — growth and site scaling', () => {
 
     // Loft company (floorCostFactor = 5)
     const loftSite = COMPANY_SITES.find((s) => s.id === 'loft')!;
-    state.money = loftSite.cost;
+    activeCountry(state).money = loftSite.cost;
     buyCompany(state, 'loft');
     const loft = activeCompany(state);
 
@@ -168,14 +169,18 @@ describe('floorCost — growth and site scaling', () => {
 
   it('uses createCompany to set up a company at a specific site', () => {
     const state = createInitialState(NOW);
-    state.companies = []; // clear to start fresh
-    state.companies.push(createCompany(state, 'loft', 'Loft Test'));
+    const country = activeCountry(state);
+    const loftSite = COMPANY_SITES.find((s) => s.id === 'loft')!;
 
-    const loft = state.companies[0];
+    // Create a new company at the loft site
+    const newCompany = createCompany(state, country, 'loft', 'Loft Test', loftSite.cost);
+    country.companies = [newCompany];
+    country.activeCompanyId = newCompany.id;
+
+    const loft = newCompany;
     expect(loft.siteId).toBe('loft');
     expect(loft.name).toBe('Loft Test');
 
-    const loftSite = COMPANY_SITES.find((s) => s.id === 'loft')!;
     const cost = floorCost(loft);
     expect(cost).toBe(
       Math.round(FLOOR_BASE_COST * loftSite.floorCostFactor * Math.pow(FLOOR_COST_GROWTH, 0))
@@ -191,27 +196,41 @@ describe('migration grandfathering — floors populated from workstation count',
     }
 
     const stateSave = {
-      companies: [
+      countries: [
         {
-          id: 1,
-          name: 'Packed Office',
-          siteId: 'garage',
-          floors: 1, // insufficient for 10 desks
-          workers: [],
-          workstations,
-          projects: [],
-          activeProjectId: 'landing',
-          upgrades: {},
-          candidates: [],
-          candidateRerollCost: 10,
+          id: 'us',
+          money: 1000,
+          totalEarned: 0,
+          projectsCompleted: 0,
+          activeCompanyId: 1,
+          usedCompanyNames: [],
+          debtQuitCooldownSec: 0,
+          companies: [
+            {
+              id: 1,
+              name: 'Packed Office',
+              siteId: 'garage',
+              floors: 1, // insufficient for 10 desks
+              workers: [],
+              workstations,
+              projects: [],
+              activeProjectId: 'landing',
+              upgrades: {},
+              candidates: [],
+              candidateRerollCost: 10,
+              wallpaperId: null,
+              timedActions: [],
+              floorProjects: [],
+              projectSlots: 1,
+            },
+          ],
         },
       ],
-      money: 1000,
-      activeCompanyId: 1,
+      activeCountryId: 'us',
     } as any;
 
     const result = migrate(stateSave, NOW);
-    const company = result.companies[0];
+    const company = result.countries[0].companies[0];
 
     // 10 workstations / 4 capacity = 2.5, ceil to 3
     expect(company.floors).toBe(3);
@@ -225,13 +244,41 @@ describe('migration grandfathering — floors populated from workstation count',
     }
 
     const flatSave = {
-      money: 1000,
-      workstations,
-      // no floors field, no companies array
+      countries: [
+        {
+          id: 'us',
+          money: 1000,
+          totalEarned: 0,
+          projectsCompleted: 0,
+          activeCompanyId: 1,
+          usedCompanyNames: [],
+          debtQuitCooldownSec: 0,
+          companies: [
+            {
+              id: 1,
+              name: 'Default Company',
+              siteId: 'garage',
+              // no floors field
+              workers: [],
+              workstations,
+              projects: [],
+              activeProjectId: 'landing',
+              upgrades: {},
+              candidates: [],
+              candidateRerollCost: 10,
+              wallpaperId: null,
+              timedActions: [],
+              floorProjects: [],
+              projectSlots: 1,
+            },
+          ],
+        },
+      ],
+      activeCountryId: 'us',
     } as any;
 
     const result = migrate(flatSave, NOW);
-    const company = result.companies[0]; // migrated into home
+    const company = result.countries[0].companies[0]; // migrated in country
 
     // 6 workstations / 4 capacity = 1.5, ceil to 2
     expect(company.floors).toBe(2);
@@ -248,27 +295,41 @@ describe('migration grandfathering — floors populated from workstation count',
     }
 
     const stateSave = {
-      companies: [
+      countries: [
         {
-          id: 1,
-          name: 'Over-Capacity',
-          siteId: 'garage',
-          floors: 1,
-          workers: [],
-          workstations,
-          projects: [],
-          activeProjectId: 'landing',
-          upgrades: {},
-          candidates: [],
-          candidateRerollCost: 10,
+          id: 'us',
+          money: 1000,
+          totalEarned: 0,
+          projectsCompleted: 0,
+          activeCompanyId: 1,
+          usedCompanyNames: [],
+          debtQuitCooldownSec: 0,
+          companies: [
+            {
+              id: 1,
+              name: 'Over-Capacity',
+              siteId: 'garage',
+              floors: 1,
+              workers: [],
+              workstations,
+              projects: [],
+              activeProjectId: 'landing',
+              upgrades: {},
+              candidates: [],
+              candidateRerollCost: 10,
+              wallpaperId: null,
+              timedActions: [],
+              floorProjects: [],
+              projectSlots: 1,
+            },
+          ],
         },
       ],
-      money: 1000,
-      activeCompanyId: 1,
+      activeCountryId: 'us',
     } as any;
 
     const result = migrate(stateSave, NOW);
-    const company = result.companies[0];
+    const company = result.countries[0].companies[0];
 
     // Needed: ceil((MAX_FLOORS * FLOOR_CAPACITY + 10) / FLOOR_CAPACITY) = MAX_FLOORS + 1
     // Migration allows floors > MAX_FLOORS if workstations demand it
@@ -284,13 +345,41 @@ describe('migration grandfathering — floors populated from workstation count',
     ];
 
     const flatSave = {
-      money: 5000,
-      workstations,
-      companyName: 'Mixed Desks Co',
+      countries: [
+        {
+          id: 'us',
+          money: 5000,
+          totalEarned: 0,
+          projectsCompleted: 0,
+          activeCompanyId: 1,
+          usedCompanyNames: [],
+          debtQuitCooldownSec: 0,
+          companies: [
+            {
+              id: 1,
+              name: 'Mixed Desks Co',
+              siteId: 'garage',
+              floors: 1,
+              workers: [],
+              workstations,
+              projects: [],
+              activeProjectId: 'landing',
+              upgrades: {},
+              candidates: [],
+              candidateRerollCost: 10,
+              wallpaperId: null,
+              timedActions: [],
+              floorProjects: [],
+              projectSlots: 1,
+            },
+          ],
+        },
+      ],
+      activeCountryId: 'us',
     } as any;
 
     const result = migrate(flatSave, NOW);
-    const company = result.companies[0];
+    const company = result.countries[0].companies[0];
 
     expect(company.workstations).toHaveLength(3);
     expect(company.workstations[0]).toEqual({ id: 1, defId: 'basic' });

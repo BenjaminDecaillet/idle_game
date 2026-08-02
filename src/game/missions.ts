@@ -1,5 +1,5 @@
 import { MISSIONS, missionById } from './data';
-import { grantVsCoin } from './engine';
+import { allCompanies, grantVsCoin } from './engine';
 import type { GameState, MissionDef, MissionMetric } from './types';
 
 /**
@@ -9,24 +9,29 @@ import type { GameState, MissionDef, MissionMetric } from './types';
  * via claimMission() so the player gets their satisfying "Claim" moment.
  */
 
-/** Current value of a mission metric. */
+/** Current value of a mission metric (aggregated across every country). */
 export function metricValue(state: GameState, metric: MissionMetric): number {
+  const companies = allCompanies(state);
   switch (metric) {
     case 'projectsCompleted':
       return state.projectsCompleted;
     case 'totalEarned':
       return state.totalEarned;
     case 'workers':
-      return state.companies.reduce((sum, c) => sum + c.workers.length, 0);
+      return companies.reduce((sum, c) => sum + c.workers.length, 0);
     case 'companies':
-      return state.companies.length;
+      return companies.length;
     case 'upgradeLevels':
-      return state.companies.reduce(
+      return companies.reduce(
         (sum, c) => sum + Object.values(c.upgrades).reduce((a, b) => a + b, 0),
         0,
       );
     case 'desks':
-      return state.companies.reduce((sum, c) => sum + c.workstations.length, 0);
+      return companies.reduce((sum, c) => sum + c.workstations.length, 0);
+    case 'promotions':
+      return state.promotionsDone;
+    case 'countries':
+      return state.countries.length;
   }
 }
 
