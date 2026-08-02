@@ -56,6 +56,31 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.deskUpgrading': 'En rénovation · terminé dans {time}',
   'ui.deskUpgradeStarted': 'Rénovation lancée !',
 
+  // --- Missions UX ----------------------------------------------------------
+  'ui.missionComplete': 'Mission accomplie — réclamez vos VsCoin !',
+
+  // --- Sociétés : plafonds, créneaux, renommage ------------------------------
+  'ui.softCap': 'PLAFOND',
+  'ui.softCapHint':
+    'Ce contrat a atteint son plafond ici — une société plus grande ira plus loin.',
+  'ui.projectSlots': 'Créneaux de projets',
+  'ui.projectSlotsHint':
+    'Affectez les étages supérieurs à leurs propres projets — ou gardez tout le monde sur le principal.',
+  'ui.unlockSlot': 'Débloquer une seconde équipe',
+  'ui.slotNeedsFloors': 'Nécessite {floors} étages',
+  'ui.slotUnlocked': 'Nouveau créneau de projet débloqué !',
+  'ui.mainProject': 'Projet principal',
+  'ui.renameCostConfirm': 'Renommer coûte {cash} + {coins} VsCoin. Continuer ?',
+
+  // --- International Business -----------------------------------------------
+  'ui.world': 'International Business',
+  'ui.worldHint':
+    'Chaque pays a sa propre économie — l’argent, les équipes et les immeubles restent locaux ; les VsCoin, les missions et votre histoire voyagent avec vous. Bonus mondial : +{bonus}% de production partout.',
+  'ui.travel': 'Voyager',
+  'ui.youAreHere': 'ICI',
+  'ui.freshEconomyHint': 'Un marché vierge — repartez de zéro, grandissez plus vite',
+  'ui.countryUnlocked': 'Bienvenue en destination : {name} !',
+
   // --- Réinitialisation bêta ------------------------------------------------
   'ui.betaResetTitle': 'Un nouveau départ (bêta)',
   'ui.betaResetText':

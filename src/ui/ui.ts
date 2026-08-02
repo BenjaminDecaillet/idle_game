@@ -15,6 +15,7 @@ import {
   VSCOIN_BOOST_MULT,
   WALLPAPERS,
   WORKSTATIONS,
+  WORLD_OUTPUT_PER_COUNTRY,
   projectDefById,
   siteById,
   stationDefById,
@@ -25,21 +26,32 @@ import {
   activeCompany,
   activeCountry,
   allCompanies,
+  assignFloorProject,
   atSkillCap,
   buyCompany,
+  countryUnlockCost,
   deskUpgradeCost,
   deskUpgradeDurationSec,
   fastForwardAction,
   fastForwardCost,
   nextStationDef,
   nextTier,
+  projectRewardCap,
+  projectSlotCost,
+  projectSlotFloorReq,
   promoteCost,
   promoteWorker,
+  renameCashCost,
+  renameVsCoinCost,
+  setActiveCountry,
   setStartingCountry,
   trainDurationSec,
+  unlockCountry,
+  unlockProjectSlot,
   upgradeDesk,
   walletMoney,
   workerBusy,
+  worldUnlocked,
   buyFloor,
   buyMapTheme,
   buyMarketingCampaign,
@@ -85,6 +97,7 @@ import {
 } from '../game/engine';
 import { formatDuration, formatMoney, formatNumber, formatRate } from '../game/format';
 import {
+  claimableMissions,
   claimMission,
   missionCompleted,
   missionProgress,
@@ -169,6 +182,12 @@ export class UI {
   private coachTargetEl: Element | null = null;
   /** step:tab key of the last target auto-scrolled into view. */
   private coachScrollKey = '';
+  /**
+   * Missions already seen completed (for the live "mission complete" toast).
+   * null = baseline not taken yet; completions present at baseline (e.g.
+   * from offline progress) get the badge dot but no toast spam.
+   */
+  private knownCompleted: Set<string> | null = null;
   private onStateReplaced: (next: GameState) => void;
 
   constructor(
@@ -185,6 +204,7 @@ export class UI {
     this.buildSkeleton();
     this.rebuildTab();
     this.root.addEventListener('click', (e) => this.handleClick(e));
+    this.root.addEventListener('change', (e) => this.handleChange(e));
     // The coach popup anchors to on-screen elements: track every layout
     // change (resize, any panel scrolling) so it never drifts over its target.
     window.addEventListener('resize', () => this.positionCoach());
@@ -273,6 +293,23 @@ export class UI {
     this.text('hud-salary', `salaries ${formatMoney(totalSalaries(s))}/s`);
     this.text('company-name', activeCompany(s).name);
     this.text('hud-vscoin-text', formatNumber(s.vsCoin));
+
+    // Missions badge: dot while anything is claimable (offline included);
+    // live completions additionally toast (baseline taken silently).
+    const claimable = claimableMissions(s);
+    document
+      .getElementById('tab-btn-missions')
+      ?.classList.toggle('has-badge', claimable.length > 0);
+    if (this.knownCompleted === null) {
+      this.knownCompleted = new Set(claimable.map((m) => m.id));
+    } else {
+      for (const m of claimable) {
+        if (!this.knownCompleted.has(m.id)) {
+          this.knownCompleted.add(m.id);
+          this.toast(`🏅 ${t('ui.missionComplete')}`, 'info');
+        }
+      }
+    }
 
     const boost = activeBoost(s);
     const boostEl = document.getElementById('hud-boost');
@@ -650,11 +687,69 @@ export class UI {
           <span class="muted">${country.companies.length}/${COMPANY_SITES.length} sites owned</span>
         </div>
         ${cityMapSvg(s.mapThemeId, sites)}
+        ${this.renderWorld()}
         <div class="section-head"><h2>Map style</h2></div>
         <div class="settings-row">${themes}</div>
         <p class="hint">💡 Tap a building to found or manage a company there. Every company
         works and earns at the same time — even while you're away.</p>
       </div>`;
+  }
+
+  /**
+   * International Business: visible once any city is fully owned. Travel
+   * freely between unlocked countries; buy the next one with local cash.
+   */
+  private renderWorld(): string {
+    const s = this.state;
+    if (!worldUnlocked(s) && s.countries.length <= 1) return '';
+    const cost = countryUnlockCost(s);
+    const rows = COUNTRIES.map((def) => {
+      const owned = s.countries.find((c) => c.id === def.id);
+      if (owned) {
+        const here = s.activeCountryId === def.id;
+        const income = owned.money;
+        return `
+        <div class="card">
+          <div class="card-row">
+            <span class="card-emoji">${def.emoji}</span>
+            <div class="card-main">
+              <h3>${lookup(`country.${def.id}.name`)}</h3>
+              <span class="muted">${owned.companies.length}/${COMPANY_SITES.length} sites ·
+                ${formatMoney(income)}</span>
+            </div>
+            ${
+              here
+                ? `<span class="active-tag">${t('ui.youAreHere')}</span>`
+                : `<button class="btn btn-primary" data-action="travel:${def.id}">
+                     ✈️ ${t('ui.travel')}</button>`
+            }
+          </div>
+        </div>`;
+      }
+      const affordable = walletMoney(s) >= cost;
+      return `
+        <div class="card ${worldUnlocked(s) ? '' : 'locked'}">
+          <div class="card-row">
+            <span class="card-emoji">${def.emoji}</span>
+            <div class="card-main">
+              <h3>${lookup(`country.${def.id}.name`)}</h3>
+              <span class="muted">${t('ui.freshEconomyHint')}</span>
+            </div>
+            <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
+                    data-action="unlock-country:${def.id}">
+              🌍 ${formatMoney(cost)}
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="section-head"><h2>🌍 ${t('ui.world')}</h2>
+        <span class="muted">${s.countries.length}/${COUNTRIES.length}</span>
+      </div>
+      <p class="hint">${t('ui.worldHint', {
+        bonus: Math.round((s.countries.length - 1) * WORLD_OUTPUT_PER_COUNTRY * 100),
+      })}</p>
+      ${rows}`;
   }
 
   /** Bottom-sheet body for the currently selected map site. */
@@ -757,7 +852,11 @@ export class UI {
             </div>
             <div class="card-right">
               <strong>${formatMoney(p.currentReward)}</strong>
-              <span class="muted">×${p.completions}</span>
+              <span class="muted">×${p.completions}${
+                p.currentReward >= projectRewardCap(c, def.id)
+                  ? ` · <span class="cap-tag" title="${t('ui.softCapHint')}">${t('ui.softCap')}</span>`
+                  : ''
+              }</span>
             </div>
           </div>
           <div class="progress mini"><div class="progress-fill" style="width:${pct}%"></div></div>
@@ -784,7 +883,58 @@ export class UI {
       }
       return '';
     }).join('');
-    return `<div class="stack">${cards}</div>`;
+    return `<div class="stack">${cards}${this.renderProjectSlots()}</div>`;
+  }
+
+  /** Multi-project: unlock slots, assign upper floors to other projects. */
+  private renderProjectSlots(): string {
+    const s = this.state;
+    const c = activeCompany(s);
+    const nextCost = projectSlotCost(c);
+    const floorsNeeded = projectSlotFloorReq(c);
+    const unlockBtn =
+      nextCost !== null && floorsNeeded !== null
+        ? c.floors >= floorsNeeded
+          ? `<button class="btn ${walletMoney(s) >= nextCost ? 'btn-primary' : ''}"
+                     ${walletMoney(s) >= nextCost ? '' : 'disabled'} data-action="unlock-slot">
+               ${t('ui.unlockSlot')} · ${formatMoney(nextCost)}
+             </button>`
+          : `<span class="muted">${icon('lock', 14)} ${t('ui.slotNeedsFloors', { floors: floorsNeeded })}</span>`
+        : '';
+    if (c.projectSlots <= 1 && !unlockBtn) return '';
+    const floorRows =
+      c.projectSlots > 1
+        ? Array.from({ length: c.floors }, (_, f) => {
+            const current = c.floorProjects[f] ?? '';
+            const options = [
+              `<option value="" ${current === '' ? 'selected' : ''}>${t('ui.mainProject')}</option>`,
+              ...c.projects
+                .filter((p) => p.unlocked)
+                .map(
+                  (p) => `
+                  <option value="${p.defId}" ${current === p.defId ? 'selected' : ''}>
+                    ${projectDefById(p.defId).name}
+                  </option>`,
+                ),
+            ].join('');
+            return `
+            <div class="settings-row">
+              <span class="settings-label">${f === 0 ? 'Ground floor' : `Floor ${f + 1}`}</span>
+              <select class="coach-input" data-select="floor-project:${f}">${options}</select>
+            </div>`;
+          })
+            .reverse()
+            .join('')
+        : '';
+    return `
+      <div class="card">
+        <div class="section-head"><h2>${t('ui.projectSlots')}</h2>
+          <span class="muted">${c.projectSlots} ${unlockBtn ? '' : '· max'}</span>
+        </div>
+        <p class="hint">${t('ui.projectSlotsHint')}</p>
+        ${unlockBtn}
+        ${floorRows}
+      </div>`;
   }
 
   private renderTeam(): string {
@@ -1520,10 +1670,38 @@ export class UI {
         if (!error) this.toast(`🚀 ${t('ui.vsCoinBoostBought')}`, 'info');
         break;
       case 'rename-company': {
-        const name = prompt('Company name:', activeCompany(s).name);
+        const company = activeCompany(s);
+        if (s.tutorial.done) {
+          const ok = confirm(
+            t('ui.renameCostConfirm', {
+              cash: formatMoney(renameCashCost(company)),
+              coins: renameVsCoinCost(company),
+            }),
+          );
+          if (!ok) break;
+        }
+        const name = prompt(t('ui.companyPlaceholder'), company.name);
         if (name !== null) error = renameCompany(s, name);
         break;
       }
+      case 'unlock-slot':
+        error = unlockProjectSlot(s);
+        if (!error) this.toast(`🗂️ ${t('ui.slotUnlocked')}`, 'info');
+        break;
+      case 'travel':
+        error = setActiveCountry(s, arg);
+        if (!error) {
+          this.closeSheet();
+          this.toast(`✈️ ${lookup(`country.${arg}.name`)}`, 'info');
+        }
+        break;
+      case 'unlock-country':
+        error = unlockCountry(s, arg);
+        if (!error) {
+          this.closeSheet();
+          this.toast(`🌍 ${t('ui.countryUnlocked', { name: lookup(`country.${arg}.name`) })}`, 'info');
+        }
+        break;
       case 'buy-marketing':
         error = buyMarketingCampaign(s);
         if (!error) this.toast('📣 Campaign live — sales are calling!', 'info');
@@ -1651,6 +1829,24 @@ export class UI {
     }
   }
 
+  /** Change events from data-select controls (floor→project assignment). */
+  private handleChange(e: Event): void {
+    const el = e.target as HTMLSelectElement;
+    const spec = el.dataset?.select;
+    if (!spec) return;
+    const [kind, arg] = spec.split(':');
+    if (kind === 'floor-project') {
+      const error = assignFloorProject(this.state, Number(arg), el.value === '' ? null : el.value);
+      if (error) {
+        this.toast(error);
+      } else {
+        saveGame(this.state);
+      }
+      this.officeDirty = true;
+      this.rebuildTab();
+    }
+  }
+
   /** Force the office floor to rebuild (seating changed outside a click). */
   officeNeedsRebuild(): void {
     this.officeDirty = true;
@@ -1667,6 +1863,7 @@ export class UI {
 
   replaceState(next: GameState): void {
     this.state = next;
+    this.knownCompleted = null;
     this.fx.soundEnabled = next.settings.sound;
     this.fx.enabled = next.settings.particles;
     setCurrentLang(resolveLang(next.settings.language, navigator.language));

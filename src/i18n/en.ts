@@ -60,6 +60,31 @@ export const en = {
   'ui.deskUpgrading': 'Under renovation · done in {time}',
   'ui.deskUpgradeStarted': 'Renovation started!',
 
+  // --- Missions UX ----------------------------------------------------------
+  'ui.missionComplete': 'Mission complete — claim your VsCoin!',
+
+  // --- Companies: soft caps, slots, renaming --------------------------------
+  'ui.softCap': 'CAP',
+  'ui.softCapHint':
+    'This contract has hit its ceiling here — a bigger company can go further.',
+  'ui.projectSlots': 'Project slots',
+  'ui.projectSlotsHint':
+    'Assign upper floors to their own projects — or keep everyone on the main one.',
+  'ui.unlockSlot': 'Unlock a second team',
+  'ui.slotNeedsFloors': 'Needs {floors} floors',
+  'ui.slotUnlocked': 'New project slot unlocked!',
+  'ui.mainProject': 'Main project',
+  'ui.renameCostConfirm': 'Renaming costs {cash} + {coins} VsCoin. Proceed?',
+
+  // --- International Business -----------------------------------------------
+  'ui.world': 'International Business',
+  'ui.worldHint':
+    'Every country runs its own economy — money, teams and buildings stay local; VsCoin, missions and your story travel with you. World bonus: +{bonus}% output everywhere.',
+  'ui.travel': 'Travel',
+  'ui.youAreHere': 'HERE',
+  'ui.freshEconomyHint': 'A fresh market — start anew, grow faster',
+  'ui.countryUnlocked': 'Welcome to {name}!',
+
   // --- Beta reset ----------------------------------------------------------
   'ui.betaResetTitle': 'A fresh start (beta)',
   'ui.betaResetText':

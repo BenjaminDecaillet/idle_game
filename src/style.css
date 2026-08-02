@@ -1156,6 +1156,43 @@ button.site-card {
   filter: none;
 }
 
+/* Unclaimed-mission badge dot on the Missions tab. */
+.tab-btn {
+  position: relative;
+}
+
+.tab-btn.has-badge::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ff5252;
+  border: 2px solid var(--ink);
+  animation: badge-pop 0.25s ease-out;
+}
+
+@keyframes badge-pop {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.cap-tag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: #ffd54f;
+  color: #4a3a00;
+}
+
 /* --- Toasts & modal ------------------------------------------------------ */
 
 #toast-zone {
