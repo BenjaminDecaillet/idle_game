@@ -719,11 +719,17 @@ function fillerSection(P: ThemePalette): string {
 //     (y 0–60), wrapped in stroke="none" opacity=".35", 1–2 colours. The
 //     river and clouds are drawn over it, which is fine.
 //  4. `landmarks(P)` — 2–3 small signature props in the verified free zones:
-//       SE meadow      x 256–334, y 662–734
-//       NE bay side    x 246–350, y  65–145
-//       mid-map pocket x 202–226, y 338–376
+//       SE meadow      x 256–334, y 662–734 (below the cross street, right
+//                      of the orbital pad, clear of the corner trees x≥336)
+//       mid-map pocket x 202–226, y 308–376 (between the main avenue ~x198
+//                      and the loft lot x228, above the loft street y380)
+//     Everywhere else is taken: the tower district fills the NE (x236–366,
+//     y66–246), Palo Alto fills x22–136 / y172–312, and owned-site plaques
+//     can stretch wide (e.g. Palo Alto's covers x0–150 / y312–329).
 //     Flat shapes, ≤ 6 colours each, ink outline inherited from the wrapper
 //     group (only soft shadows / silhouettes opt out with stroke="none").
+//     A prop drawn at natural size may be fitted into the narrow pocket with
+//     a literal translate+scale wrapper — still deterministic.
 //  Everything must be deterministic: literal coordinates, no randomness.
 
 interface CountryTheme {
@@ -773,9 +779,9 @@ function chLandmarks(P: ThemePalette): string {
     `<rect x="292" y="660" width="12" height="12" fill="#e63946"/>` +
     `<g fill="${CREAM}" stroke="none"><rect x="296.5" y="662.5" width="3" height="7"/><rect x="294.5" y="664.5" width="7" height="3"/></g>` +
     `</g>`;
-  // grazing cow — NE bay-side pasture
+  // grazing cow — mid-map pocket (drawn at natural size, fitted by transform)
   g +=
-    `<g>` +
+    `<g transform="translate(214 370) scale(.65) translate(-292 -118)">` +
     shadow(296, 117, 15, 3.5) +
     `<rect x="288" y="108" width="3.5" height="8" rx="1.5" fill="${CREAM}"/>` +
     `<rect x="302" y="108" width="3.5" height="8" rx="1.5" fill="${CREAM}"/>` +
@@ -831,14 +837,6 @@ function caLandmarks(P: ThemePalette): string {
     `</g>` +
     `<g stroke-width="1.2" fill="none"><path d="M218,331.5 q-1,-3 -3,-3.5"/><path d="M220.5,331.5 q1,-3 3,-3.5"/></g>` +
     `</g>`;
-  // beached canoe — NE bay side, by the river bank
-  g +=
-    `<g>` +
-    shadow(258, 124, 17, 3) +
-    `<path d="M242,113 Q258,123 274,113 Q270,120 258,120 Q246,120 242,113 Z" fill="#d9452e"/>` +
-    `<line x1="264" y1="106" x2="268" y2="118" stroke-width="2"/>` +
-    `<ellipse cx="263" cy="104" rx="2.5" ry="4" fill="${P.trunk}"/>` +
-    `</g>`;
   return g;
 }
 
@@ -877,7 +875,7 @@ function itLandmarks(P: ThemePalette): string {
     `</g>`;
   // mint Vespa — SE meadow, by the fountain
   g +=
-    `<g>` +
+    `<g transform="translate(3 4)">` +
     shadow(319, 726, 12, 3) +
     `<circle cx="310" cy="722" r="4" fill="${INK}"/>` +
     `<circle cx="310" cy="722" r="1.5" fill="${CREAM}" stroke="none"/>` +
@@ -946,9 +944,9 @@ function frLandmarks(P: ThemePalette): string {
     `<rect x="308" y="704" width="5" height="4" rx="1" fill="${P.bridge}"/>` +
     `<circle cx="276" cy="701.5" r="1.3" fill="#c0392b" stroke-width="1"/>` +
     `</g>`;
-  // Arc-style monument with tricolour — NE bay side
+  // Arc-style monument with tricolour — mid-map pocket (fitted by transform)
   g +=
-    `<g>` +
+    `<g transform="translate(214 374) scale(.7) translate(-300 -134)">` +
     shadow(300, 134, 18, 4) +
     `<path d="M286,132 L286,102 Q286,94 293,94 L307,94 Q314,94 314,102 L314,132 L306,132 L306,114 Q306,107 300,107 Q294,107 294,114 L294,132 Z" fill="#d6cdbc"/>` +
     `<rect x="284" y="88" width="32" height="6" rx="1.5" fill="#c4b9a4"/>` +
@@ -996,9 +994,9 @@ function deLandmarks(P: ThemePalette): string {
     `<rect x="294" y="699" width="5" height="7" rx="1" fill="${GOLD}"/>` +
     `<rect x="293.5" y="697" width="6" height="2.5" rx="1" fill="${CREAM}"/>` +
     `</g>`;
-  // fairy-tale castle turret — NE bay side
+  // fairy-tale castle turret — mid-map pocket (fitted by transform)
   g +=
-    `<g>` +
+    `<g transform="translate(214 374) scale(.7) translate(-299 -136)">` +
     shadow(299, 136, 14, 3.5) +
     `<rect x="284" y="112" width="9" height="22" fill="${CREAM}"/>` +
     `<polygon points="282,112 288.5,99 295,112" fill="#4a6fa5"/>` +
@@ -1046,9 +1044,9 @@ function saLandmarks(P: ThemePalette): string {
     `<ellipse cx="325" cy="694.5" rx="3.5" ry="2.5" fill="#c89a5f"/>` +
     `<path d="M302,704 q-3,2 -2,6" fill="none" stroke-width="1.5"/>` +
     `</g>`;
-  // striped desert tent — NE bay side
+  // striped desert tent — mid-map pocket (fitted by transform)
   g +=
-    `<g>` +
+    `<g transform="translate(214 374) scale(.65) translate(-300 -134)">` +
     shadow(300, 134, 20, 4) +
     `<path d="M282,132 L296,104 Q300,100 304,104 L318,132 Z" fill="${CREAM}"/>` +
     `<path d="M285,126 L315,126 L318,132 L282,132 Z" fill="#b03a2e" stroke-width="1"/>` +
