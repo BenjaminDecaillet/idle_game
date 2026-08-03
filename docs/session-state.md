@@ -1,67 +1,53 @@
-# Session state — beta delivery fix, backlog refresh & top-tier features
+# Session state — 2026-08-03 wrap (delivery fix + top-tier features)
 
-Session of 2026-08-03 (autonomous). Contract:
-`.claude/skills/session-handoff/SKILL.md`. Backlog: `docs/improvements.md`
-(re-baselined this session). Prestige numbers: `docs/balance.md` (Phase P
-section, to be added by the balance-designer pass).
+Session complete; nothing in flight. Contract:
+`.claude/skills/session-handoff/SKILL.md`.
 
-## 1. Slice table
+## 1. What shipped (all merged to master, all deploys green)
 
-| Slice | Branch | Status |
-|---|---|---|
-| A1 beta force-refresh + build stamp (PR #7) | `fix/beta-force-refresh` | merged (master `27ad222`) |
-| B1 backlog re-baseline + plan/session docs | `docs/backlog-refresh` | merged (PR #8) |
-| C1–C2 prestige (engine + story epilogue + UI) | `feat/prestige` | merged (PR #9) |
-| C3 goal hint chip | `feat/goal-hint` | merged (PR #10) |
-| C4 offline doubler placement | `feat/offline-doubler` | merged (PR #11) |
-| C5 story recap journal | `feat/story-journal` | merged (PR #12) |
-| C6 locale number formatting | `feat/locale-format` | merged (PR #13) |
-| C7 builder story beats + missions | `feat/builder-story` | in progress |
-| C8 CI: PR checks + smoke test | `ci/pr-checks` | pending |
+| Slice | PR |
+|---|---|
+| Beta force-refresh + Settings build stamp | #7 |
+| Backlog re-baseline | #8 |
+| Prestige — "IPO & open-source the dream" (no save wipe) | #9 |
+| Gabriel goal-hint chip (`src/game/goals.ts`) | #10 |
+| Offline-earnings doubler (ad-ready placement) | #11 |
+| Story journal on the Stats tab | #12 |
+| FR locale number formatting (`format.ts` → `src/ui/`) | #13 |
+| Builders-guild beat + builders mission chain | #14 |
+| CI on PRs: vitest + build + Chromium smoke | #15 |
 
-Slices C3+ are cut in priority order; at ~80% budget stop starting new ones.
+Test suite: 496 green (24 files). Design notes: decisions.md #17–#19;
+balance: balance.md Phase P. SAVE_VERSION still 9 — every change this
+session was additive with `migrate()` hygiene (no beta reset).
 
 ## 2. In-progress unit
 
-C7 builder story on `feat/builder-story`: `builders-guild` beat
-(floorGiftClaimed), `builders` mission metric + 2/3/5 chain,
-tests/builders-content.test.ts written inline. i18n-writer running
-(story.builders-guild.* + mission.builders — required for the
-narrative completeness test). **Exact next step:** full test-runner
-run, commit, PR, self-merge; then C8 (ci/pr-checks) is the last
-planned slice before wrap-up.
+None. Phase C stopped at the agreed top-tier boundary — Benjamin's
+go-ahead is required before starting the next tier (session brief §Phase C).
 
-## 3. Decisions (autonomous, veto-able)
+## 3. Next session (after go-ahead) — see improvements.md top tier
 
-- Root cause of the "features never arrive" bug: client-side PWA shell
-  staleness (no SW update flow; resumed PWAs never re-check), NOT a deploy
-  failure — deploy run #9 shipped `fb02a1c` fine. Fix behind
-  `BETA_FORCE_REFRESH` (decisions.md #17).
-- Benjamin approved via question batch: prestige IS in this session's top
-  tier; force-refresh = silent save-then-reload (no toast).
-- Verification of the deployed site ran against a local production build +
-  the green deploy run for the same sha — the sandbox network policy
-  blocks `benjamindecaillet.github.io` (proxy CONNECT 403) and the Pages
-  artifact blob store. Live-URL check must happen on Benjamin's device
-  (Settings build stamp makes it one glance).
-- No PR-level CI exists (deploy.yml on master push is the only gate);
-  merged PR #7 on green local test+build. Backlog #7 adds PR checks.
-- Single tiny i18n pair (`ui.build`) added directly instead of via the
-  i18n-writer agent; batches still go through the agent.
+1. Daily contracts (rotating missions)
+2. i18n sweep of remaining UI strings (+ tab-label rebuild hook)
+3. Worker traits & rare candidates
+4. Random events with choices
+5. Piggy-bank vault
 
-## 4. Open questions
+## 4. Standing decisions to remember
 
-None blocking. Phase C stop-point: after top-tier items, report and wait
-for go-ahead (per the session brief).
+- `BETA_FORCE_REFRESH` + `BETA_FREE_IAP` (both in `src/game/data.ts`)
+  must be flipped before real-user testing (improvements.md "Beta exit
+  checklist", decisions.md #17).
+- Offline doubler credits the ACTIVE country's wallet and counts into
+  lifetime totals (veto-able, decisions.md-adjacent, see PR #11).
+- The sandbox network policy blocks `benjamindecaillet.github.io`;
+  verify live deploys on-device via the Settings build stamp, or rely on
+  the CI smoke test.
 
-## 5. Build health / how to verify
+## 5. How to verify on Benjamin's device
 
-- master `27ad222`: `npm test` 398/398 green, `npm run build` green,
-  deploy run for `27ad222` should be green (verify in Actions).
-- Browser-verified on the built bundle (Playwright + local
-  `vite preview`, scripts in the session scratchpad): Shop tab, VsCoin
-  tab, live construction countdown (25m 1s → 24m 58s), build stamp
-  "Build fb02a1c · 2026-08-03 15:15Z", zero console errors.
-- On-device: open the deployed PWA twice (one cold start to fetch the new
-  worker, it reloads itself once active); thereafter every deploy lands
-  within ~1 min of the app being focused. Check Settings → build stamp.
+Open the PWA, fully close it once, reopen: the new service worker
+installs and the app reloads itself. From then on every deploy lands
+within ~1 min of the app being focused. Settings tab (bottom of Stats)
+shows `Build <sha> · <date>` — compare with the latest master commit.
