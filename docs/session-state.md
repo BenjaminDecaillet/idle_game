@@ -14,22 +14,22 @@ section, to be added by the balance-designer pass).
 | C1–C2 prestige (engine + story epilogue + UI) | `feat/prestige` | merged (PR #9) |
 | C3 goal hint chip | `feat/goal-hint` | merged (PR #10) |
 | C4 offline doubler placement | `feat/offline-doubler` | merged (PR #11) |
-| C5 story recap journal | `feat/story-journal` | in progress |
-| C6 locale number formatting | `feat/locale-format` | pending |
-| C7 builder story beats + missions | `feat/builder-story` | pending |
+| C5 story recap journal | `feat/story-journal` | merged (PR #12) |
+| C6 locale number formatting | `feat/locale-format` | merged (PR #13) |
+| C7 builder story beats + missions | `feat/builder-story` | in progress |
 | C8 CI: PR checks + smoke test | `ci/pr-checks` | pending |
 
 Slices C3+ are cut in priority order; at ~80% budget stop starting new ones.
 
 ## 2. In-progress unit
 
-C5 story journal on `feat/story-journal`: `renderStoryJournal()` card
-on the Stats tab (seen beats in STORY_BEATS order, <details> expand,
-progress line), styles appended to style.css. UI-only — no engine or
-save changes, no new tests (narrative tests already guarantee beat
-text). i18n-writer running (ui.storyJournal* keys — required for
-compile). **Exact next step:** full test-runner run, commit, PR,
-self-merge, verify deploy.
+C7 builder story on `feat/builder-story`: `builders-guild` beat
+(floorGiftClaimed), `builders` mission metric + 2/3/5 chain,
+tests/builders-content.test.ts written inline. i18n-writer running
+(story.builders-guild.* + mission.builders — required for the
+narrative completeness test). **Exact next step:** full test-runner
+run, commit, PR, self-merge; then C8 (ci/pr-checks) is the last
+planned slice before wrap-up.
 
 ## 3. Decisions (autonomous, veto-able)
 
