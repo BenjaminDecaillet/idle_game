@@ -70,6 +70,7 @@ import {
   countryDefById,
   mapThemeById,
   projectDefById,
+  shopPackById,
   siteById,
   stationDefById,
   tierById,
@@ -1642,6 +1643,37 @@ export function grossRewardRate(state: GameState): number {
 /** Price of a marketing campaign: ~MARKETING_COST_SEC of gross income. */
 export function marketingCost(state: GameState): number {
   return Math.max(MARKETING_MIN_COST, Math.round(grossRewardRate(state) * MARKETING_COST_SEC));
+}
+
+// ---------------------------------------------------------------------------
+// Shop — VsCoin → cash funding rounds
+// ---------------------------------------------------------------------------
+
+/** Cash a shop pack grants right now (progression-scaled, never trivial). */
+export function shopPackCash(state: GameState, packId: string): number {
+  const pack = shopPackById(packId);
+  return Math.max(pack.floorCash, Math.round(grossRewardRate(state) * 60 * pack.minutes));
+}
+
+/** Whether the active country has enough companies to unlock a pack. */
+export function shopPackUnlocked(state: GameState, packId: string): boolean {
+  return activeCountry(state).companies.length >= shopPackById(packId).requiresCompanies;
+}
+
+/**
+ * Buy a funding round: VsCoin out (audited, sink 'shop:<sku>'), cash into
+ * the active country's wallet. In debt the credit pays the debt down first
+ * — it is the same wallet. Deliberately NOT added to totalEarned: missions
+ * and story feed on earnings and must not be purchasable.
+ */
+export function buyShopPack(state: GameState, packId: string): string | null {
+  const pack = shopPackById(packId);
+  if (!shopPackUnlocked(state, packId)) return 'error.packLocked';
+  const cash = shopPackCash(state, packId);
+  const err = spendVsCoin(state, pack.vsCoin, `shop:${pack.id}`);
+  if (err) return err;
+  activeCountry(state).money += cash;
+  return null;
 }
 
 /**

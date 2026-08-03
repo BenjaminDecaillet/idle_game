@@ -80,6 +80,24 @@ export const en = {
   'ui.companyBuilt': '{name} is open for business!',
   'error.siteAlreadyBuilding': 'A company is already under construction there.',
 
+  // --- Shop (funding rounds: VsCoin → cash) --------------------------------
+  'ui.shopTitle': 'Funding rounds',
+  'ui.shopHint':
+    'Trade VsCoin for a cash injection into the country you are managing. Pack value scales with your current income, so a round stays meaningful at every stage.',
+  'ui.shopDebtNote': 'You are in debt: fresh funding pays the debt down first — it is one wallet.',
+  'ui.packRequires': 'Needs {count} companies',
+  'ui.packBought': '{name} closed — {cash} wired!',
+  'shop.pack.seed.name': 'Seed round',
+  'shop.pack.seed.blurb': 'A friendly angel wires you a little runway.',
+  'shop.pack.series-a.name': 'Series A',
+  'shop.pack.series-a.blurb': 'A real term sheet. The partners want a demo.',
+  'shop.pack.series-b.name': 'Series B',
+  'shop.pack.series-b.blurb': 'Growth capital — the board deck writes itself.',
+  'shop.pack.series-c.name': 'Series C',
+  'shop.pack.series-c.blurb': 'Late-stage money. Private jets circle the block.',
+  'shop.pack.ipo.name': 'IPO bell',
+  'shop.pack.ipo.blurb': 'Ring it. The market does the rest.',
+
   // --- Desk upgrades --------------------------------------------------------
   'ui.renovations': 'Renovations',
   'ui.upgradeDesk': 'Upgrade',

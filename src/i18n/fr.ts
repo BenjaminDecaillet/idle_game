@@ -77,6 +77,25 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.companyBuilt': '{name} ouvre ses portes !',
   'error.siteAlreadyBuilding': 'Une société est déjà en construction à cet endroit.',
 
+  // --- Boutique (levées de fonds : VsCoin → cash) ---------------------------
+  'ui.shopTitle': 'Levées de fonds',
+  'ui.shopHint':
+    'Échangez des VsCoin contre une injection de cash dans le pays que vous gérez. La valeur des packs suit vos revenus actuels : une levée reste utile à chaque étape.',
+  'ui.shopDebtNote':
+    'Vous êtes endetté : les fonds levés remboursent d’abord la dette — c’est le même portefeuille.',
+  'ui.packRequires': 'Nécessite {count} sociétés',
+  'ui.packBought': '{name} bouclée — {cash} virés !',
+  'shop.pack.seed.name': 'Tour Seed',
+  'shop.pack.seed.blurb': 'Un business angel bienveillant vous vire un peu de trésorerie.',
+  'shop.pack.series-a.name': 'Série A',
+  'shop.pack.series-a.blurb': 'Une vraie term sheet. Les associés veulent une démo.',
+  'shop.pack.series-b.name': 'Série B',
+  'shop.pack.series-b.blurb': 'Du capital de croissance — le board deck s’écrit tout seul.',
+  'shop.pack.series-c.name': 'Série C',
+  'shop.pack.series-c.blurb': 'De l’argent late-stage. Des jets privés tournent autour du pâté de maisons.',
+  'shop.pack.ipo.name': 'Cloche d’IPO',
+  'shop.pack.ipo.blurb': 'Sonnez-la. Le marché fait le reste.',
+
   // --- Améliorations de bureaux ---------------------------------------------
   'ui.renovations': 'Rénovations',
   'ui.upgradeDesk': 'Améliorer',

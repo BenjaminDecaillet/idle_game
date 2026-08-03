@@ -7,6 +7,7 @@ import {
   MARKETING_MULT,
   MAX_FLOORS,
   PROJECTS,
+  SHOP_CASH_PACKS,
   TIME_SCALES,
   TUTORIAL_ANGEL_GIFT,
   UPGRADES,
@@ -30,7 +31,10 @@ import {
   atSkillCap,
   builderCost,
   buyCompany,
+  buyShopPack,
   claimFloorGift,
+  shopPackCash,
+  shopPackUnlocked,
   countryUnlockCost,
   floorGiftAvailable,
   floorUnderConstruction,
@@ -143,7 +147,7 @@ import {
   playerPortrait,
 } from './portraits';
 import { cityMapSvg, type SiteView } from './cityMap';
-import { icon } from './icons';
+import { icon, type IconName } from './icons';
 import { lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
 import { projectArt, stationArt, upgradeArt, upgradeProp } from './itemArt';
 import { emptyDeskSvg, founderOffice, personaAtDesk, personaStanding } from './persona';
@@ -163,14 +167,16 @@ const SPEECH_LINES = [
   'TODO: fix later',
 ];
 
-type Tab = 'map' | 'projects' | 'team' | 'office' | 'upgrades' | 'missions' | 'stats';
+type Tab = 'map' | 'projects' | 'team' | 'office' | 'upgrades' | 'shop' | 'missions' | 'stats';
 
-const TABS: { id: Tab; label: string }[] = [
+// `icon` overrides the tab-bar icon when a tab has no icon of its own name.
+const TABS: { id: Tab; label: string; icon?: IconName }[] = [
   { id: 'map', label: 'Map' },
   { id: 'projects', label: 'Projects' },
   { id: 'team', label: 'Team' },
   { id: 'office', label: 'Office' },
   { id: 'upgrades', label: 'Upgrades' },
+  { id: 'shop', label: 'Shop', icon: 'coin' },
   { id: 'missions', label: 'Missions' },
   { id: 'stats', label: 'Stats' },
 ];
@@ -272,7 +278,7 @@ export class UI {
         ${TABS.map(
           (t) => `
           <button class="tab-btn" data-action="tab:${t.id}" id="tab-btn-${t.id}">
-            <span class="tab-icon">${icon(t.id, 24)}</span><span>${t.label}</span>
+            <span class="tab-icon">${icon(t.icon ?? (t.id as IconName), 24)}</span><span>${t.label}</span>
           </button>`,
         ).join('')}
       </nav>
@@ -651,12 +657,61 @@ export class UI {
       case 'upgrades':
         content.innerHTML = this.renderUpgrades();
         break;
+      case 'shop':
+        content.innerHTML = this.renderShop();
+        break;
       case 'stats':
         content.innerHTML = this.renderStats();
         break;
     }
     // Tab content just changed under the coach popup — re-anchor it.
     this.positionCoach();
+  }
+
+  /** Shop tab: funding rounds — VsCoin in, progression-scaled cash out. */
+  private renderShop(): string {
+    const s = this.state;
+    const inDebt = walletMoney(s) < 0;
+    const cards = SHOP_CASH_PACKS.map((pack) => {
+      const name = lookup(`shop.pack.${pack.id}.name`);
+      if (!shopPackUnlocked(s, pack.id)) {
+        return `
+        <div class="card">
+          <div class="card-row">
+            <span class="muted">${pack.emoji} <b>${name}</b></span>
+            <span class="muted">${icon('lock', 14)} ${t('ui.packRequires', {
+              count: pack.requiresCompanies,
+            })}</span>
+          </div>
+        </div>`;
+      }
+      const cash = shopPackCash(s, pack.id);
+      const affordable = s.vsCoin >= pack.vsCoin;
+      return `
+        <div class="card">
+          <div class="card-row">
+            <span>${pack.emoji} <b>${name}</b></span>
+            <strong>+${formatMoney(cash)}</strong>
+          </div>
+          <p class="muted">${lookup(`shop.pack.${pack.id}.blurb`)}</p>
+          <div class="card-row">
+            <span></span>
+            <button class="btn btn-small ${affordable ? 'btn-primary' : ''}"
+                    ${affordable ? '' : 'disabled'} data-action="buy-pack:${pack.id}">
+              ${icon('vscoin', 14)} ${pack.vsCoin}
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="stack">
+        <div class="section-head"><h2>💸 ${t('ui.shopTitle')}</h2>
+          <span class="muted">${icon('vscoin', 16)} ${formatNumber(s.vsCoin)}</span>
+        </div>
+        <p class="hint">${t('ui.shopHint')}</p>
+        ${inDebt ? `<div class="warning-banner">⚠️ ${t('ui.shopDebtNote')}</div>` : ''}
+        ${cards}
+      </div>`;
   }
 
   /** The map: an illustrated city where every site is a tappable building. */
@@ -1725,6 +1780,18 @@ export class UI {
       case 'hire-builder':
         error = hireBuilder(s);
         if (!error) this.toast(`👷 ${t('ui.hireBuilder')} ✓`, 'info');
+        break;
+      case 'buy-pack':
+        error = buyShopPack(s, arg);
+        if (!error) {
+          this.toast(
+            `💸 ${t('ui.packBought', {
+              name: lookup(`shop.pack.${arg}.name`),
+              cash: formatMoney(shopPackCash(s, arg)),
+            })}`,
+            'info',
+          );
+        }
         break;
       case 'buy-wallpaper':
         error = buyWallpaper(s, arg);

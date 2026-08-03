@@ -14,7 +14,7 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 | S3 zero-output rules (desk-upgrade unseat, training/promo verify) | done |
 | S4 timed floor construction + Gabriel floor gift + freeFastForwards | done |
 | S5 timed company founding (country-level actions) | done |
-| S6 Shop tab (VsCoin → cash packs) | not started |
+| S6 Shop tab (VsCoin → cash packs) | done |
 | S7 VsCoin tab (BETA_FREE_IAP free starter pack) | not started |
 | S8 i18n EN+FR | not started |
 | S9 tests | not started |
@@ -53,15 +53,15 @@ describes v8 — refresh in S8.
 
 ## 4. Next action
 
-S6: Shop tab — `types.ts` ShopCashPackDef; `data.ts` SHOP_CASH_PACKS
-(seed/series-a/series-b/series-c/ipo per balance.md Phase W); `engine.ts`
-shopPackCash = max(floorCash, round(grossRewardRate×60×minutes)),
-shopPackUnlocked (requiresCompanies in active country), buyShopPack via
-spendVsCoin('shop:<sku>') then country.money += cash (NOT totalEarned —
-missions must not be purchasable); `ui.ts` Tab union + TABS ('shop',
-icon 'coin' — TABS entries need an icon field since 'shop' has no own
-icon), renderShop() with per-pack cards (lookup shop.pack.<id>.name),
-debt note when wallet < 0, 'buy-pack:<id>' action. i18n EN+FR.
+S7: VsCoin tab — `data.ts`: BETA_FREE_IAP = true + VSCOIN_PACKS
+(vsc-starter 20 / vsc-angel 50 / vsc-venture 150 / vsc-growth 400 /
+vsc-unicorn 1000, future CHF prices as comments; VsCoinPackDef already in
+types.ts); `engine.ts` claimVsCoinPack (starter only while BETA_FREE_IAP,
+grantVsCoin 'shop:<sku>', others → 'error.iapComingSoon'); `ui.ts` Tab
+'vscoin' (icon 'vscoin'), renderVsCoinShop(): free starter card with BETA
+badge + claim button ('claim-vscoin:<sku>'), larger packs disabled with
+coming-soon note. i18n EN+FR. Update docs/monetization.md cross-ref.
+NOTE: tab labels stay hardcoded EN like the existing 7 (improvements #16).
 
 ## 5. Build health
 

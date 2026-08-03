@@ -5,6 +5,7 @@ import type {
   MapThemeDef,
   MissionDef,
   ProjectDef,
+  ShopCashPackDef,
   Specialization,
   UpgradeDef,
   WallpaperDef,
@@ -479,6 +480,24 @@ export const LAST_NAMES = [
   'Chen', 'Patel', 'Kim', 'Garcia', 'Müller', 'Rossi', 'Dubois', 'Silva',
   'Novak', 'Ivanov', 'Tanaka', 'Okafor', 'Berg', 'Costa', 'Haber', 'Wu',
 ];
+
+// Shop: VsCoin → cash "funding rounds". Grant = max(floorCash,
+// grossRewardRate × 60 × minutes); requiresCompanies (in the active
+// country) is the anti-trivialization gate — a pack can never pre-pay the
+// milestone it would skip (see balance.md Phase W).
+export const SHOP_CASH_PACKS: ShopCashPackDef[] = [
+  { id: 'seed', emoji: '🌱', minutes: 5, floorCash: 1_000, vsCoin: 4, requiresCompanies: 1 },
+  { id: 'series-a', emoji: '💼', minutes: 15, floorCash: 10_000, vsCoin: 10, requiresCompanies: 2 },
+  { id: 'series-b', emoji: '🏦', minutes: 40, floorCash: 100_000, vsCoin: 20, requiresCompanies: 3 },
+  { id: 'series-c', emoji: '🏛️', minutes: 100, floorCash: 1_000_000, vsCoin: 40, requiresCompanies: 5 },
+  { id: 'ipo', emoji: '🔔', minutes: 240, floorCash: 10_000_000, vsCoin: 75, requiresCompanies: 7 },
+];
+
+export function shopPackById(id: string): ShopCashPackDef {
+  const p = SHOP_CASH_PACKS.find((p) => p.id === id);
+  if (!p) throw new Error(`Unknown shop pack: ${id}`);
+  return p;
+}
 
 export function tierById(id: string): WorkerTierDef {
   const t = WORKER_TIERS.find((t) => t.id === id);

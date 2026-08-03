@@ -63,6 +63,34 @@ export interface CompanySiteDef {
   blurb: string;
 }
 
+/**
+ * A Shop cash pack ("funding round"): VsCoin in, cash out. The grant is
+ * progression-scaled — max(floorCash, grossRewardRate × 60 × minutes) — so
+ * a pack stays meaningful at every stage (see docs/balance.md Phase W).
+ */
+export interface ShopCashPackDef {
+  id: string;
+  emoji: string;
+  /** Minutes of the active country's gross income the pack grants. */
+  minutes: number;
+  /** Minimum grant — covers fresh/prestiged countries with ~0 income. */
+  floorCash: number;
+  vsCoin: number;
+  /** Companies required in the active country before the pack unlocks. */
+  requiresCompanies: number;
+}
+
+/**
+ * A VsCoin acquisition SKU. Ids are stable and payment-provider-shaped:
+ * grants go through grantVsCoin with source 'shop:<sku>' today and
+ * 'iap:<sku>' once real payments ship (see docs/monetization.md).
+ */
+export interface VsCoinPackDef {
+  id: string;
+  emoji: string;
+  coins: number;
+}
+
 /** A purchasable office wallpaper/decor theme (pure cosmetics). */
 export interface WallpaperDef {
   id: string;
