@@ -1891,3 +1891,35 @@ button.site-card {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+
+/* --- Goal chip (Gabriel's next-best-action hint) ----------------------- */
+
+.goal-chip {
+  display: block;
+  margin: 0 12px 8px;
+  padding: 6px 12px;
+  max-width: calc(100% - 24px);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: left;
+  color: var(--ink);
+  background: #fff7d6;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 var(--ink-faint);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goal-chip:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 var(--ink-faint);
+}
+
+.goal-chip-save {
+  background: var(--surface);
+  color: var(--ink-soft);
+}

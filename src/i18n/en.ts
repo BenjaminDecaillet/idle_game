@@ -125,6 +125,19 @@ export const en = {
   // --- Missions UX ----------------------------------------------------------
   'ui.missionComplete': 'Mission complete — claim your VsCoin!',
 
+  // --- Goal chip (next-best action under the HUD) -----------------------------
+  // goal.* strings are spliced into goalNext/goalSave mid-sentence: keep them
+  // lowercase-leading in every language.
+  'ui.goalNext': 'Next: {goal} — {cost}',
+  'ui.goalSave': 'Save up {cost} → {goal}',
+  'ui.goal.hire': 'hire a new employee',
+  'ui.goal.desk': 'buy a workstation',
+  'ui.goal.unlockProject': 'unlock {name}',
+  'ui.goal.upgrade': 'buy {name}',
+  'ui.goal.floor': 'add a floor',
+  'ui.goal.country': 'expand to a new country',
+  'ui.goal.company': 'found a company at {name}',
+
   // --- Companies: soft caps, slots, renaming --------------------------------
   'ui.softCap': 'CAP',
   'ui.softCapHint':
