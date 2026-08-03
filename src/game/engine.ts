@@ -317,8 +317,16 @@ export function activeBoost(state: GameState): { mult: number; remainingSec: num
   return { mult, remainingSec };
 }
 
+/** A desk being renovated is a construction site: unusable, zero output. */
+export function stationUnderUpgrade(company: CompanyState, stationInstanceId: number): boolean {
+  return company.timedActions.some(
+    (a) => a.kind === 'desk-upgrade' && a.targetId === stationInstanceId,
+  );
+}
+
 export function stationMultiplier(company: CompanyState, stationInstanceId: number | null): number {
   if (stationInstanceId === null) return 0; // no desk, no output
+  if (stationUnderUpgrade(company, stationInstanceId)) return 0; // construction site
   const instance = company.workstations.find((w) => w.id === stationInstanceId);
   if (!instance) return 0;
   const base = stationDefById(instance.defId).multiplier;
@@ -755,7 +763,9 @@ export function deskUpgradeDurationSec(defId: string): number | null {
 
 /**
  * Upgrade a desk in place to the next workstation tier: money + time.
- * The seated worker keeps working at the old multiplier meanwhile.
+ * The desk becomes a construction site for the duration: its employee is
+ * unseated (autoSeat may find them another free desk) and it produces
+ * nothing until the renovation completes.
  */
 export function upgradeDesk(state: GameState, stationId: number): string | null {
   const country = activeCountry(state);
@@ -780,6 +790,7 @@ export function upgradeDesk(state: GameState, stationId: number): string | null 
     totalSec: duration,
     toDefId: to,
   });
+  autoSeat(company); // evict the sitter; they may find another free desk
   return null;
 }
 
@@ -1605,9 +1616,10 @@ const WORKSTATION_ORDER = ['basic', 'standing', 'dual', 'corner'];
  * desk produce nothing.
  */
 export function autoSeat(company: CompanyState): void {
-  const stations = [...company.workstations].sort(
-    (a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier,
-  );
+  // Desks under renovation are construction sites — nobody sits there.
+  const stations = company.workstations
+    .filter((w) => !stationUnderUpgrade(company, w.id))
+    .sort((a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier);
   const potential = (w: WorkerState) => {
     const tier = tierById(w.tierId);
     const specBonus =

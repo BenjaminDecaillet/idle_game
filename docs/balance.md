@@ -61,8 +61,10 @@ Upgrade desk tier i → i+1 in place:
   escalation) so upgrading stays attractive when many desks are owned.
 - duration = `DESK_UPGRADE_DURATION_BASE (180 s) × DESK_UPGRADE_DURATION_GROWTH (2)^targetTierIndex`
   → standing 6 min, dual 12 min, corner 24 min.
-- The seated worker keeps working during the upgrade (friendliness; the money
-  + time cost is the constraint).
+- (Phase W revision) The desk is a construction site for the duration: its
+  employee is auto-unseated on start and the desk produces nothing until the
+  renovation completes — downtime is part of the price, consistent with the
+  "nothing produces while it is being worked on" rule.
 
 ## Company soft caps (Phase 5)
 

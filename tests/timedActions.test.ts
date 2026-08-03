@@ -10,7 +10,9 @@ import {
   atSkillCap,
   autoSeat,
   buyWorkstation,
+  companyWorkRate,
   createInitialState,
+  deskUpgradeDurationSec,
   fastForwardAction,
   fastForwardCost,
   nextTier,
@@ -21,6 +23,7 @@ import {
   timedActionsFor,
   trainDurationSec,
   trainWorker,
+  upgradeDesk,
   workerBusy,
 } from '../src/game/engine';
 import type { WorkerState } from '../src/game/types';
@@ -688,5 +691,133 @@ describe('Edge cases', () => {
 
     const err = promoteWorker(state, worker.id);
     expect(err).toBe('Already at the top grade');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. Zero output while busy (construction downtime regression tests)
+// ---------------------------------------------------------------------------
+
+describe('zero output while busy', () => {
+  it('a worker in training contributes zero to company work rate', () => {
+    const state = createInitialState(NOW);
+    const c = activeCompany(state);
+    const country = activeCountry(state);
+    country.money = 100_000;
+    buyWorkstation(state, 'basic');
+
+    const worker = makeWorker({ id: state.nextEntityId++, tierId: 'junior', skillLevel: 1 });
+    c.workers.push(worker);
+    autoSeat(c);
+
+    const rateBefore = companyWorkRate(state, c);
+    expect(rateBefore).toBeGreaterThan(0);
+
+    const duration = trainDurationSec(c, worker);
+    trainWorker(state, worker.id);
+
+    // During training, worker is off the floor and contributes nothing
+    const rateDuringTraining = companyWorkRate(state, c);
+    expect(rateDuringTraining).toBe(0);
+
+    // Check midway through training
+    tick(state, duration / 2);
+    const rateMidway = companyWorkRate(state, c);
+    expect(rateMidway).toBe(0);
+
+    // After training completes, worker is back on floor and producing
+    tick(state, duration / 2 + 1);
+    const rateAfter = companyWorkRate(state, c);
+    expect(rateAfter).toBeGreaterThan(0);
+  });
+
+  it('a worker being promoted contributes zero to company work rate', () => {
+    const state = createInitialState(NOW);
+    const c = activeCompany(state);
+    const country = activeCountry(state);
+    country.money = 100_000;
+    buyWorkstation(state, 'basic');
+
+    const worker = makeWorker({
+      id: state.nextEntityId++,
+      tierId: 'intern',
+      skillLevel: 10, // at skill cap for intern tier
+    });
+    c.workers.push(worker);
+    autoSeat(c);
+
+    const rateBefore = companyWorkRate(state, c);
+    expect(rateBefore).toBeGreaterThan(0);
+
+    const duration = promoteDurationSec(worker)!;
+    promoteWorker(state, worker.id);
+
+    // During promotion, worker is off the floor and contributes nothing
+    const rateDuringPromotion = companyWorkRate(state, c);
+    expect(rateDuringPromotion).toBe(0);
+
+    // Check midway through promotion
+    tick(state, duration / 2);
+    const rateMidway = companyWorkRate(state, c);
+    expect(rateMidway).toBe(0);
+
+    // After promotion completes, worker is back on floor with new tier
+    tick(state, duration / 2 + 1);
+    const rateAfter = companyWorkRate(state, c);
+    expect(rateAfter).toBeGreaterThan(0);
+  });
+
+  it('offline parity: state via many ticks equals state via simulateOffline (desk upgrade)', () => {
+    function cloneState(state: any) {
+      return JSON.parse(JSON.stringify(state));
+    }
+
+    function setupBase() {
+      const state = createInitialState(NOW);
+      const c = activeCompany(state);
+      const country = activeCountry(state);
+      country.money = 100_000;
+
+      buyWorkstation(state, 'basic');
+      const worker = makeWorker({ id: state.nextEntityId++, tierId: 'junior', skillLevel: 5 });
+      c.workers.push(worker);
+      autoSeat(c);
+
+      return state;
+    }
+
+    const base = setupBase();
+    const c = activeCompany(base);
+    const deskId = c.workstations[0].id;
+
+    upgradeDesk(base, deskId);
+    const duration = deskUpgradeDurationSec('basic')!;
+    const totalDuration = duration + 50; // upgrade + 50 more seconds
+
+    // Approach 1: many small ticks through a desk upgrade
+    const viaSmallTicks = cloneState(base);
+    for (let i = 0; i < totalDuration; i += 10) {
+      tick(viaSmallTicks, Math.min(10, totalDuration - i));
+    }
+
+    // Approach 2: one simulateOffline call
+    const viaOffline = cloneState(base);
+    simulateOffline(viaOffline, totalDuration, totalDuration + 100);
+
+    // Both should end up with:
+    // - Same workstation defId (upgraded from basic to standing)
+    // - Same worker.stationId status
+    // - Equal country money
+    expect(activeCompany(viaSmallTicks).workstations[0].defId).toBe('standing');
+    expect(activeCompany(viaOffline).workstations[0].defId).toBe('standing');
+
+    const workerSmallTicks = activeCompany(viaSmallTicks).workers[0];
+    const workerOffline = activeCompany(viaOffline).workers[0];
+    expect(workerSmallTicks.stationId).toBe(workerOffline.stationId);
+
+    expect(activeCountry(viaSmallTicks).money).toBeCloseTo(
+      activeCountry(viaOffline).money,
+      6,
+    );
   });
 });

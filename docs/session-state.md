@@ -11,7 +11,7 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 | S0 recon + plan + balance numbers | done |
 | S1 state foundations (SAVE_VERSION 9, builders, country timedActions) | done |
 | S2 builder pool gating + purchase ladder | done |
-| S3 zero-output rules (desk-upgrade unseat, training/promo verify) | not started |
+| S3 zero-output rules (desk-upgrade unseat, training/promo verify) | done |
 | S4 timed floor construction + Gabriel floor gift + freeFastForwards | not started |
 | S5 timed company founding (country-level actions) | not started |
 | S6 Shop tab (VsCoin → cash packs) | not started |
@@ -23,12 +23,11 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 
 ## 2. In-progress unit
 
-None — S2 just landed: `busyBuilders`/`freeBuilders`/`builderCost`/
-`hireBuilder` in engine.ts (derived occupancy, ladder per balance.md),
-gating in trainWorker/promoteWorker/upgradeDesk (`'error.noFreeBuilders'`
-key id), builder bar + hire button in the Office tab, error toasts now go
-through `lookup()` so engine can return i18n key ids. Gift builder named
-Doug Foundations / Gérard Fondations. Beta-reset notice copy still
+None — S3 just landed: `stationUnderUpgrade()` helper, stationMultiplier
+returns 0 for desks under renovation, autoSeat skips them, upgradeDesk
+unseats via autoSeat; training/promotion verified zero-output; regression
+tests incl. offline parity (359 tests). decisions.md entries 15+16,
+balance.md desk-upgrade paragraph revised. Beta-reset notice copy still
 describes v8 — refresh in S8.
 
 ## 3. Decisions & assumptions (autonomous, veto-able)
@@ -51,13 +50,15 @@ describes v8 — refresh in S8.
 
 ## 4. Next action
 
-S3: zero-output rules — `engine.ts`: on `upgradeDesk` start, unseat the
-seated worker (`stationId = null`) and make `autoSeat`/`stationMultiplier`
-skip stations under a desk-upgrade action; verify training/promotion
-targets already yield zero output (workerBusy → off floor); regression
-tests in tests/desks.test.ts + timedActions.test.ts; update balance.md
-(desk-upgrade paragraph says the worker keeps working — now false) and
-decisions.md entry 4.
+S4: timed floor construction — `data.ts`: FLOOR_BUILD_DURATION_BASE 600,
+FLOOR_BUILD_FLOOR_GROWTH 1.5, FLOOR_BUILD_COMPANY_GROWTH 1.15. `engine.ts`:
+`floorBuildDurationSec`, `floorUnderConstruction`, buyFloor → starts
+'floor-build' (targetId = company.id, gated on builder + one-at-a-time),
+completion case adds the floor + floorBuildsDone event; `claimFloorGift`
+(first company of countries[0], floors===1, sets floorGiftClaimed, floors=2,
+freeFastForwards+=1); fastForwardCost free while freeFastForwards>0
+(consumed in fastForwardAction when fastForwardsUsed>0). Office tab:
+construction banner with progress/remaining/👷/ff button + gift button.
 
 ## 5. Build health
 
