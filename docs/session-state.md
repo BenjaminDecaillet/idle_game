@@ -1,57 +1,63 @@
-# Session state — workforce, timed expansion & shop
+# Session state — beta delivery fix, backlog refresh & top-tier features
 
-Branch: `feat/workforce-and-shop` (from master @ 3ce2128).
-Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
-`docs/plan-workforce.md`. Numbers: `docs/balance.md` Phase W section.
+Session of 2026-08-03 (autonomous). Contract:
+`.claude/skills/session-handoff/SKILL.md`. Backlog: `docs/improvements.md`
+(re-baselined this session). Prestige numbers: `docs/balance.md` (Phase P
+section, to be added by the balance-designer pass).
 
-## 1. Phase list
+## 1. Slice table
 
-| Slice | Status |
-|---|---|
-| S0 recon + plan + balance numbers | done |
-| S1 state foundations (SAVE_VERSION 9, builders, country timedActions) | done |
-| S2 builder pool gating + purchase ladder | done |
-| S3 zero-output rules (desk-upgrade unseat, training/promo verify) | done |
-| S4 timed floor construction + Gabriel floor gift + freeFastForwards | done |
-| S5 timed company founding (country-level actions) | done |
-| S6 Shop tab (VsCoin → cash packs) | done |
-| S7 VsCoin tab (BETA_FREE_IAP free starter pack) | done |
-| S8 i18n EN+FR | done |
-| S9 tests | done |
-| S10 docs + skills updates | done |
-| S11 optional art (construction scaffolding decor) | done |
+| Slice | Branch | Status |
+|---|---|---|
+| A1 beta force-refresh + build stamp (PR #7) | `fix/beta-force-refresh` | merged (master `27ad222`) |
+| B1 backlog re-baseline + plan/session docs | `docs/backlog-refresh` | in progress |
+| C1–C2 prestige (engine + story epilogue + UI) | `feat/prestige` | pending |
+| C3 goal hint chip | `feat/goal-hint` | pending |
+| C4 offline doubler placement | `feat/offline-doubler` | pending |
+| C5 story recap journal | `feat/story-journal` | pending |
+| C6 locale number formatting | `feat/locale-format` | pending |
+| C7 builder story beats + missions | `feat/builder-story` | pending |
+| C8 CI: PR checks + smoke test | `ci/pr-checks` | pending |
+
+Slices C3+ are cut in priority order; at ~80% budget stop starting new ones.
 
 ## 2. In-progress unit
 
-None. All scope shipped; **PR #6 is open against master**
-(https://github.com/BenjaminDecaillet/idle_game/pull/6).
+B1: commit `docs/improvements.md` rewrite + `docs/plan.md` status +
+this file, push `docs/backlog-refresh`, PR, self-merge. **Exact next
+step:** commit this branch and open the PR.
 
-## 3. Decisions & assumptions (autonomous, veto-able)
+## 3. Decisions (autonomous, veto-able)
 
-- Branch is `feat/workforce-and-shop` per the task brief (overrides the
-  harness-suggested `claude/workforce-and-shop-teovzu`).
-- Builder pool starts at 1 in `createCountry()` (Gabriel's gift is simply
-  pre-granted, per country) — avoids an unclaimable-training dead state.
-- `floor-build` lives on `CompanyState.timedActions` (targetId = company
-  id); `company-build` on new `CountryState.timedActions` with a `siteId`
-  payload (no CompanyState exists yet).
-- First company of any country founds instantly (tutorial + prestige
-  restarts stay friction-free); ramp starts at company #2.
-- Gabriel's floor gift = global `floorGiftClaimed` flag + a claim button on
-  floor 2 of the first company of the starting country; bundles
-  `freeFastForwards += 1` (durable counter; cost 0 while > 0).
-- Shop cash packs anchor on `grossRewardRate` (never negative), gated by
-  `requiresCompanies`; debt countries just get wallet credit (one wallet —
-  UI copy explains it pays debt first).
+- Root cause of the "features never arrive" bug: client-side PWA shell
+  staleness (no SW update flow; resumed PWAs never re-check), NOT a deploy
+  failure — deploy run #9 shipped `fb02a1c` fine. Fix behind
+  `BETA_FORCE_REFRESH` (decisions.md #17).
+- Benjamin approved via question batch: prestige IS in this session's top
+  tier; force-refresh = silent save-then-reload (no toast).
+- Verification of the deployed site ran against a local production build +
+  the green deploy run for the same sha — the sandbox network policy
+  blocks `benjamindecaillet.github.io` (proxy CONNECT 403) and the Pages
+  artifact blob store. Live-URL check must happen on Benjamin's device
+  (Settings build stamp makes it one glance).
+- No PR-level CI exists (deploy.yml on master push is the only gate);
+  merged PR #7 on green local test+build. Backlog #7 adds PR checks.
+- Single tiny i18n pair (`ui.build`) added directly instead of via the
+  i18n-writer agent; batches still go through the agent.
 
-## 4. Next action
+## 4. Open questions
 
-Nothing pending. Post-merge follow-ups live in `docs/improvements.md`
-#19–#22 (narrative touchpoints for the builder economy, tab-label i18n
-via skeleton rebuild, richer construction art, builder idle visibility).
-Story beats/missions were deliberately skipped this round (#19).
+None blocking. Phase C stop-point: after top-tier items, report and wait
+for go-ahead (per the session brief).
 
-## 5. Build health
+## 5. Build health / how to verify
 
-`npm test`: 398/398 green (20 files). `npm run build`: green
-(tsc + vite + PWA precache). Everything committed and pushed; PR #6 open.
+- master `27ad222`: `npm test` 398/398 green, `npm run build` green,
+  deploy run for `27ad222` should be green (verify in Actions).
+- Browser-verified on the built bundle (Playwright + local
+  `vite preview`, scripts in the session scratchpad): Shop tab, VsCoin
+  tab, live construction countdown (25m 1s → 24m 58s), build stamp
+  "Build fb02a1c · 2026-08-03 15:15Z", zero console errors.
+- On-device: open the deployed PWA twice (one cold start to fetch the new
+  worker, it reloads itself once active); thereafter every deploy lands
+  within ~1 min of the app being focused. Check Settings → build stamp.
