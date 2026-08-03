@@ -116,7 +116,7 @@ import {
   upgradeCost,
   workerRate,
 } from '../game/engine';
-import { formatDuration, formatMoney, formatNumber, formatRate } from '../game/format';
+import { formatDuration, formatMoney, formatNumber, formatRate } from './format';
 import {
   claimableMissions,
   claimMission,

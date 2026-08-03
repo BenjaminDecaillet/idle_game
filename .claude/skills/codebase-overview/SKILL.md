@@ -23,7 +23,7 @@ TypeScript PWA, Vite, vanilla DOM, vitest; zero runtime dependencies. Core loop:
 - `save.ts` — serialize + beta-reset gate + `migrate()` (same-version hygiene merge; see bump-save-version skill)
 - `missions.ts` — progress derived from durable counters aggregated across countries; VsCoin only via `grantVsCoin`/`spendVsCoin` (audited ledger with source/sink tags)
 - `story.ts` — one-shot beats on durable milestones (incl. debt + expansion beats); `tutorial.ts` — declarative, skippable step list (incl. choose-country + fast-forward freebie)
-- `player.ts` — avatar `look` validation; `format.ts` — number formatting
+- `player.ts` — avatar `look` validation. (Number formatting lives in `src/ui/format.ts` — locale-aware, so it's presentation, not game logic.)
 
 ## src/ui/
 

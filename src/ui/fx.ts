@@ -1,4 +1,4 @@
-import { formatMoney } from '../game/format';
+import { formatMoney } from './format';
 
 /**
  * Lightweight canvas FX: confetti bursts and floating "+$" labels on project
