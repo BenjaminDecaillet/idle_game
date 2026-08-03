@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { formatDuration, formatMoney, formatNumber, formatRate } from '../src/game/format';
+import { afterEach, describe, expect, it } from 'vitest';
+import { formatDuration, formatMoney, formatNumber, formatRate } from '../src/ui/format';
+import { setCurrentLang } from '../src/i18n';
 
 describe('formatNumber', () => {
   it('formats small integers with no suffix', () => {
@@ -80,5 +81,31 @@ describe('formatDuration', () => {
   it('formats days and hours', () => {
     expect(formatDuration(90_000)).toBe('1d 1h'); // 25h = 1d 1h
     expect(formatDuration(86_400)).toBe('1d 0h');
+  });
+});
+
+describe('French locale', () => {
+  afterEach(() => setCurrentLang('en'));
+
+  it('uses a decimal comma', () => {
+    setCurrentLang('fr');
+    expect(formatNumber(1234)).toBe('1,23K');
+    expect(formatNumber(5.4)).toBe('5,4');
+    expect(formatNumber(123_000)).toBe('123K'); // no decimals — no comma
+  });
+
+  it('puts the currency symbol after the amount (narrow no-break space)', () => {
+    setCurrentLang('fr');
+    expect(formatMoney(1_234_567)).toBe('1,23M $');
+    expect(formatMoney(5)).toBe('5 $');
+  });
+
+  it('uses "j" for days', () => {
+    setCurrentLang('fr');
+    expect(formatDuration(90_000)).toBe('1j 1h');
+  });
+
+  it('English stays unchanged after restoring', () => {
+    expect(formatMoney(1234)).toBe('$1.23K');
   });
 });
