@@ -148,6 +148,21 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.freshEconomyHint': 'Un marché vierge — repartez de zéro, grandissez plus vite',
   'ui.countryUnlocked': 'Nouvelle destination : {name} !',
 
+  // --- Prestige : IPO & Héritage (onglet Stats) ------------------------------
+  'ui.prestigeTitle': 'IPO & Héritage',
+  'ui.prestigeRep': 'Réputation',
+  'ui.prestigeMult': 'Bonus de production permanent',
+  'ui.prestigeGain': 'Réputation si vous entrez en bourse maintenant',
+  'ui.prestigeButton': 'IPO — tout passer en open source',
+  'ui.prestigeHint':
+    'L’IPO réinitialise toutes les sociétés et tous les pays. Vous gardez vos VsCoin, vos améliorations premium, vos cosmétiques, votre avatar et votre histoire — et votre Réputation dope la production pour toujours.',
+  'ui.prestigeLocked': 'Livrez l’IAG depuis le QG orbital pour débloquer l’IPO.',
+  'ui.prestigeConfirm':
+    'Entrer en bourse maintenant ? Toutes les sociétés et tous les pays repartent du garage. VsCoin, cosmétiques et Réputation sont à vous pour toujours.',
+  'ui.prestigeDone': 'IPO ! Le rêve est open source — retour au garage, avec une réputation.',
+  'ui.prestigeNeedStory': 'Terminez d’abord le rêve : livrez l’IAG depuis le QG orbital.',
+  'ui.prestigeNoRep': 'Pas encore assez de nouveaux gains pour un seul point de Réputation.',
+
   // --- Réinitialisation bêta ------------------------------------------------
   'ui.betaResetTitle': 'Un nouveau départ (bêta)',
   'ui.betaResetText':
@@ -297,4 +312,8 @@ export const fr: Record<keyof typeof en, string> = {
   'story.dream-achieved.title': 'Gratuite comme la lumière',
   'story.dream-achieved.text':
     'Depuis le labo orbital, ton IA touche désormais tout le monde — toutes les langues, tous les fuseaux, gratuite comme la lumière du soleil, exactement comme promis à la tondeuse. Ils ne rient plus. Ils montent leurs propres garages.',
+
+  'story.new-venture.title': 'Une nouvelle aventure',
+  'story.new-venture.text':
+    'Tu as offert le rêve au monde, et le monde t’a remercié en construisant dessus — mille garages tournent désormais sur ton code. Et te revoilà à côté de la tondeuse, par choix cette fois. Finalement, le rêve n’a jamais été l’exit — c’était l’habitude de construire.',
 };
