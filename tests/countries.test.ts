@@ -396,6 +396,8 @@ describe('global output multiplier with world expansion', () => {
       activeCompanyId: 0,
       debtQuitCooldownSec: 60,
       usedCompanyNames: [],
+      builders: { count: 1 },
+      timedActions: [],
     };
     state.countries.push(fakeCountry);
 
@@ -433,6 +435,8 @@ describe('global output multiplier with world expansion', () => {
       activeCompanyId: 0,
       debtQuitCooldownSec: 60,
       usedCompanyNames: [],
+      builders: { count: 1 },
+      timedActions: [],
     };
     state.countries.push(fakeCountry);
 

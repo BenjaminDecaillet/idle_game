@@ -87,7 +87,10 @@ import type {
 // v8: BETA RESET — per-country economies, generic timed actions, employee
 //     grades/promotion, debt, soft caps, multi-project companies. Saves
 //     below v8 are discarded (see save.ts).
-export const SAVE_VERSION = 8;
+// v9: per-country builder pool gating every timed action, country-level
+//     timed actions (company-build), timed floor construction, Gabriel's
+//     floor gift + free fast-forward credits, Shop/VsCoin tabs.
+export const SAVE_VERSION = 9;
 
 // ---------------------------------------------------------------------------
 // State creation
@@ -117,6 +120,8 @@ export function createInitialState(now = Date.now(), countryId: CountryId = DEFA
     missionsClaimed: [],
     globalUpgrades: {},
     fastForwardsUsed: 0,
+    freeFastForwards: 0,
+    floorGiftClaimed: false,
     promotionsDone: 0,
     nextEntityId: 1,
   };
@@ -144,6 +149,8 @@ export function createCountry(
     activeCompanyId: 0,
     debtQuitCooldownSec: DEBT_QUIT_INTERVAL_SEC,
     usedCompanyNames: [],
+    builders: { count: 1 }, // #1 is Gabriel's free, named gift
+    timedActions: [],
   };
   state.countries.push(country);
   const name = firstCompanyName ?? nextParodyName(country, 'garage');
@@ -911,6 +918,8 @@ function emptyEvents(): TickEvents {
     trainingsDone: [],
     promotionsDone: [],
     deskUpgradesDone: [],
+    floorBuildsDone: [],
+    companyBuildsDone: [],
     quits: [],
   };
 }

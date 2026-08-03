@@ -9,7 +9,7 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 | Slice | Status |
 |---|---|
 | S0 recon + plan + balance numbers | done |
-| S1 state foundations (SAVE_VERSION 9, builders, country timedActions) | not started |
+| S1 state foundations (SAVE_VERSION 9, builders, country timedActions) | done |
 | S2 builder pool gating + purchase ladder | not started |
 | S3 zero-output rules (desk-upgrade unseat, training/promo verify) | not started |
 | S4 timed floor construction + Gabriel floor gift + freeFastForwards | not started |
@@ -23,7 +23,11 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 
 ## 2. In-progress unit
 
-None — S0 just landed.
+None — S1 just landed (v9 committed: `BuilderState`, `CountryState.builders`
++ `.timedActions`, `floor-build`/`company-build` kinds + `siteId` payload,
+`freeFastForwards`/`floorGiftClaimed`, save.ts hygiene incl. country-level
+action ids, TickEvents entries). Beta-reset notice copy still describes v8 —
+refresh it in S8.
 
 ## 3. Decisions & assumptions (autonomous, veto-able)
 
@@ -45,12 +49,13 @@ None — S0 just landed.
 
 ## 4. Next action
 
-S1: `src/game/types.ts` — add `BuilderState`, `CountryState.builders` +
-`CountryState.timedActions`, extend `TimedActionKind` +
-`siteId?` payload, `GameState.freeFastForwards`/`floorGiftClaimed`; then
-`engine.ts` `SAVE_VERSION = 9` + defaults, `save.ts` hygiene, save tests.
+S2: `src/game/engine.ts` — add `busyBuilders(country)` /
+`freeBuilders(country)` (derived over company + country timedActions),
+gate the three existing start functions on a free builder, add
+`hireBuilder(state)` + `builderCost(country)` per the Phase W ladder in
+balance.md; constants into `data.ts`; builder counter + hire button in
+`ui.ts` (Office tab header).
 
 ## 5. Build health
 
-Not yet run this session (docs-only so far). Last known: 352/352 green on
-master.
+`npm test`: 352/352 green (19 files). `npm run build`: green.

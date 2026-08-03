@@ -138,12 +138,21 @@ export interface VsCoinLedgerEntry {
  * only inside tick() (so offline simulation is exact) and every one can be
  * fast-forwarded with VsCoin. See .claude/skills/add-timed-action.
  */
-export type TimedActionKind = 'training' | 'promotion' | 'desk-upgrade';
+export type TimedActionKind =
+  | 'training'
+  | 'promotion'
+  | 'desk-upgrade'
+  | 'floor-build'
+  | 'company-build';
 
 export interface TimedAction {
   id: number;
   kind: TimedActionKind;
-  /** Worker id (training/promotion) or workstation id (desk-upgrade). */
+  /**
+   * Worker id (training/promotion), workstation id (desk-upgrade) or
+   * company id (floor-build). company-build has no target entity yet:
+   * targetId is 0 and siteId identifies the map site.
+   */
   targetId: number;
   remainingSec: number;
   totalSec: number;
@@ -153,6 +162,8 @@ export interface TimedAction {
   toTierId?: string;
   /** desk-upgrade: workstation def the desk turns into. */
   toDefId?: string;
+  /** company-build: the map site the new company rises on. */
+  siteId?: string;
 }
 
 export interface WorkerState {
@@ -282,6 +293,20 @@ export interface CompanyState {
 }
 
 /**
+ * The construction labour pool.
+ *
+ * DELIBERATE code-vs-UI naming split — do not "fix" it: `WorkerState` above
+ * already means seated *employees* who produce project work (displayed as
+ * "Employees" / "Employés"). Builders are a separate per-country pool that
+ * the player sees as "Workers" (EN) / "Ouvriers" (FR). Renaming either type
+ * to match the other would collide the two concepts.
+ */
+export interface BuilderState {
+  /** Builders owned in this country. #1 is Gabriel's free, named gift. */
+  count: number;
+}
+
+/**
  * One country = one fully independent economy: its own wallet (which CAN go
  * below zero — debt), companies, employees, projects, floors and cash
  * upgrades. VsCoin, story, missions, cosmetics and the avatar are global.
@@ -297,6 +322,18 @@ export interface CountryState {
   debtQuitCooldownSec: number;
   /** Parody names already assigned in this country (never reused). */
   usedCompanyNames: string[];
+  /**
+   * Construction labour pool shared by every company in this country. Each
+   * in-flight timed action (any kind, company- or country-level) occupies
+   * one builder; availability is DERIVED from the in-flight actions, never
+   * stored (see freeBuilders() in engine.ts).
+   */
+  builders: BuilderState;
+  /**
+   * Country-level timed actions: company-build lives here because a company
+   * under construction has no CompanyState yet to carry it.
+   */
+  timedActions: TimedAction[];
 }
 
 export interface GameState {
@@ -332,6 +369,10 @@ export interface GameState {
   globalUpgrades: Record<string, number>;
   /** Lifetime fast-forwards bought — the very first one is free (tutorial). */
   fastForwardsUsed: number;
+  /** Free fast-forward credits (Gabriel's gifts), consumed before VsCoin. */
+  freeFastForwards: number;
+  /** Gabriel's once-per-game free second floor has been claimed. */
+  floorGiftClaimed: boolean;
   /** Lifetime completed promotions (mission metric). */
   promotionsDone: number;
   nextEntityId: number;
@@ -350,6 +391,8 @@ export interface TickEvents {
   trainingsDone: { companyId: number; workerId: number; newLevel: number }[];
   promotionsDone: { companyId: number; workerId: number; newTierId: string }[];
   deskUpgradesDone: { companyId: number; stationId: number; newDefId: string }[];
+  floorBuildsDone: { companyId: number; floors: number }[];
+  companyBuildsDone: { countryId: CountryId; companyId: number; siteId: string }[];
   /** Debt-crisis resignations (the UI toasts them). */
   quits: { companyId: number; workerId: number; name: string }[];
 }
