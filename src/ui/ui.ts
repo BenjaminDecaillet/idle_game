@@ -1,6 +1,7 @@
 import {
   BETA_FREE_IAP,
   COMPANY_SITES,
+  PRESTIGE_STORY_BEAT,
   COUNTRIES,
   FLOOR_CAPACITY,
   MAP_THEMES,
@@ -102,6 +103,9 @@ import {
   projectUnlockCost,
   upgradeVsCoinCost,
   totalSalaries,
+  prestigeMultiplier,
+  prestigePreview,
+  prestigeReset,
   totalWorkRate,
   trainCost,
   trainLevels,
@@ -569,7 +573,9 @@ export class UI {
     const zone = document.getElementById('modal-zone');
     if (!zone) return;
     const pose: GabrielPose =
-      beatId === 'agi-shipped' || beatId === 'dream-achieved' ? 'cheer' : 'think';
+      beatId === 'agi-shipped' || beatId === 'dream-achieved' || beatId === 'new-venture'
+        ? 'cheer'
+        : 'think';
     zone.innerHTML = `
       <div class="modal-backdrop">
         <div class="modal card story-modal">
@@ -1703,9 +1709,33 @@ export class UI {
           </div>
         </div>
       </div>`;
+    const prestigeUnlocked = s.story.seen.includes(PRESTIGE_STORY_BEAT);
+    const prestigeGain = prestigePreview(s);
+    const prestigeCard = `
+      <div class="card">
+        <h2 class="card-title">${icon('boost', 18)} ${t('ui.prestigeTitle')}</h2>
+        ${
+          prestigeUnlocked
+            ? `
+        <table class="stats-table">
+          <tr><td><span class="stat-label">${icon('star', 16)}${t('ui.prestigeRep')}</span></td>
+              <td>${formatNumber(s.prestige.reputation)}</td></tr>
+          <tr><td><span class="stat-label">${icon('energy', 16)}${t('ui.prestigeMult')}</span></td>
+              <td>×${prestigeMultiplier(s).toFixed(2)}</td></tr>
+          <tr><td><span class="stat-label">${icon('coin', 16)}${t('ui.prestigeGain')}</span></td>
+              <td>+${formatNumber(prestigeGain)}</td></tr>
+        </table>
+        <button class="btn btn-primary" data-action="prestige" ${prestigeGain < 1 ? 'disabled' : ''}>
+          ${icon('boost', 16)} ${t('ui.prestigeButton')}
+        </button>
+        <p class="hint">${t('ui.prestigeHint')}</p>`
+            : `<p class="hint">${t('ui.prestigeLocked')}</p>`
+        }
+      </div>`;
     return `
       <div class="stack">
         ${founder}
+        ${prestigeCard}
         <div class="card">
           <h2 class="card-title">${icon('stats', 18)} ${c.name}</h2>
           <table class="stats-table">
@@ -1969,6 +1999,16 @@ export class UI {
             this.toast('✅ Save imported', 'info');
           } catch {
             error = 'Invalid save code';
+          }
+        }
+        break;
+      }
+      case 'prestige': {
+        if (confirm(t('ui.prestigeConfirm'))) {
+          error = prestigeReset(s);
+          if (!error) {
+            this.officeNeedsRebuild();
+            this.toast(`🚀 ${t('ui.prestigeDone')}`, 'info');
           }
         }
         break;

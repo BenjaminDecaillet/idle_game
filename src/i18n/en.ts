@@ -149,6 +149,21 @@ export const en = {
   'ui.freshEconomyHint': 'A fresh market — start anew, grow faster',
   'ui.countryUnlocked': 'Welcome to {name}!',
 
+  // --- Prestige: IPO & Legacy (Stats tab) -----------------------------------
+  'ui.prestigeTitle': 'IPO & Legacy',
+  'ui.prestigeRep': 'Reputation',
+  'ui.prestigeMult': 'Permanent output bonus',
+  'ui.prestigeGain': 'Reputation if you IPO now',
+  'ui.prestigeButton': 'IPO — open-source everything',
+  'ui.prestigeHint':
+    'IPO resets every company and country. You keep VsCoin, premium upgrades, cosmetics, your avatar and your story — and your Reputation boosts output forever.',
+  'ui.prestigeLocked': 'Ship the AGI from the Orbital HQ to unlock the IPO.',
+  'ui.prestigeConfirm':
+    'IPO now? Every company and country restarts from the garage. VsCoin, cosmetics and Reputation are yours forever.',
+  'ui.prestigeDone': 'IPO! The dream is open source — back to the garage, with a reputation.',
+  'ui.prestigeNeedStory': 'Finish the dream first: ship the AGI from the Orbital HQ.',
+  'ui.prestigeNoRep': 'Not enough new earnings for a single Reputation point yet.',
+
   // --- Beta reset ----------------------------------------------------------
   'ui.betaResetTitle': 'A fresh start (beta)',
   'ui.betaResetText':
@@ -298,4 +313,8 @@ export const en = {
   'story.dream-achieved.title': 'Free as sunlight',
   'story.dream-achieved.text':
     'From the orbital lab, your AI now reaches everyone — every language, every timezone, free as sunlight, exactly like you promised the lawnmower. They’re not laughing anymore. They’re building garages of their own.',
+
+  'story.new-venture.title': 'A new venture',
+  'story.new-venture.text':
+    'You gave the dream away, and the world thanked you by building on it — a thousand garages now run on your code. And here you are, back beside the lawnmower, by choice this time. Turns out the dream was never the exit — it was the habit of building.',
 } as const;

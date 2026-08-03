@@ -366,6 +366,18 @@ export interface CountryState {
   timedActions: TimedAction[];
 }
 
+/**
+ * Prestige: reputation banked by IPO-ing ("open-sourcing the dream") after
+ * the story epilogue. `reputation` is cumulative and only ever grows;
+ * the permanent output multiplier derives from it (see engine.ts).
+ */
+export interface PrestigeState {
+  /** Completed prestige resets. */
+  count: number;
+  /** Cumulative reputation points across all resets. */
+  reputation: number;
+}
+
 export interface GameState {
   version: number;
   countries: CountryState[];
@@ -405,6 +417,8 @@ export interface GameState {
   floorGiftClaimed: boolean;
   /** Lifetime completed promotions (mission metric). */
   promotionsDone: number;
+  /** IPO resets & banked reputation (permanent output multiplier). */
+  prestige: PrestigeState;
   nextEntityId: number;
 }
 

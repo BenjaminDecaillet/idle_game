@@ -275,3 +275,113 @@ identity (e.g. "5 builders everywhere I settle" or "regular skipper" or
 "pack buyer") but not all — which is the design goal. Watch metric: if
 builders #4–5 are bought by <20% of players reaching company 3, drop
 `BUILDER_VSCOIN_COSTS` toward [5, 10] — one knob per segment.
+
+## Phase P — Prestige (IPO: open-source the AGI)
+
+Prestige ("IPO / open-source the AGI & restart with reputation") wipes
+countries, companies and money; keeps VsCoin, premium global upgrades,
+cosmetics, avatar, story-seen and missions-claimed. In exchange the player
+converts **all-time lifetime earnings** into permanent **Reputation** points
+that feed a global output multiplier.
+
+### Constants (for `src/game/data.ts`)
+
+```ts
+// Prestige: convert all-time lifetime earnings into permanent Reputation.
+// totalRep(E) = E <= MIN ? 0 : floor(POINTS_PER_DECADE * log10(E / MIN))
+// award on prestige = totalRep(allTimeEarned) - state.reputation  (delta form:
+// fractional decades carry over, nothing is lost to floor() across resets)
+// output mult = 1 + PRESTIGE_OUTPUT_K * reputation^PRESTIGE_OUTPUT_ALPHA
+export const PRESTIGE_MIN_LIFETIME = 100_000_000_000_000; // 1e14 — log anchor & hard floor
+export const PRESTIGE_POINTS_PER_DECADE = 10; // rep per ×10 of all-time earnings
+export const PRESTIGE_OUTPUT_K = 0.5;
+export const PRESTIGE_OUTPUT_ALPHA = 0.5; // sqrt — heavy diminishing returns
+export const PRESTIGE_STORY_BEAT = 'dream-achieved'; // epilogue gate (story-seen survives prestige)
+```
+
+State needs: a never-reset all-time earnings accumulator and a cumulative
+`reputation` integer. Simplest: keep `state.totalEarned` un-reset across
+prestige (it already only feeds claimed-once missions and seen-once story
+beats, both of which survive prestige anyway); per-country `totalEarned`
+dies with its country as today.
+
+### 1. Reputation from lifetime earnings (log-based, diminishing)
+
+`totalRep(E) = E <= PRESTIGE_MIN_LIFETIME ? 0 : floor(PRESTIGE_POINTS_PER_DECADE × log10(E / PRESTIGE_MIN_LIFETIME))`
+
+- 1.26e14 (= 1e14 × 10^0.1, the first point): 1 rep — earliest possible
+  prestige, ~9–12 days in (Orbital ≈ 1.13e14 as company #8, AGI ~shipped).
+- 3e14 (typical epilogue wealth: full city + AGI + slack): 4 rep — ~10–14 days.
+- 1e17 (patient first run: all 8 countries before prestiging): 30 rep —
+  ~4–6 weeks; the long route is rewarded but not mandatory.
+
+Rationale: log (not sqrt) because late-game wealth is exponential — one
+rep-decade per ×10 earned keeps rep growth *linear per run* no matter how
+the economy inflates, which is what caps ten prestiges at ~5×.
+
+### 2. Permanent output multiplier from cumulative Reputation
+
+`prestigeMult(rep) = 1 + PRESTIGE_OUTPUT_K (0.5) × rep^PRESTIGE_OUTPUT_ALPHA (0.5)`
+
+Multiplies into `globalOutputMultiplier()` alongside `aura` and `world`.
+
+- rep 1 (minimum first prestige): 1.50× — bottom of the promised +50–100% band.
+- rep 4 (comfortable first prestige at 3e14): 2.00× — top of the band.
+- rep 60 (~10 prestiges, see table): 4.87× — under the ~5–10× lifetime cap;
+  even a runaway 1e22 all-time (80 rep) only reaches 5.47×.
+
+Rationale: sqrt-of-log stacks two diminishing curves, so the knob that
+matters is *when* you prestige, not how many times — no rep-farming loop.
+
+### 3. Eligibility
+
+Prestige is offered only when **both** hold:
+
+- story beat `PRESTIGE_STORY_BEAT` (`dream-achieved`: Orbital HQ owned +
+  AGI shipped) is in `story.seen` — narrative gate; you can only
+  open-source an AGI you have actually built (checked once ever, since
+  story-seen survives prestige);
+- `prestigePreview(state) ≥ 1` (see #4) — economic gate; below
+  ~1.26e14 all-time the formula yields 0, and after a prestige the gate
+  automatically becomes "grow all-time earnings ×1.26 past the last
+  conversion point", so a pointless immediate re-prestige is impossible.
+
+UI: disable the button with the preview showing `+0 rep` when ineligible.
+
+### 4. Next-prestige preview (UI)
+
+`prestigePreview(state) = max(0, totalRep(allTimeEarned) − state.reputation)`
+
+Pure function of durable state — safe to render at 2 Hz and to recompute
+after offline simulation. The delta form also *is* the award formula, so
+preview and grant can never disagree.
+
+### 5. Sanity table
+
+Assumes each run pushes all-time earnings roughly one decade at first
+(perm mult + kept Aura/VsCoin make re-climbing fast), tapering to ×3–4 per
+run as the plateau economy makes further decades slower.
+
+| prestige # | all-time earnings at reset | rep gained | total rep | mult after | expected TTV (cumulative) |
+|---|---|---|---|---|---|
+| 1 | 3e14 | +4 | 4 | 2.00× | ~10–14 days (first full story run) |
+| 2 | 3e15 | +10 | 14 | 2.87× | +~6–8 days (2× perm start, re-climb + 1 decade) |
+| 3 | 2e16 | +9 | 23 | 3.40× | +~5–7 days |
+| 4 | 1e17 | +7 | 30 | 3.74× | +~5–7 days (≈ full 8-country wealth) |
+| 5 | 4e17 | +6 | 36 | 4.00× | +~5–7 days |
+| 7 | 3e18 | +4/run | 44 | 4.32× | ~2 months total |
+| 10 | 1e20 | +5–6/run | 60 | 4.87× | ~3 months total |
+
+Rationale for the pacing: first prestige lands right after the story
+epilogue with a 2× head start — big enough that run 2's first session
+reaches the SoMa Loft in well under an hour, small enough that the lost
+world bonus (up to 2.75× with 8 countries) still makes finishing a world
+tour a real alternative to prestiging early. Each later prestige is
+roughly a week and buys a visibly smaller slice (+0.5×, +0.3×, …), pushing
+long-term players toward breadth (countries, builders, missions) instead
+of an infinite prestige treadmill.
+
+Watch metrics: if players prestige at the 1-rep minimum and churn, raise
+`PRESTIGE_MIN_LIFETIME` to 2e14 (one knob, shifts the whole curve); if ten
+prestiges feel flat, raise `PRESTIGE_OUTPUT_K` toward 0.7 (rep 60 → 6.4×)
+without touching the earning curve.

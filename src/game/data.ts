@@ -552,6 +552,20 @@ export function mapThemeById(id: string): MapThemeDef {
   return t;
 }
 
+// ---------------------------------------------------------------------------
+// Prestige — "IPO & open-source the dream" (docs/balance.md, Phase P).
+// totalRep(E) = E <= MIN ? 0 : floor(POINTS_PER_DECADE * log10(E / MIN)) on
+// the never-reset all-time earnings; award = totalRep(E) - reputation (delta
+// form, so preview and grant can never disagree and fractional decades carry
+// over). Output mult = 1 + K * reputation^ALPHA.
+// ---------------------------------------------------------------------------
+
+export const PRESTIGE_MIN_LIFETIME = 100_000_000_000_000; // 1e14 — log anchor & hard floor
+export const PRESTIGE_POINTS_PER_DECADE = 10; // rep per ×10 of all-time earnings
+export const PRESTIGE_OUTPUT_K = 0.5;
+export const PRESTIGE_OUTPUT_ALPHA = 0.5; // sqrt — heavy diminishing returns
+export const PRESTIGE_STORY_BEAT = 'dream-achieved'; // epilogue gate (story-seen survives prestige)
+
 export function siteById(id: string): CompanySiteDef {
   const s = COMPANY_SITES.find((s) => s.id === id);
   if (!s) throw new Error(`Unknown company site: ${id}`);

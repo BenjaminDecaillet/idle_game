@@ -98,3 +98,18 @@ be revisited cheaply.
     device runs. Flip the flag to false before testing with real users:
     updates then wait for the next natural reload instead of interrupting
     a session.
+18. **Prestige = IPO & open-source the dream** (Phase P, docs/balance.md):
+    reputation is banked in delta form against the never-reset all-time
+    `totalEarned` (`totalRep(E) - reputation`), so the preview and the
+    award share one formula and fractional log-decades carry over across
+    resets. The multiplier (`1 + 0.5·√rep`) slots into
+    `globalOutputMultiplier` next to aura/world. The reset keeps every
+    global layer (VsCoin+ledger, premium upgrades, cosmetics, avatar,
+    settings, story-seen, missions-claimed, lifetime counters, Gabriel's
+    gifts, finished tutorial) and wipes countries/companies/boosts,
+    restarting in the player's original starting country with the default
+    company name. `prestige` is an additive, defaultable field —
+    **no SAVE_VERSION bump**; same-version saves get `{count:0,
+    reputation:0}` from `migrate()`. Eligibility = `dream-achieved` seen
+    (survives the reset) + at least 1 new reputation point — structurally
+    prevents churn-prestiging (each point needs ×1.26 all-time growth).
