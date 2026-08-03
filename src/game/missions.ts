@@ -32,6 +32,9 @@ export function metricValue(state: GameState, metric: MissionMetric): number {
       return state.promotionsDone;
     case 'countries':
       return state.countries.length;
+    case 'builders':
+      // Construction pool size across all countries (Gabriel's gift included).
+      return state.countries.reduce((sum, c) => sum + c.builders.count, 0);
   }
 }
 

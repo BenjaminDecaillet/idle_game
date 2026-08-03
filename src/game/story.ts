@@ -47,6 +47,8 @@ export const STORY_BEATS: StoryBeatDef[] = [
   { id: 'first-thousand', trigger: (s) => s.totalEarned >= 1_000 },
   { id: 'full-garage', trigger: (s) => totalWorkers(s) >= 4 },
   { id: 'first-upgrade', trigger: anyUpgrade },
+  // Gabriel's floor gift claimed — the builder economy introduces itself.
+  { id: 'builders-guild', trigger: (s) => s.floorGiftClaimed },
   // Gabriel's debt warnings: one-shot per severity, on durable conditions
   // (the HUD alarm carries the ongoing signal; see docs/decisions.md #9).
   { id: 'debt-first', trigger: (s) => s.countries.some(inDebt) },

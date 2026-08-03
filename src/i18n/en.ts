@@ -43,6 +43,7 @@ export const en = {
   'mission.desks': 'Own {target} workstations',
   'mission.promotions': 'Promote employees {target} times',
   'mission.countries': 'Expand to {target} countries',
+  'mission.builders': 'Grow your construction crew to {target} workers',
 
   // --- Employees: training, promotion, fast-forward ------------------------
   'ui.inTraining': 'In training · +{levels} levels in {time}',
@@ -266,6 +267,10 @@ export const en = {
   'story.first-upgrade.title': 'Investing in the crew',
   'story.first-upgrade.text':
     'You spent money on your people instead of yourself. Remember this feeling — it’s the exact habit that builds companies worth believing in.',
+
+  'story.builders-guild.title': 'The builders arrive',
+  'story.builders-guild.text':
+    'A second floor, on the house — and a worker to raise it, because a gift you can’t use is just clutter. Empires aren’t only coded, my friend: they’re built, hammer by hammer. Hire more builders and watch more things rise at once.',
 
   'story.debt-first.title': 'In the red',
   'story.debt-first.text':

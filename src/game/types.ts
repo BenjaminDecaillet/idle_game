@@ -139,7 +139,8 @@ export type MissionMetric =
   | 'upgradeLevels'
   | 'desks'
   | 'promotions'
-  | 'countries';
+  | 'countries'
+  | 'builders';
 
 export interface MissionDef {
   id: string;
