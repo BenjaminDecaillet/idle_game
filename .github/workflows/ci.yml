@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run
+      - run: npm run build
+      - name: Smoke test the built app
+        run: |
+          node_modules/.bin/vite preview --port 4173 --strictPort &
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:4173/idle_game/ > /dev/null && break
+            sleep 0.5
+          done
+          CHROMIUM_PATH="$(command -v google-chrome || command -v chromium-browser || command -v chromium)" \
+            node scripts/smoke-test.mjs
