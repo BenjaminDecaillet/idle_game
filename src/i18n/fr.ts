@@ -84,7 +84,7 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.shopDebtNote':
     'Vous êtes endetté : les fonds levés remboursent d’abord la dette — c’est le même portefeuille.',
   'ui.packRequires': 'Nécessite {count} sociétés',
-  'ui.packBought': '{name} bouclée — {cash} virés !',
+  'ui.packBought': '{name} : c’est bouclé — {cash} virés !',
   'shop.pack.seed.name': 'Tour Seed',
   'shop.pack.seed.blurb': 'Un business angel bienveillant vous vire un peu de trésorerie.',
   'shop.pack.series-a.name': 'Série A',
@@ -150,7 +150,7 @@ export const fr: Record<keyof typeof en, string> = {
   // --- Réinitialisation bêta ------------------------------------------------
   'ui.betaResetTitle': 'Un nouveau départ (bêta)',
   'ui.betaResetText':
-    'Le monde vient de beaucoup grandir : des pays, des promotions, des dettes et bien plus. Cette mise à jour bêta reconstruit le jeu de fond en comble, et votre ancienne sauvegarde n’a pas pu suivre. Merci de tester — votre prochain empire grandira encore plus vite !',
+    'Les équipes de chantier sont arrivées : des ouvriers qui construisent vos étages et vos sociétés au fil du temps, des levées de fonds et une boutique VsCoin. Cette mise à jour bêta repense la croissance de votre empire, et votre ancienne sauvegarde n’a pas pu suivre. Merci de tester — votre prochain empire grandira encore plus vite !',
 
   // --- Pays -----------------------------------------------------------------
   'country.ch.name': 'Suisse',

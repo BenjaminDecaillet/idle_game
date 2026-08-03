@@ -151,7 +151,7 @@ export const en = {
   // --- Beta reset ----------------------------------------------------------
   'ui.betaResetTitle': 'A fresh start (beta)',
   'ui.betaResetText':
-    'The world just got a lot bigger: countries, promotions, debt and more. This beta update rebuilds the game from the ground up, so your old save could not come along. Thank you for testing — your next empire will rise even faster!',
+    'Construction crews have arrived: a workforce that builds your floors and companies over time, funding rounds, and a VsCoin shop. This beta update reworks how your empire grows, so your old save could not come along. Thank you for testing — your next empire will rise even faster!',
 
   // --- Countries -----------------------------------------------------------
   'country.ch.name': 'Switzerland',

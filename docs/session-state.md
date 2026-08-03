@@ -16,7 +16,7 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 | S5 timed company founding (country-level actions) | done |
 | S6 Shop tab (VsCoin → cash packs) | done |
 | S7 VsCoin tab (BETA_FREE_IAP free starter pack) | done |
-| S8 i18n EN+FR | not started |
+| S8 i18n EN+FR | done |
 | S9 tests | not started |
 | S10 docs + skills updates | not started |
 | S11 optional art | not started |
@@ -53,13 +53,13 @@ describes v8 — refresh in S8.
 
 ## 4. Next action
 
-S8: i18n audit — refresh beta-reset notice copy (ui.betaResetTitle/Text
-still describe the v8 update; must mention the v9 workforce/construction/
-shop reset), then i18n-writer audit of all Phase W keys for EN/FR parity
-and tone. Also decide/skip story-beat touchpoints (builder gift intro
-beat? floor gift beat?) — only durable-state triggers allowed
-(add-story-beat skill). Then S9 tests (shop grant/spend ledger, free-pack
-repeatability, builder ladder pricing), S10 docs+skills.
+S9 is in flight: a test-writer agent is finishing tests/shop.test.ts
+(builder ladder pricing, shop pack scaling/gating/ledger, free starter
+repeatability). When it lands green: commit S9, update the "19 vitest
+files" line in .claude/skills/codebase-overview (tests section) to 20,
+commit S10 docs (plan/specs/improvements/decisions/skills already
+edited), then decide S11 art by remaining budget, then open THE single
+PR. Story beats/missions deliberately skipped → improvements.md #19.
 
 ## 5. Build health
 
