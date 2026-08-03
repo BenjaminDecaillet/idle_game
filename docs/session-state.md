@@ -12,8 +12,8 @@ section, to be added by the balance-designer pass).
 | A1 beta force-refresh + build stamp (PR #7) | `fix/beta-force-refresh` | merged (master `27ad222`) |
 | B1 backlog re-baseline + plan/session docs | `docs/backlog-refresh` | merged (PR #8) |
 | C1–C2 prestige (engine + story epilogue + UI) | `feat/prestige` | merged (PR #9) |
-| C3 goal hint chip | `feat/goal-hint` | in progress |
-| C4 offline doubler placement | `feat/offline-doubler` | pending |
+| C3 goal hint chip | `feat/goal-hint` | merged (PR #10) |
+| C4 offline doubler placement | `feat/offline-doubler` | in progress |
 | C5 story recap journal | `feat/story-journal` | pending |
 | C6 locale number formatting | `feat/locale-format` | pending |
 | C7 builder story beats + missions | `feat/builder-story` | pending |
@@ -23,14 +23,15 @@ Slices C3+ are cut in priority order; at ~80% budget stop starting new ones.
 
 ## 2. In-progress unit
 
-C3 goal chip on `feat/goal-hint`: `src/game/goals.ts`
-(`nextGoalHint()` — cheapest affordable step among desk/hire/project/
-upgrade/floor/company/country, save-up fallback), UI chip
-(`#goal-chip` in buildSkeleton, `updateGoalChip()` at 2 Hz in
-rebuildTab, `goal:<tab>` action, styles at end of style.css).
-i18n-writer (ui.goal* keys — REQUIRED for compile, GOAL_KEYS is typed
-StringKey) and test-writer (tests/goals.test.ts) running. **Exact next
-step:** on completion, test-runner full run, fix fallout, commit, PR,
+C4 offline doubler on `feat/offline-doubler`: engine
+`offlineDoublerReady`/`claimOfflineDoubler` (+2 additive GameState
+fields with migrate hygiene, no save bump), Welcome-back modal button
+(`double-offline` action, `pendingOfflineEarnings` on UI),
+`OFFLINE_DOUBLER_COOLDOWN_SEC = 20h` in data.ts. Doubled amount counts
+into lifetime totals (missions/reputation) and credits the ACTIVE
+country's wallet (decision, veto-able). i18n-writer (ui.doubler* —
+required for compile) + test-writer (tests/offline-doubler.test.ts)
+running. **Exact next step:** full test-runner run, commit, PR,
 self-merge, verify deploy.
 
 ## 3. Decisions (autonomous, veto-able)

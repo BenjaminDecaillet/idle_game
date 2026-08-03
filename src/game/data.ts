@@ -508,6 +508,14 @@ export const BETA_FREE_IAP = true;
 // Flip to false before testing with real users so sessions are never
 // interrupted by a mid-play reload (docs/decisions.md #17).
 export const BETA_FORCE_REFRESH = true;
+
+// Offline earnings doubler ("Gabriel's blessing"): the Welcome-back modal
+// offers a free ×2 on the earnings just simulated, at most once per
+// cooldown window. Free while in beta — the button doubles as the future
+// rewarded-ad placement (docs/monetization.md), so the habit loop and the
+// placement get measured before any SDK exists. 20 h keeps a forgiving
+// daily cadence (a "daily" that drifts later never gets lost).
+export const OFFLINE_DOUBLER_COOLDOWN_SEC = 20 * 3600;
 export const VSCOIN_PACKS: VsCoinPackDef[] = [
   { id: 'vsc-starter', emoji: '☕', coins: 20 }, // future CHF 2.00
   { id: 'vsc-angel', emoji: '😇', coins: 50 }, // future CHF 4.00

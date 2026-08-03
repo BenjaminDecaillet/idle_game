@@ -103,6 +103,8 @@ import {
   projectUnlockCost,
   upgradeVsCoinCost,
   totalSalaries,
+  claimOfflineDoubler,
+  offlineDoublerReady,
   prestigeMultiplier,
   prestigePreview,
   prestigeReset,
@@ -209,6 +211,8 @@ export class UI {
   private tab: Tab = 'projects';
   private rebuildTimer = 0;
   private officeDirty = true;
+  /** Offline earnings shown by the current Welcome-back modal (doubler). */
+  private pendingOfflineEarnings = 0;
   private sheetSiteId: string | null = null;
   /** Tutorial step currently rendered in the coach card ('' = force redraw). */
   private coachStep: string | null | '' = '';
@@ -628,6 +632,15 @@ export class UI {
   welcomeBack(offlineSec: number, earnings: number): void {
     const zone = document.getElementById('modal-zone');
     if (!zone) return;
+    // The doubler button is the future rewarded-ad slot (free while in
+    // beta): remember what the modal showed so the claim doubles exactly it.
+    this.pendingOfflineEarnings = earnings;
+    const blessing =
+      earnings > 0 && offlineDoublerReady(this.state)
+        ? `<button class="btn btn-primary" data-action="double-offline">
+             😇 ${t('ui.doublerButton')}
+           </button>`
+        : '';
     zone.innerHTML = `
       <div class="modal-backdrop" data-action="close-modal">
         <div class="modal card">
@@ -635,7 +648,8 @@ export class UI {
           <p>While you were away for <strong>${formatDuration(offlineSec)}</strong>,
           your team kept shipping:</p>
           <div class="modal-earnings">+${formatMoney(earnings)}</div>
-          <button class="btn btn-primary" data-action="close-modal">Back to work</button>
+          ${blessing}
+          <button class="btn ${blessing ? '' : 'btn-primary'}" data-action="close-modal">Back to work</button>
         </div>
       </div>`;
   }
@@ -2042,6 +2056,17 @@ export class UI {
           } catch {
             error = 'Invalid save code';
           }
+        }
+        break;
+      }
+      case 'double-offline': {
+        const amount = this.pendingOfflineEarnings;
+        error = claimOfflineDoubler(s, amount);
+        if (!error) {
+          this.pendingOfflineEarnings = 0;
+          const zone = document.getElementById('modal-zone');
+          if (zone) zone.innerHTML = '';
+          this.toast(`😇 ${t('ui.doublerDone', { amount: formatMoney(amount) })}`, 'info');
         }
         break;
       }
