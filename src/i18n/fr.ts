@@ -39,6 +39,7 @@ export const fr: Record<keyof typeof en, string> = {
   'mission.desks': 'Possédez {target} postes de travail',
   'mission.promotions': 'Promouvez des employés {target} fois',
   'mission.countries': 'Implantez-vous dans {target} pays',
+  'mission.builders': 'Agrandissez votre équipe de chantier à {target} ouvriers',
 
   // --- Employés : formation, promotion, avance rapide ----------------------
   'ui.inTraining': 'En formation · +{levels} niveaux dans {time}',
@@ -265,6 +266,10 @@ export const fr: Record<keyof typeof en, string> = {
   'story.first-upgrade.title': 'Investir dans l’équipe',
   'story.first-upgrade.text':
     'Tu as dépensé pour ton équipe plutôt que pour toi. Retiens cette sensation — c’est exactement l’habitude qui bâtit des entreprises dignes de confiance.',
+
+  'story.builders-guild.title': 'Les bâtisseurs arrivent',
+  'story.builders-guild.text':
+    'Un deuxième étage, offert par la maison — et un ouvrier pour le monter, parce qu’un cadeau qu’on ne peut pas utiliser n’est qu’un encombrant. Les empires ne se codent pas seulement, mon ami : ils se bâtissent, coup de marteau après coup de marteau. Embauche d’autres bâtisseurs et regarde plusieurs choses s’élever à la fois.',
 
   'story.debt-first.title': 'Dans le rouge',
   'story.debt-first.text':

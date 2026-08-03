@@ -268,6 +268,10 @@ export const en = {
   'story.first-upgrade.text':
     'You spent money on your people instead of yourself. Remember this feeling — it’s the exact habit that builds companies worth believing in.',
 
+  'story.builders-guild.title': 'The builders arrive',
+  'story.builders-guild.text':
+    'A second floor, on the house — and a worker to raise it, because a gift you can’t use is just clutter. Empires aren’t only coded, my friend: they’re built, hammer by hammer. Hire more builders and watch more things rise at once.',
+
   'story.debt-first.title': 'In the red',
   'story.debt-first.text':
     'Payday came and the account said no. Listen — every founder kisses zero at least once. But debt gathers interest like gossip gathers ears. Ship something, fast.',
