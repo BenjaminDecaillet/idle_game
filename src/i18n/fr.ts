@@ -124,6 +124,19 @@ export const fr: Record<keyof typeof en, string> = {
   // --- Missions UX ----------------------------------------------------------
   'ui.missionComplete': 'Mission accomplie — réclamez vos VsCoin !',
 
+  // --- Puce d’objectif (prochaine action conseillée sous le HUD) --------------
+  // Les chaînes goal.* s’insèrent au milieu de goalNext/goalSave : elles
+  // commencent en minuscule dans toutes les langues.
+  'ui.goalNext': 'Prochaine étape : {goal} — {cost}',
+  'ui.goalSave': 'Économisez {cost} → {goal}',
+  'ui.goal.hire': 'recruter un nouvel employé',
+  'ui.goal.desk': 'acheter un poste de travail',
+  'ui.goal.unlockProject': 'débloquer {name}',
+  'ui.goal.upgrade': 'acheter {name}',
+  'ui.goal.floor': 'ajouter un étage',
+  'ui.goal.country': 's’implanter dans un nouveau pays',
+  'ui.goal.company': 'fonder une société ({name})',
+
   // --- Sociétés : plafonds, créneaux, renommage ------------------------------
   'ui.softCap': 'PLAFOND',
   'ui.softCapHint':
