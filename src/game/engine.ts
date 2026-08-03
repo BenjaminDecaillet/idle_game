@@ -1,5 +1,9 @@
 import {
   AURA_OUTPUT_PER_LEVEL,
+  BUILDER_CASH_COSTS,
+  BUILDER_VSCOIN_BASE,
+  BUILDER_VSCOIN_COSTS,
+  BUILDER_VSCOIN_GROWTH,
   COMPANY_COST_GROWTH,
   COMPANY_SITES,
   COUNTRY_STARTING_MONEY,
@@ -591,6 +595,52 @@ export function workerBusy(company: CompanyState, workerId: number): boolean {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Builder pool — the per-country labour that every timed action occupies
+// ---------------------------------------------------------------------------
+
+/**
+ * Builders occupied right now = every in-flight timed action in the country
+ * (company- and country-level alike). Derived, never stored, so it can never
+ * desync across save/load or offline simulation.
+ */
+export function busyBuilders(country: CountryState): number {
+  let busy = country.timedActions.length;
+  for (const company of country.companies) busy += company.timedActions.length;
+  return busy;
+}
+
+export function freeBuilders(country: CountryState): number {
+  return country.builders.count - busyBuilders(country);
+}
+
+/** Price of the country's next builder: cash early, then VsCoin forever. */
+export function builderCost(country: CountryState): { cash: number } | { vsCoin: number } {
+  const n = country.builders.count + 1; // the builder number being bought
+  const cashIndex = n - 2; // builder #2 = index 0
+  if (cashIndex < BUILDER_CASH_COSTS.length) return { cash: BUILDER_CASH_COSTS[cashIndex] };
+  const vsCoinIndex = cashIndex - BUILDER_CASH_COSTS.length; // builder #4 = index 0
+  if (vsCoinIndex < BUILDER_VSCOIN_COSTS.length) {
+    return { vsCoin: BUILDER_VSCOIN_COSTS[vsCoinIndex] };
+  }
+  return { vsCoin: Math.ceil(BUILDER_VSCOIN_BASE * Math.pow(BUILDER_VSCOIN_GROWTH, n - 5)) };
+}
+
+/** Hire the active country's next builder off the ladder. */
+export function hireBuilder(state: GameState): string | null {
+  const country = activeCountry(state);
+  const price = builderCost(country);
+  if ('cash' in price) {
+    if (country.money < price.cash) return 'Not enough money';
+    country.money -= price.cash;
+  } else {
+    const err = spendVsCoin(state, price.vsCoin, 'shop:builder');
+    if (err) return err;
+  }
+  country.builders.count += 1;
+  return null;
+}
+
 /** The tier a worker gets promoted into (null = already at the top). */
 export function nextTier(worker: WorkerState): string | null {
   const index = WORKER_TIERS.findIndex((t) => t.id === worker.tierId);
@@ -631,6 +681,7 @@ export function trainWorker(state: GameState, workerId: number): string | null {
   if (atSkillCap(worker)) {
     return nextTier(worker) ? 'At skill cap — promote instead' : 'Already at max skill level';
   }
+  if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = trainCost(worker);
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
@@ -661,6 +712,7 @@ export function promoteWorker(state: GameState, workerId: number): string | null
   const to = nextTier(worker);
   if (!to) return 'Already at the top grade';
   if (!atSkillCap(worker)) return 'Not at the skill cap yet';
+  if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = promoteCost(worker)!;
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
@@ -715,6 +767,7 @@ export function upgradeDesk(state: GameState, stationId: number): string | null 
   }
   const to = nextStationDef(station.defId);
   if (!to) return 'Already the best desk';
+  if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = deskUpgradeCost(station.defId)!;
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;

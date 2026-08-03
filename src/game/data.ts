@@ -48,6 +48,14 @@ export const DESK_UPGRADE_COST_FACTOR = 0.8; // × (next.baseCost - current.base
 export const DESK_UPGRADE_DURATION_BASE = 180;
 export const DESK_UPGRADE_DURATION_GROWTH = 2; // ^ target workstation index
 
+// Builder pool ("Workers" in the UI, per country): every in-flight timed
+// action occupies one builder. #1 is Gabriel's free gift; #2-#3 cost cash,
+// #4-#5 VsCoin, #6+ an open-ended exponential VsCoin sink (see balance.md).
+export const BUILDER_CASH_COSTS = [2_500, 250_000]; // builders #2, #3
+export const BUILDER_VSCOIN_COSTS = [8, 15]; // builders #4, #5
+export const BUILDER_VSCOIN_BASE = 12; // #6+: ceil(base × growth^(n-5))
+export const BUILDER_VSCOIN_GROWTH = 1.8;
+
 // Per-company soft cap: a project's reward stops growing at
 // baseReward × site.projectScale × PROJECT_REWARD_CAP_MULT; work growth
 // freezes with it (plateau, not decline) so a single company stalls and the

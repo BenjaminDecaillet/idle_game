@@ -594,6 +594,7 @@ describe('TickEvents: trainingsDone and promotionsDone', () => {
     const worker2 = makeWorker({ id: state.nextEntityId++, tierId: 'junior', skillLevel: 1 });
     c.workers.push(worker1, worker2);
     country.money = 100_000;
+    country.builders.count = 2; // two concurrent trainings need two builders
 
     const duration = trainDurationSec(c, worker1); // both workers same duration
     trainWorker(state, worker1.id);

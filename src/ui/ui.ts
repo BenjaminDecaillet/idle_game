@@ -28,8 +28,11 @@ import {
   allCompanies,
   assignFloorProject,
   atSkillCap,
+  builderCost,
   buyCompany,
   countryUnlockCost,
+  freeBuilders,
+  hireBuilder,
   deskUpgradeCost,
   deskUpgradeDurationSec,
   fastForwardAction,
@@ -1143,6 +1146,22 @@ export class UI {
            ${icon('floor-up', 16)} Add floor ${formatMoney(nextCost)}
          </button>`;
 
+    const country = activeCountry(s);
+    const free = freeBuilders(country);
+    const price = builderCost(country);
+    const canHire = 'cash' in price ? walletMoney(s) >= price.cash : s.vsCoin >= price.vsCoin;
+    const priceLabel =
+      'cash' in price ? formatMoney(price.cash) : `${icon('vscoin', 14)} ${price.vsCoin}`;
+    const builderBar = `
+      <div class="floor-actions" title="${t('ui.builderGiftHint', { name: t('ui.builderGiftName') })}">
+        <span class="${free > 0 ? '' : 'muted'}">👷 <b>${t('ui.builders')}</b> ·
+          ${t('ui.buildersFree', { free, total: country.builders.count })}</span>
+        <button class="btn btn-small ${canHire ? 'btn-primary' : ''}" ${canHire ? '' : 'disabled'}
+                data-action="hire-builder">
+          ${t('ui.hireBuilder')} ${priceLabel}
+        </button>
+      </div>`;
+
     const standing = c.workers
       .filter((w) => w.stationId === null && !workerBusy(c, w.id))
       .map(
@@ -1174,6 +1193,7 @@ export class UI {
         <span class="muted">${c.workstations.length}/${deskCapacity(c)} desks ·
           ${c.floors}/${MAX_FLOORS} floors</span>
       </div>
+      ${builderBar}
       <div class="floor-actions">${floorBtn}</div>
       <div class="building card" style="${officeWallVars(wpId)}">
         <div class="roof-band">${roofDecor(wpId)}</div>
@@ -1632,6 +1652,10 @@ export class UI {
         error = buyFloor(s);
         if (!error) this.toast('⬆️ New floor unlocked!', 'info');
         break;
+      case 'hire-builder':
+        error = hireBuilder(s);
+        if (!error) this.toast(`👷 ${t('ui.hireBuilder')} ✓`, 'info');
+        break;
       case 'buy-wallpaper':
         error = buyWallpaper(s, arg);
         if (!error) this.toast('🎨 Wallpaper unlocked!', 'info');
@@ -1820,7 +1844,9 @@ export class UI {
     }
 
     if (error) {
-      this.toast(error);
+      // Engine errors are either raw text or i18n key ids; lookup() falls
+      // back to the string itself, so both render.
+      this.toast(lookup(error));
     } else if (action !== 'tab' && action !== 'poke') {
       this.fx.click();
       saveGame(this.state);
@@ -1840,7 +1866,7 @@ export class UI {
     if (kind === 'floor-project') {
       const error = assignFloorProject(this.state, Number(arg), el.value === '' ? null : el.value);
       if (error) {
-        this.toast(error);
+        this.toast(lookup(error));
       } else {
         saveGame(this.state);
       }

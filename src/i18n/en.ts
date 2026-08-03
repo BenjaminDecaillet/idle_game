@@ -54,6 +54,15 @@ export const en = {
   'ui.free': 'Free',
   'ui.workerQuit': '{name} quit over unpaid wages!',
 
+  // --- Builder pool (code: builders — displays as "Workers") ----------------
+  'ui.builders': 'Workers',
+  'ui.buildersFree': '{free}/{total} available',
+  'ui.hireBuilder': 'Hire a worker',
+  'ui.builderGiftName': 'Doug Foundations',
+  'ui.builderGiftHint':
+    'Your work crew builds floors, renovates desks and runs the trainings. {name} — your first worker — was a gift from Gabriel.',
+  'error.noFreeBuilders': 'All workers are busy — wait for a job to finish or hire another.',
+
   // --- Desk upgrades --------------------------------------------------------
   'ui.renovations': 'Renovations',
   'ui.upgradeDesk': 'Upgrade',

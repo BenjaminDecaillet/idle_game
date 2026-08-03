@@ -50,6 +50,16 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.free': 'Gratuit',
   'ui.workerQuit': '{name} a démissionné pour salaires impayés !',
 
+  // --- Ouvriers (code : builders — affichés « Ouvriers ») -------------------
+  'ui.builders': 'Ouvriers',
+  'ui.buildersFree': '{free}/{total} disponibles',
+  'ui.hireBuilder': 'Embaucher un ouvrier',
+  'ui.builderGiftName': 'Gérard Fondations',
+  'ui.builderGiftHint':
+    'Votre équipe de chantier construit les étages, rénove les bureaux et anime les formations. {name} — votre premier ouvrier — est un cadeau de Gabriel.',
+  'error.noFreeBuilders':
+    'Tous les ouvriers sont occupés — attendez la fin d’un chantier ou embauchez-en un autre.',
+
   // --- Améliorations de bureaux ---------------------------------------------
   'ui.renovations': 'Rénovations',
   'ui.upgradeDesk': 'Améliorer',

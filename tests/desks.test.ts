@@ -235,6 +235,7 @@ describe('upgradeDesk — completion after tick', () => {
     const desk1Id = c.workstations[0].id;
     const desk2Id = c.workstations[1].id;
 
+    country.builders.count = 2; // two concurrent renovations need two builders
     upgradeDesk(state, desk1Id);
     upgradeDesk(state, desk2Id);
     expect(c.timedActions).toHaveLength(2);

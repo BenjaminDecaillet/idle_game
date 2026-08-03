@@ -10,7 +10,7 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 |---|---|
 | S0 recon + plan + balance numbers | done |
 | S1 state foundations (SAVE_VERSION 9, builders, country timedActions) | done |
-| S2 builder pool gating + purchase ladder | not started |
+| S2 builder pool gating + purchase ladder | done |
 | S3 zero-output rules (desk-upgrade unseat, training/promo verify) | not started |
 | S4 timed floor construction + Gabriel floor gift + freeFastForwards | not started |
 | S5 timed company founding (country-level actions) | not started |
@@ -23,11 +23,13 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 
 ## 2. In-progress unit
 
-None — S1 just landed (v9 committed: `BuilderState`, `CountryState.builders`
-+ `.timedActions`, `floor-build`/`company-build` kinds + `siteId` payload,
-`freeFastForwards`/`floorGiftClaimed`, save.ts hygiene incl. country-level
-action ids, TickEvents entries). Beta-reset notice copy still describes v8 —
-refresh it in S8.
+None — S2 just landed: `busyBuilders`/`freeBuilders`/`builderCost`/
+`hireBuilder` in engine.ts (derived occupancy, ladder per balance.md),
+gating in trainWorker/promoteWorker/upgradeDesk (`'error.noFreeBuilders'`
+key id), builder bar + hire button in the Office tab, error toasts now go
+through `lookup()` so engine can return i18n key ids. Gift builder named
+Doug Foundations / Gérard Fondations. Beta-reset notice copy still
+describes v8 — refresh in S8.
 
 ## 3. Decisions & assumptions (autonomous, veto-able)
 
@@ -49,12 +51,13 @@ refresh it in S8.
 
 ## 4. Next action
 
-S2: `src/game/engine.ts` — add `busyBuilders(country)` /
-`freeBuilders(country)` (derived over company + country timedActions),
-gate the three existing start functions on a free builder, add
-`hireBuilder(state)` + `builderCost(country)` per the Phase W ladder in
-balance.md; constants into `data.ts`; builder counter + hire button in
-`ui.ts` (Office tab header).
+S3: zero-output rules — `engine.ts`: on `upgradeDesk` start, unseat the
+seated worker (`stationId = null`) and make `autoSeat`/`stationMultiplier`
+skip stations under a desk-upgrade action; verify training/promotion
+targets already yield zero output (workerBusy → off floor); regression
+tests in tests/desks.test.ts + timedActions.test.ts; update balance.md
+(desk-upgrade paragraph says the worker keeps working — now false) and
+decisions.md entry 4.
 
 ## 5. Build health
 
