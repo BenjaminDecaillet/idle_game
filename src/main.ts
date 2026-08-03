@@ -1,4 +1,6 @@
 import './style.css';
+import { registerSW } from 'virtual:pwa-register';
+import { BETA_FORCE_REFRESH } from './game/data';
 import { activeCompany, grantBoost, tick, timeSkip } from './game/engine';
 import { loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
@@ -110,6 +112,41 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 window.addEventListener('pagehide', () => saveGame(state));
+
+// ---------------------------------------------------------------------------
+// Service worker updates. The PWA precaches the whole shell, so without an
+// explicit update flow a phone that only ever resumes the installed app can
+// keep serving a stale build indefinitely. While BETA_FORCE_REFRESH is on,
+// re-check for a new service worker aggressively (on focus + every minute)
+// and save + reload the instant an updated worker takes control.
+// ---------------------------------------------------------------------------
+
+registerSW({
+  immediate: true,
+  onRegisteredSW(_url, registration) {
+    if (!BETA_FORCE_REFRESH || !registration) return;
+    const check = (): void => {
+      registration.update().catch(() => {});
+    };
+    setInterval(check, 60_000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') check();
+    });
+  },
+});
+
+if (BETA_FORCE_REFRESH && 'serviceWorker' in navigator) {
+  // Never reload on the very first install (controller flips from null);
+  // only when an update replaces the worker that loaded this page.
+  const hadController = navigator.serviceWorker.controller !== null;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true;
+    saveGame(state);
+    window.location.reload();
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Golden briefcase — a rare, optional tap bonus (classic idle-game "juice").

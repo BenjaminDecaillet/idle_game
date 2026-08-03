@@ -12,6 +12,7 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.gabriel': 'Gabriel',
   'ui.storyTitle': 'Votre histoire',
   'ui.language': 'Langue',
+  'ui.build': 'Version',
   'ui.lang.auto': 'Auto',
   'ui.lang.en': 'English',
   'ui.lang.fr': 'Français',
