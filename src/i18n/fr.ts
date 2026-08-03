@@ -96,6 +96,24 @@ export const fr: Record<keyof typeof en, string> = {
   'shop.pack.ipo.name': 'Cloche d’IPO',
   'shop.pack.ipo.blurb': 'Sonnez-la. Le marché fait le reste.',
 
+  // --- Onglet d’acquisition de VsCoin ---------------------------------------
+  'ui.vscoinTitle': 'Obtenir des VsCoin',
+  'ui.vscoinHint':
+    'Les VsCoin paient les avances rapides, les ouvriers, les levées de fonds et les bonus premium. Vous en gagnez aussi via les missions et votre histoire.',
+  'ui.betaBadge': 'BÊTA',
+  'ui.claimFree': 'Récupérer gratuitement',
+  'ui.vscoinClaimed': '+{coins} VsCoin — profitez-en !',
+  'ui.comingSoon': 'Disponible avec la monétisation',
+  'ui.vscoinBetaNote':
+    'Pendant la bêta, le pack de départ est gratuit et illimité — sans conditions.',
+  'error.iapComingSoon':
+    'Les vrais achats arriveront après la bêta — le pack de départ est offert !',
+  'vscoin.pack.vsc-starter.name': 'Espresso de départ',
+  'vscoin.pack.vsc-angel.name': 'Ailes d’ange',
+  'vscoin.pack.vsc-venture.name': 'Coffre venture',
+  'vscoin.pack.vsc-growth.name': 'Fusée de croissance',
+  'vscoin.pack.vsc-unicorn.name': 'Trésor de licorne',
+
   // --- Améliorations de bureaux ---------------------------------------------
   'ui.renovations': 'Rénovations',
   'ui.upgradeDesk': 'Améliorer',

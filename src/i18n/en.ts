@@ -98,6 +98,23 @@ export const en = {
   'shop.pack.ipo.name': 'IPO bell',
   'shop.pack.ipo.blurb': 'Ring it. The market does the rest.',
 
+  // --- VsCoin acquisition tab -----------------------------------------------
+  'ui.vscoinTitle': 'Get VsCoin',
+  'ui.vscoinHint':
+    'VsCoin buys fast-forwards, workers, funding rounds and premium perks. You also earn it through missions and your story.',
+  'ui.betaBadge': 'BETA',
+  'ui.claimFree': 'Claim free',
+  'ui.vscoinClaimed': '+{coins} VsCoin — enjoy!',
+  'ui.comingSoon': 'Coming with monetization',
+  'ui.vscoinBetaNote':
+    'While the beta runs, the starter pack is free and unlimited — no strings attached.',
+  'error.iapComingSoon': 'Real purchases arrive after the beta — the starter pack is on us!',
+  'vscoin.pack.vsc-starter.name': 'Starter espresso',
+  'vscoin.pack.vsc-angel.name': 'Angel wings',
+  'vscoin.pack.vsc-venture.name': 'Venture vault',
+  'vscoin.pack.vsc-growth.name': 'Growth rocket',
+  'vscoin.pack.vsc-unicorn.name': 'Unicorn hoard',
+
   // --- Desk upgrades --------------------------------------------------------
   'ui.renovations': 'Renovations',
   'ui.upgradeDesk': 'Upgrade',

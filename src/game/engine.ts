@@ -1,5 +1,6 @@
 import {
   AURA_OUTPUT_PER_LEVEL,
+  BETA_FREE_IAP,
   BUILDER_CASH_COSTS,
   BUILDER_VSCOIN_BASE,
   BUILDER_VSCOIN_COSTS,
@@ -65,6 +66,7 @@ import {
   VSCOIN_BOOST_DURATION_SEC,
   VSCOIN_BOOST_MULT,
   VSCOIN_LEDGER_CAP,
+  VSCOIN_PACKS,
   WORKER_TIERS,
   WORLD_OUTPUT_PER_COUNTRY,
   countryDefById,
@@ -72,6 +74,7 @@ import {
   projectDefById,
   shopPackById,
   siteById,
+  vsCoinPackById,
   stationDefById,
   tierById,
   upgradeDefById,
@@ -1658,6 +1661,18 @@ export function shopPackCash(state: GameState, packId: string): number {
 /** Whether the active country has enough companies to unlock a pack. */
 export function shopPackUnlocked(state: GameState, packId: string): boolean {
   return activeCountry(state).companies.length >= shopPackById(packId).requiresCompanies;
+}
+
+/**
+ * Claim a VsCoin acquisition SKU. In beta only the starter pack is
+ * claimable — free and unlimited while BETA_FREE_IAP is true; the larger
+ * packs wait for real payments (their grant will arrive through the
+ * payment callback with source 'iap:<sku>').
+ */
+export function claimVsCoinPack(state: GameState, skuId: string): string | null {
+  const pack = vsCoinPackById(skuId);
+  if (!BETA_FREE_IAP || pack.id !== VSCOIN_PACKS[0].id) return 'error.iapComingSoon';
+  return grantVsCoin(state, pack.coins, `shop:${pack.id}`);
 }
 
 /**

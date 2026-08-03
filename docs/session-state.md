@@ -15,7 +15,7 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 | S4 timed floor construction + Gabriel floor gift + freeFastForwards | done |
 | S5 timed company founding (country-level actions) | done |
 | S6 Shop tab (VsCoin → cash packs) | done |
-| S7 VsCoin tab (BETA_FREE_IAP free starter pack) | not started |
+| S7 VsCoin tab (BETA_FREE_IAP free starter pack) | done |
 | S8 i18n EN+FR | not started |
 | S9 tests | not started |
 | S10 docs + skills updates | not started |
@@ -53,15 +53,13 @@ describes v8 — refresh in S8.
 
 ## 4. Next action
 
-S7: VsCoin tab — `data.ts`: BETA_FREE_IAP = true + VSCOIN_PACKS
-(vsc-starter 20 / vsc-angel 50 / vsc-venture 150 / vsc-growth 400 /
-vsc-unicorn 1000, future CHF prices as comments; VsCoinPackDef already in
-types.ts); `engine.ts` claimVsCoinPack (starter only while BETA_FREE_IAP,
-grantVsCoin 'shop:<sku>', others → 'error.iapComingSoon'); `ui.ts` Tab
-'vscoin' (icon 'vscoin'), renderVsCoinShop(): free starter card with BETA
-badge + claim button ('claim-vscoin:<sku>'), larger packs disabled with
-coming-soon note. i18n EN+FR. Update docs/monetization.md cross-ref.
-NOTE: tab labels stay hardcoded EN like the existing 7 (improvements #16).
+S8: i18n audit — refresh beta-reset notice copy (ui.betaResetTitle/Text
+still describe the v8 update; must mention the v9 workforce/construction/
+shop reset), then i18n-writer audit of all Phase W keys for EN/FR parity
+and tone. Also decide/skip story-beat touchpoints (builder gift intro
+beat? floor gift beat?) — only durable-state triggers allowed
+(add-story-beat skill). Then S9 tests (shop grant/spend ledger, free-pack
+repeatability, builder ladder pricing), S10 docs+skills.
 
 ## 5. Build health
 

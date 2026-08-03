@@ -8,6 +8,7 @@ import type {
   ShopCashPackDef,
   Specialization,
   UpgradeDef,
+  VsCoinPackDef,
   WallpaperDef,
   WorkerTierDef,
   WorkstationDef,
@@ -492,6 +493,27 @@ export const SHOP_CASH_PACKS: ShopCashPackDef[] = [
   { id: 'series-c', emoji: '🏛️', minutes: 100, floorCash: 1_000_000, vsCoin: 40, requiresCompanies: 5 },
   { id: 'ipo', emoji: '🔔', minutes: 240, floorCash: 10_000_000, vsCoin: 75, requiresCompanies: 7 },
 ];
+
+// VsCoin acquisition SKUs (IAP-shaped, payment-provider-ready ids). While
+// BETA_FREE_IAP is true the starter pack is free and unlimited (we want
+// sink telemetry, and the beta reset policy wipes hoards before 1.0);
+// larger packs render disabled. Flipping the flag converts the tab to real
+// SKUs: grants then move from source 'shop:<sku>' to 'iap:<sku>'
+// (docs/monetization.md, Phase 3).
+export const BETA_FREE_IAP = true;
+export const VSCOIN_PACKS: VsCoinPackDef[] = [
+  { id: 'vsc-starter', emoji: '☕', coins: 20 }, // future CHF 2.00
+  { id: 'vsc-angel', emoji: '😇', coins: 50 }, // future CHF 4.00
+  { id: 'vsc-venture', emoji: '💎', coins: 150 }, // future CHF 9.00
+  { id: 'vsc-growth', emoji: '📈', coins: 400 }, // future CHF 19.00
+  { id: 'vsc-unicorn', emoji: '🦄', coins: 1000 }, // future CHF 39.00
+];
+
+export function vsCoinPackById(id: string): VsCoinPackDef {
+  const p = VSCOIN_PACKS.find((p) => p.id === id);
+  if (!p) throw new Error(`Unknown VsCoin pack: ${id}`);
+  return p;
+}
 
 export function shopPackById(id: string): ShopCashPackDef {
   const p = SHOP_CASH_PACKS.find((p) => p.id === id);

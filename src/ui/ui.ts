@@ -1,4 +1,5 @@
 import {
+  BETA_FREE_IAP,
   COMPANY_SITES,
   COUNTRIES,
   FLOOR_CAPACITY,
@@ -14,6 +15,7 @@ import {
   VSCOIN_BOOST_COST,
   VSCOIN_BOOST_DURATION_SEC,
   VSCOIN_BOOST_MULT,
+  VSCOIN_PACKS,
   WALLPAPERS,
   WORKSTATIONS,
   WORLD_OUTPUT_PER_COUNTRY,
@@ -21,6 +23,7 @@ import {
   siteById,
   stationDefById,
   tierById,
+  vsCoinPackById,
 } from '../game/data';
 import {
   activeBoost,
@@ -33,6 +36,7 @@ import {
   buyCompany,
   buyShopPack,
   claimFloorGift,
+  claimVsCoinPack,
   shopPackCash,
   shopPackUnlocked,
   countryUnlockCost,
@@ -167,7 +171,16 @@ const SPEECH_LINES = [
   'TODO: fix later',
 ];
 
-type Tab = 'map' | 'projects' | 'team' | 'office' | 'upgrades' | 'shop' | 'missions' | 'stats';
+type Tab =
+  | 'map'
+  | 'projects'
+  | 'team'
+  | 'office'
+  | 'upgrades'
+  | 'shop'
+  | 'vscoin'
+  | 'missions'
+  | 'stats';
 
 // `icon` overrides the tab-bar icon when a tab has no icon of its own name.
 const TABS: { id: Tab; label: string; icon?: IconName }[] = [
@@ -177,6 +190,7 @@ const TABS: { id: Tab; label: string; icon?: IconName }[] = [
   { id: 'office', label: 'Office' },
   { id: 'upgrades', label: 'Upgrades' },
   { id: 'shop', label: 'Shop', icon: 'coin' },
+  { id: 'vscoin', label: 'VsCoin', icon: 'vscoin' },
   { id: 'missions', label: 'Missions' },
   { id: 'stats', label: 'Stats' },
 ];
@@ -660,6 +674,9 @@ export class UI {
       case 'shop':
         content.innerHTML = this.renderShop();
         break;
+      case 'vscoin':
+        content.innerHTML = this.renderVsCoinShop();
+        break;
       case 'stats':
         content.innerHTML = this.renderStats();
         break;
@@ -710,6 +727,51 @@ export class UI {
         </div>
         <p class="hint">${t('ui.shopHint')}</p>
         ${inDebt ? `<div class="warning-banner">⚠️ ${t('ui.shopDebtNote')}</div>` : ''}
+        ${cards}
+      </div>`;
+  }
+
+  /** VsCoin tab: IAP-shaped SKUs; the starter pack is free during beta. */
+  private renderVsCoinShop(): string {
+    const s = this.state;
+    const cards = VSCOIN_PACKS.map((pack, i) => {
+      const name = lookup(`vscoin.pack.${pack.id}.name`);
+      const freeBeta = BETA_FREE_IAP && i === 0;
+      if (freeBeta) {
+        return `
+        <div class="card">
+          <div class="card-row">
+            <span>${pack.emoji} <b>${name}</b>
+              <span class="badge badge-vscoin">${t('ui.betaBadge')}</span></span>
+            <strong>${icon('vscoin', 16)} ${pack.coins}</strong>
+          </div>
+          <p class="muted">${t('ui.vscoinBetaNote')}</p>
+          <div class="card-row">
+            <span></span>
+            <button class="btn btn-small btn-primary" data-action="claim-vscoin:${pack.id}">
+              🎁 ${t('ui.claimFree')}
+            </button>
+          </div>
+        </div>`;
+      }
+      return `
+        <div class="card">
+          <div class="card-row">
+            <span class="muted">${pack.emoji} <b>${name}</b></span>
+            <span class="muted">${icon('vscoin', 16)} ${pack.coins}</span>
+          </div>
+          <div class="card-row">
+            <span></span>
+            <button class="btn btn-small" disabled>${icon('lock', 14)} ${t('ui.comingSoon')}</button>
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="stack">
+        <div class="section-head"><h2>${icon('vscoin', 20)} ${t('ui.vscoinTitle')}</h2>
+          <span class="muted">${icon('vscoin', 16)} ${formatNumber(s.vsCoin)}</span>
+        </div>
+        <p class="hint">${t('ui.vscoinHint')}</p>
         ${cards}
       </div>`;
   }
@@ -1781,6 +1843,12 @@ export class UI {
         error = hireBuilder(s);
         if (!error) this.toast(`👷 ${t('ui.hireBuilder')} ✓`, 'info');
         break;
+      case 'claim-vscoin': {
+        const coins = vsCoinPackById(arg).coins;
+        error = claimVsCoinPack(s, arg);
+        if (!error) this.toast(`${t('ui.vscoinClaimed', { coins })}`, 'info');
+        break;
+      }
       case 'buy-pack':
         error = buyShopPack(s, arg);
         if (!error) {
