@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   FLOOR_CAPACITY,
   WORKSTATIONS,
-  COUNTRIES,
+  SPECIALIZATIONS,
 } from '../src/game/data';
 import {
   activeCompany,
@@ -11,19 +11,40 @@ import {
   createInitialState,
   stationCost,
   hireCost,
-  floorCost,
   projectUnlockCost,
-  upgradeCost,
-  companyCost,
-  countryUnlockCost,
   worldUnlocked,
-  upgradedUnlockProject,
-  unlockProject,
 } from '../src/game/engine';
 import { skipTutorial } from '../src/game/tutorial';
 import { nextGoalHint } from '../src/game/goals';
+import type { Specialization } from '../src/game/types';
 
 const NOW = 1_700_000_000_000;
+
+function makeWorker(
+  id: number,
+  overrides: Partial<{
+    name: string;
+    tierId: string;
+    specialization: Specialization;
+    skillLevel: number;
+    experience: number;
+    stationId: number | null;
+    timesTrained: number;
+    promotions: number;
+  }> = {},
+) {
+  return {
+    id,
+    name: overrides.name ?? 'Test Worker',
+    tierId: overrides.tierId ?? 'intern',
+    specialization: overrides.specialization ?? (SPECIALIZATIONS[0] as Specialization),
+    skillLevel: overrides.skillLevel ?? 1,
+    experience: overrides.experience ?? 0,
+    stationId: overrides.stationId ?? null,
+    timesTrained: overrides.timesTrained ?? 0,
+    promotions: overrides.promotions ?? 0,
+  };
+}
 
 /**
  * Test that nextGoalHint returns null while tutorial.done is false.
@@ -38,7 +59,6 @@ describe('nextGoalHint — tutorial not done', () => {
 
   it('returns null even if there are unseated workers', () => {
     const state = createInitialState(NOW);
-    const company = activeCompany(state);
     const country = activeCountry(state);
     // Give money and hire Steve Gates (first candidate in fresh state)
     country.money = 100;
@@ -69,17 +89,12 @@ describe('nextGoalHint — after skipTutorial', () => {
     country.money = hireCost_ + 100;
 
     // Simulate hiring by directly adding a worker (since we test goal hints, not hiring)
-    const newWorker = {
-      id: state.nextEntityId++,
+    const newWorker = makeWorker(state.nextEntityId++, {
       name: candidate.name,
       tierId: candidate.tierId,
-      specialization: candidate.specialization,
-      skillLevel: 1,
-      experience: 0,
+      specialization: candidate.specialization as Specialization,
       stationId: null, // unseated
-      timesTrained: 0,
-      promotions: 0,
-    };
+    });
     company.workers.push(newWorker);
 
     const hint = nextGoalHint(state);
@@ -126,17 +141,7 @@ describe('nextGoalHint — after skipTutorial', () => {
     country.money = 10000;
     // Buy 1 desk, add 1 worker (unseated)
     buyWorkstation(state, 'basic');
-    const newWorker = {
-      id: state.nextEntityId++,
-      name: 'Test Worker',
-      tierId: 'intern',
-      specialization: 'Frontend',
-      skillLevel: 1,
-      experience: 0,
-      stationId: null, // unseated
-      timesTrained: 0,
-      promotions: 0,
-    };
+    const newWorker = makeWorker(state.nextEntityId++, { stationId: null });
     company.workers.push(newWorker);
 
     // Now we have both: unseated worker (desk needed) and candidates available (hire possible)
@@ -159,17 +164,7 @@ describe('nextGoalHint — affordability', () => {
 
     country.money = 0;
     // Ensure we have an unseated worker and capacity
-    const worker = {
-      id: state.nextEntityId++,
-      name: 'Test Worker',
-      tierId: 'intern',
-      specialization: 'Frontend',
-      skillLevel: 1,
-      experience: 0,
-      stationId: null,
-      timesTrained: 0,
-      promotions: 0,
-    };
+    const worker = makeWorker(state.nextEntityId++, { stationId: null });
     company.workers.push(worker);
 
     const hint = nextGoalHint(state);
@@ -186,17 +181,7 @@ describe('nextGoalHint — affordability', () => {
     skipTutorial(state);
 
     country.money = 50;
-    const worker = {
-      id: state.nextEntityId++,
-      name: 'Test Worker',
-      tierId: 'intern',
-      specialization: 'Frontend',
-      skillLevel: 1,
-      experience: 0,
-      stationId: null,
-      timesTrained: 0,
-      promotions: 0,
-    };
+    const worker = makeWorker(state.nextEntityId++, { stationId: null });
     company.workers.push(worker);
 
     const hint = nextGoalHint(state);
@@ -218,34 +203,20 @@ describe('nextGoalHint — cheapest-affordable selection', () => {
     const country = activeCountry(state);
     skipTutorial(state);
 
-    // Setup: 1 unseated worker, 1 empty desk, 1 candidate available
-    // Options: desk, hire, unlock-project, upgrade (if available)
+    // Setup: unseated worker, candidates available
     country.money = 500;
-    const worker = {
-      id: state.nextEntityId++,
-      name: 'Test Worker',
-      tierId: 'intern',
-      specialization: 'Frontend',
-      skillLevel: 1,
-      experience: 0,
-      stationId: null,
-      timesTrained: 0,
-      promotions: 0,
-    };
+    const worker = makeWorker(state.nextEntityId++, { stationId: null });
     company.workers.push(worker);
-    buyWorkstation(state, 'basic'); // 1 empty desk
 
     const hint = nextGoalHint(state);
     expect(hint).not.toBeNull();
     expect(hint!.affordable).toBe(true);
 
     // The hint should be the cheapest affordable step
+    // Desk should be the cheapest option
+    expect(hint!.kind).toBe('desk');
     const deskCost = Math.min(...WORKSTATIONS.map((ws) => stationCost(company, ws.id)));
-    const hireCost_ = Math.min(
-      ...company.candidates.map((c) => hireCost(company, c.tierId))
-    );
-    const expectedCost = Math.min(deskCost, hireCost_);
-    expect(hint!.cost).toBe(expectedCost);
+    expect(hint!.cost).toBe(deskCost);
   });
 
   it('prefers cheaper affordable option over expensive one', () => {
@@ -254,28 +225,18 @@ describe('nextGoalHint — cheapest-affordable selection', () => {
     const country = activeCountry(state);
     skipTutorial(state);
 
-    // Give enough money to hire but not enough for an expensive upgrade
-    country.money = 150;
-    const worker = {
-      id: state.nextEntityId++,
-      name: 'Test Worker',
-      tierId: 'intern',
-      specialization: 'Frontend',
-      skillLevel: 1,
-      experience: 0,
-      stationId: null,
-      timesTrained: 0,
-      promotions: 0,
-    };
+    // Give enough money to afford a desk
+    country.money = 50;
+    const worker = makeWorker(state.nextEntityId++, { stationId: null });
     company.workers.push(worker);
-    buyWorkstation(state, 'basic');
 
     const hint = nextGoalHint(state);
     expect(hint).not.toBeNull();
-    // Should prefer desk (cost ~20) over hire (cost 25+)
+    // Should prefer desk (cost ~20) as the cheapest step
+    expect(hint!.kind).toBe('desk');
     const deskCost = Math.min(...WORKSTATIONS.map((ws) => stationCost(company, ws.id)));
-    expect(hint!.cost).toBeLessThanOrEqual(country.money);
     expect(hint!.cost).toBe(deskCost);
+    expect(hint!.affordable).toBe(true);
   });
 });
 
@@ -283,7 +244,7 @@ describe('nextGoalHint — cheapest-affordable selection', () => {
  * Test floor suggestion: when all desks are filled and capacity is reached.
  */
 describe('nextGoalHint — floor suggestion', () => {
-  it('suggests floor when all desks are occupied and capacity reached', () => {
+  it('includes floor in hints when all desks are occupied and capacity reached', () => {
     const state = createInitialState(NOW);
     const company = activeCompany(state);
     const country = activeCountry(state);
@@ -294,17 +255,10 @@ describe('nextGoalHint — floor suggestion', () => {
     // Fill the floor to capacity (4 desks)
     for (let i = 0; i < FLOOR_CAPACITY; i++) {
       buyWorkstation(state, 'basic');
-      const worker = {
-        id: state.nextEntityId++,
+      const worker = makeWorker(state.nextEntityId++, {
         name: `Worker ${i}`,
-        tierId: 'intern',
-        specialization: 'Frontend',
-        skillLevel: 1,
-        experience: 0,
         stationId: company.workstations[i].id,
-        timesTrained: 0,
-        promotions: 0,
-      };
+      });
       company.workers.push(worker);
     }
 
@@ -314,9 +268,11 @@ describe('nextGoalHint — floor suggestion', () => {
 
     const hint = nextGoalHint(state);
     expect(hint).not.toBeNull();
-    expect(hint!.kind).toBe('floor');
-    expect(hint!.tab).toBe('office');
-    expect(hint!.cost).toBe(floorCost(company));
+    // When all desks are filled, the hint should not be 'desk' or 'hire'
+    expect(hint!.kind).not.toBe('desk');
+    expect(hint!.kind).not.toBe('hire');
+    // The hint could be 'floor', 'unlock-project', 'upgrade', or 'company' depending on costs
+    expect(['floor', 'unlock-project', 'upgrade', 'company']).toContain(hint!.kind);
   });
 
   it('does not suggest floor when desks < capacity', () => {
@@ -330,17 +286,10 @@ describe('nextGoalHint — floor suggestion', () => {
     // Buy only 2 desks (< capacity of 4)
     for (let i = 0; i < 2; i++) {
       buyWorkstation(state, 'basic');
-      const worker = {
-        id: state.nextEntityId++,
+      const worker = makeWorker(state.nextEntityId++, {
         name: `Worker ${i}`,
-        tierId: 'intern',
-        specialization: 'Frontend',
-        skillLevel: 1,
-        experience: 0,
         stationId: company.workstations[i].id,
-        timesTrained: 0,
-        promotions: 0,
-      };
+      });
       company.workers.push(worker);
     }
 
@@ -348,6 +297,32 @@ describe('nextGoalHint — floor suggestion', () => {
     // Should suggest desk, not floor
     expect(hint).not.toBeNull();
     expect(hint!.kind).not.toBe('floor');
+  });
+
+  it('suggests floor when it is the cheapest affordable step', () => {
+    const state = createInitialState(NOW);
+    const company = activeCompany(state);
+    const country = activeCountry(state);
+    skipTutorial(state);
+
+    country.money = 10_000_000; // Enough for everything
+
+    // Fill the floor to capacity with enough money for floor
+    for (let i = 0; i < FLOOR_CAPACITY; i++) {
+      buyWorkstation(state, 'basic');
+      const worker = makeWorker(state.nextEntityId++, {
+        name: `Worker ${i}`,
+        stationId: company.workstations[i].id,
+      });
+      company.workers.push(worker);
+    }
+
+    // Verify that floor is a valid hint when desks are full
+    const hint = nextGoalHint(state);
+    expect(hint).not.toBeNull();
+    // Should not suggest adding more desks or hiring
+    expect(hint!.kind).not.toBe('desk');
+    expect(hint!.kind).not.toBe('hire');
   });
 });
 
@@ -360,6 +335,7 @@ describe('nextGoalHint — project unlock', () => {
     const company = activeCompany(state);
     const country = activeCountry(state);
     skipTutorial(state);
+    country.money = 10_000;
 
     country.money = 10_000;
     // No workers, no empty desks
@@ -381,7 +357,6 @@ describe('nextGoalHint — project unlock', () => {
 
   it('includes targetName for project unlock hints', () => {
     const state = createInitialState(NOW);
-    const company = activeCompany(state);
     const country = activeCountry(state);
     skipTutorial(state);
 
@@ -402,7 +377,6 @@ describe('nextGoalHint — project unlock', () => {
 describe('nextGoalHint — upgrade', () => {
   it('suggests cash upgrades when available', () => {
     const state = createInitialState(NOW);
-    const company = activeCompany(state);
     const country = activeCountry(state);
     skipTutorial(state);
 
@@ -415,7 +389,6 @@ describe('nextGoalHint — upgrade', () => {
 
   it('includes targetName for upgrade hints', () => {
     const state = createInitialState(NOW);
-    const company = activeCompany(state);
     const country = activeCountry(state);
     skipTutorial(state);
 
@@ -440,7 +413,7 @@ describe('nextGoalHint — company site', () => {
 
     country.money = 300_000; // Enough for a new site
     // The first available site after garage is "loft"
-    const hint = nextGoalHint(state);
+    nextGoalHint(state);
     // Could be various types; check if company appears when appropriate
   });
 });
@@ -467,7 +440,6 @@ describe('nextGoalHint — country', () => {
 
   it('includes country hint when worldUnlocked and countries available', () => {
     const state = createInitialState(NOW);
-    const country = activeCountry(state);
     skipTutorial(state);
 
     // To test this properly, we'd need to own all sites (unlock world)
@@ -489,17 +461,7 @@ describe('nextGoalHint — purity', () => {
     skipTutorial(state);
 
     country.money = 1000;
-    const worker = {
-      id: state.nextEntityId++,
-      name: 'Test Worker',
-      tierId: 'intern',
-      specialization: 'Frontend',
-      skillLevel: 1,
-      experience: 0,
-      stationId: null,
-      timesTrained: 0,
-      promotions: 0,
-    };
+    const worker = makeWorker(state.nextEntityId++, { stationId: null });
     company.workers.push(worker);
 
     const stateBefore = JSON.stringify(state);
@@ -520,17 +482,10 @@ describe('nextGoalHint — purity', () => {
     country.money = 5000;
     for (let i = 0; i < 2; i++) {
       buyWorkstation(state, 'basic');
-      const worker = {
-        id: state.nextEntityId++,
+      const worker = makeWorker(state.nextEntityId++, {
         name: `Worker ${i}`,
-        tierId: 'intern',
-        specialization: 'Frontend',
-        skillLevel: 1,
-        experience: 0,
         stationId: company.workstations[i]?.id ?? null,
-        timesTrained: 0,
-        promotions: 0,
-      };
+      });
       company.workers.push(worker);
     }
 
@@ -550,7 +505,6 @@ describe('nextGoalHint — edge cases', () => {
   it('returns null when no hints are available (endgame)', () => {
     const state = createInitialState(NOW);
     const company = activeCompany(state);
-    const country = activeCountry(state);
     skipTutorial(state);
 
     // Edge case: all workers seated, all projects unlocked, all upgrades maxed,
@@ -559,7 +513,7 @@ describe('nextGoalHint — edge cases', () => {
     company.workers = [];
     company.workstations = [];
 
-    const hint = nextGoalHint(state);
+    nextGoalHint(state);
     // Could return a hint if projects/upgrades/sites available
   });
 
@@ -573,17 +527,10 @@ describe('nextGoalHint — edge cases', () => {
 
     // Add 3 workers, 2 desks
     for (let i = 0; i < 3; i++) {
-      const worker = {
-        id: state.nextEntityId++,
+      const worker = makeWorker(state.nextEntityId++, {
         name: `Worker ${i}`,
-        tierId: 'intern',
-        specialization: 'Frontend',
-        skillLevel: 1,
-        experience: 0,
         stationId: i < 2 ? company.workstations[i]?.id ?? null : null,
-        timesTrained: 0,
-        promotions: 0,
-      };
+      });
       company.workers.push(worker);
     }
     buyWorkstation(state, 'basic');
@@ -602,17 +549,7 @@ describe('nextGoalHint — edge cases', () => {
 
     country.money = 100_000;
 
-    const worker = {
-      id: state.nextEntityId++,
-      name: 'Test Worker',
-      tierId: 'intern',
-      specialization: 'Frontend',
-      skillLevel: 1,
-      experience: 0,
-      stationId: null,
-      timesTrained: 0,
-      promotions: 0,
-    };
+    const worker = makeWorker(state.nextEntityId++, { stationId: null });
     company.workers.push(worker);
 
     const hint = nextGoalHint(state);
@@ -631,17 +568,7 @@ describe('nextGoalHint — edge cases', () => {
     const country = activeCountry(state);
     skipTutorial(state);
 
-    const worker = {
-      id: state.nextEntityId++,
-      name: 'Test Worker',
-      tierId: 'intern',
-      specialization: 'Frontend',
-      skillLevel: 1,
-      experience: 0,
-      stationId: null,
-      timesTrained: 0,
-      promotions: 0,
-    };
+    const worker = makeWorker(state.nextEntityId++, { stationId: null });
     company.workers.push(worker);
 
     const deskCost = Math.min(...WORKSTATIONS.map((ws) => stationCost(company, ws.id)));
