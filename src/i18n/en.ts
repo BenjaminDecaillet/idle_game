@@ -63,6 +63,17 @@ export const en = {
     'Your work crew builds floors, renovates desks and runs the trainings. {name} — your first worker — was a gift from Gabriel.',
   'error.noFreeBuilders': 'All workers are busy — wait for a job to finish or hire another.',
 
+  // --- Floor construction ---------------------------------------------------
+  'ui.floorBuilding': 'Floor {floor} under construction · done in {time}',
+  'ui.floorBuildingShort': 'Under construction',
+  'ui.builderOnSite': '1 worker on site',
+  'ui.floorBuildStarted': 'Construction started!',
+  'ui.floorBuilt': 'New floor ready!',
+  'ui.floorGift': 'Claim Gabriel’s gift: a free second floor',
+  'ui.floorGiftClaimed': 'Gabriel built you a floor — and left a free fast-forward!',
+  'error.floorAlreadyBuilding': 'A floor is already under construction.',
+  'error.floorGiftUnavailable': 'Gabriel’s gift isn’t available here.',
+
   // --- Desk upgrades --------------------------------------------------------
   'ui.renovations': 'Renovations',
   'ui.upgradeDesk': 'Upgrade',

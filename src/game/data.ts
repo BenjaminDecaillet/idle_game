@@ -48,6 +48,13 @@ export const DESK_UPGRADE_COST_FACTOR = 0.8; // × (next.baseCost - current.base
 export const DESK_UPGRADE_DURATION_BASE = 180;
 export const DESK_UPGRADE_DURATION_GROWTH = 2; // ^ target workstation index
 
+// Floor construction: floors are paid up front and built over time by a
+// builder. Duration ramps with the floor being built and with the company's
+// index in its country (later companies build slower — see balance.md).
+export const FLOOR_BUILD_DURATION_BASE = 600; // 10 min — the cheapest floor
+export const FLOOR_BUILD_FLOOR_GROWTH = 1.5; // ^ (floorIndex − 2)
+export const FLOOR_BUILD_COMPANY_GROWTH = 1.15; // ^ company index in country
+
 // Builder pool ("Workers" in the UI, per country): every in-flight timed
 // action occupies one builder. #1 is Gabriel's free gift; #2-#3 cost cash,
 // #4-#5 VsCoin, #6+ an open-ended exponential VsCoin sink (see balance.md).

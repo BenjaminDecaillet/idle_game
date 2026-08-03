@@ -12,7 +12,7 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 | S1 state foundations (SAVE_VERSION 9, builders, country timedActions) | done |
 | S2 builder pool gating + purchase ladder | done |
 | S3 zero-output rules (desk-upgrade unseat, training/promo verify) | done |
-| S4 timed floor construction + Gabriel floor gift + freeFastForwards | not started |
+| S4 timed floor construction + Gabriel floor gift + freeFastForwards | done |
 | S5 timed company founding (country-level actions) | not started |
 | S6 Shop tab (VsCoin → cash packs) | not started |
 | S7 VsCoin tab (BETA_FREE_IAP free starter pack) | not started |
@@ -23,12 +23,14 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 
 ## 2. In-progress unit
 
-None — S3 just landed: `stationUnderUpgrade()` helper, stationMultiplier
-returns 0 for desks under renovation, autoSeat skips them, upgradeDesk
-unseats via autoSeat; training/promotion verified zero-output; regression
-tests incl. offline parity (359 tests). decisions.md entries 15+16,
-balance.md desk-upgrade paragraph revised. Beta-reset notice copy still
-describes v8 — refresh in S8.
+None — S4 just landed: buyFloor starts a 'floor-build' timed action
+(pay up front, one per company, builder-gated), completion adds the floor
++ floorBuildsDone event/toast; floorBuildDurationSec ramp; Gabriel's
+floorGift (claim button, first company of first country, floors 1→2 +
+freeFastForwards credit consumed by fastForwardAction when the tutorial
+first-free isn't in play); Office tab shows scaffolding block +
+progress/👷/ff card. 371 tests. Beta-reset notice copy still describes
+v8 — refresh in S8.
 
 ## 3. Decisions & assumptions (autonomous, veto-able)
 
@@ -50,15 +52,16 @@ describes v8 — refresh in S8.
 
 ## 4. Next action
 
-S4: timed floor construction — `data.ts`: FLOOR_BUILD_DURATION_BASE 600,
-FLOOR_BUILD_FLOOR_GROWTH 1.5, FLOOR_BUILD_COMPANY_GROWTH 1.15. `engine.ts`:
-`floorBuildDurationSec`, `floorUnderConstruction`, buyFloor → starts
-'floor-build' (targetId = company.id, gated on builder + one-at-a-time),
-completion case adds the floor + floorBuildsDone event; `claimFloorGift`
-(first company of countries[0], floors===1, sets floorGiftClaimed, floors=2,
-freeFastForwards+=1); fastForwardCost free while freeFastForwards>0
-(consumed in fastForwardAction when fastForwardsUsed>0). Office tab:
-construction banner with progress/remaining/👷/ff button + gift button.
+S5: timed company founding — `data.ts`: COMPANY_BUILD_DURATION_BASE 600,
+COMPANY_BUILD_DURATION_GROWTH 1.6. `engine.ts`: `companyBuildDurationSec`
+(instant when country has 0 companies), `siteUnderConstruction(country,
+siteId)`, buyCompany → pushes 'company-build' onto country.timedActions
+(targetId 0, siteId + price payload, builder-gated); tickCountry counts
+down country.timedActions and calls new `completeCountryTimedAction`
+(createCompany + nextParodyName + companyBuildsDone event, NO active-
+company switch); fastForwardAction searches country.timedActions too;
+companyCost/availableSites count pending builds. Map tab: site sheet +
+map status show construction w/ progress + ff. main.ts toast on done.
 
 ## 5. Build health
 

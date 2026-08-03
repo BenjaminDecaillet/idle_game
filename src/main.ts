@@ -67,6 +67,12 @@ function loop(now: number): void {
     }
   }
   if (events.deskUpgradesDone.length > 0) ui.officeNeedsRebuild();
+  for (const done of events.floorBuildsDone) {
+    ui.officeNeedsRebuild();
+    if (done.companyId === shownCompanyId) {
+      ui.toast(`🏗️ ${t('ui.floorBuilt')}`, 'info');
+    }
+  }
   for (const quit of events.quits) {
     ui.officeNeedsRebuild();
     ui.toast(`😞 ${t('ui.workerQuit', { name: quit.name })}`, 'error');

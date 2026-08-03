@@ -30,7 +30,10 @@ import {
   atSkillCap,
   builderCost,
   buyCompany,
+  claimFloorGift,
   countryUnlockCost,
+  floorGiftAvailable,
+  floorUnderConstruction,
   freeBuilders,
   hireBuilder,
   deskUpgradeCost,
@@ -1139,9 +1142,44 @@ export class UI {
     }
     const atMax = c.floors >= MAX_FLOORS;
     const nextCost = floorCost(c);
-    const floorBtn = atMax
-      ? `<span class="muted">🏁 Max height reached</span>`
-      : `<button class="btn ${walletMoney(s) >= nextCost ? 'btn-primary' : ''}"
+    const building = floorUnderConstruction(c);
+    if (building) {
+      // The rising floor tops the building as scaffolding while it builds.
+      floorBlocks.unshift(`
+        <div class="floor-block" style="opacity:.65">
+          <div class="floor-wall">
+            <span class="floor-label">🏗️ ${t('ui.floorBuildingShort')}</span>
+          </div>
+        </div>`);
+    }
+    const buildPct = building
+      ? Math.min(100, (1 - building.remainingSec / building.totalSec) * 100)
+      : 0;
+    const buildFfCost = building ? fastForwardCost(s, building) : 0;
+    const floorBtn = building
+      ? `<div class="card" style="flex:1">
+           <div class="card-row">
+             <span>🏗️ ${t('ui.floorBuilding', {
+               floor: c.floors + 1,
+               time: formatDuration(building.remainingSec),
+             })} · 👷 ${t('ui.builderOnSite')}</span>
+             <button class="btn btn-small btn-primary"
+                     ${buildFfCost === 0 || s.vsCoin >= buildFfCost ? '' : 'disabled'}
+                     data-action="fast-forward:${building.id}">
+               ⚡ ${buildFfCost === 0 ? t('ui.free') : `${icon('vscoin', 14)} ${buildFfCost}`}
+             </button>
+           </div>
+           <div class="progress mini training">
+             <div class="progress-fill" style="width:${buildPct}%"></div>
+           </div>
+         </div>`
+      : atMax
+        ? `<span class="muted">🏁 Max height reached</span>`
+        : floorGiftAvailable(s)
+          ? `<button class="btn btn-primary" data-action="claim-floor-gift">
+               🎁 ${t('ui.floorGift')}
+             </button>`
+          : `<button class="btn ${walletMoney(s) >= nextCost ? 'btn-primary' : ''}"
                  ${walletMoney(s) >= nextCost ? '' : 'disabled'} data-action="buy-floor">
            ${icon('floor-up', 16)} Add floor ${formatMoney(nextCost)}
          </button>`;
@@ -1650,7 +1688,11 @@ export class UI {
         break;
       case 'buy-floor':
         error = buyFloor(s);
-        if (!error) this.toast('⬆️ New floor unlocked!', 'info');
+        if (!error) this.toast(`🏗️ ${t('ui.floorBuildStarted')}`, 'info');
+        break;
+      case 'claim-floor-gift':
+        error = claimFloorGift(s);
+        if (!error) this.toast(`🎁 ${t('ui.floorGiftClaimed')}`, 'info');
         break;
       case 'hire-builder':
         error = hireBuilder(s);

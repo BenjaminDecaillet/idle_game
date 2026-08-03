@@ -60,6 +60,17 @@ export const fr: Record<keyof typeof en, string> = {
   'error.noFreeBuilders':
     'Tous les ouvriers sont occupés — attendez la fin d’un chantier ou embauchez-en un autre.',
 
+  // --- Construction d’étages ------------------------------------------------
+  'ui.floorBuilding': 'Étage {floor} en construction · terminé dans {time}',
+  'ui.floorBuildingShort': 'En construction',
+  'ui.builderOnSite': '1 ouvrier sur le chantier',
+  'ui.floorBuildStarted': 'Chantier lancé !',
+  'ui.floorBuilt': 'Nouvel étage prêt !',
+  'ui.floorGift': 'Réclamer le cadeau de Gabriel : un 2ᵉ étage gratuit',
+  'ui.floorGiftClaimed': 'Gabriel vous a construit un étage — avec une avance rapide gratuite !',
+  'error.floorAlreadyBuilding': 'Un étage est déjà en construction.',
+  'error.floorGiftUnavailable': 'Le cadeau de Gabriel n’est pas disponible ici.',
+
   // --- Améliorations de bureaux ---------------------------------------------
   'ui.renovations': 'Rénovations',
   'ui.upgradeDesk': 'Améliorer',

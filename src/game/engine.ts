@@ -23,6 +23,9 @@ import {
   FASTFORWARD_SEC_PER_VSCOIN,
   FIRST_NAMES,
   FLOOR_BASE_COST,
+  FLOOR_BUILD_COMPANY_GROWTH,
+  FLOOR_BUILD_DURATION_BASE,
+  FLOOR_BUILD_FLOOR_GROWTH,
   FLOOR_CAPACITY,
   FLOOR_COST_GROWTH,
   LAST_NAMES,
@@ -552,6 +555,25 @@ export function floorCost(company: CompanyState): number {
   );
 }
 
+/** The company's in-flight floor construction, if any (one at a time). */
+export function floorUnderConstruction(company: CompanyState): TimedAction | null {
+  return company.timedActions.find((a) => a.kind === 'floor-build') ?? null;
+}
+
+/** Build time of the company's next floor (ramps per floor and company). */
+export function floorBuildDurationSec(country: CountryState, company: CompanyState): number {
+  const floorIndex = company.floors + 1; // the floor being built (2..MAX_FLOORS)
+  const companyIndex = Math.max(
+    0,
+    country.companies.findIndex((c) => c.id === company.id),
+  );
+  return (
+    FLOOR_BUILD_DURATION_BASE *
+    Math.pow(FLOOR_BUILD_FLOOR_GROWTH, floorIndex - 2) *
+    Math.pow(FLOOR_BUILD_COMPANY_GROWTH, companyIndex)
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Training, promotion & desk upgrades (all generic timed actions)
 // ---------------------------------------------------------------------------
@@ -801,6 +823,7 @@ export function upgradeDesk(state: GameState, stationId: number): string | null 
  */
 export function fastForwardCost(state: GameState, action: TimedAction): number {
   if (state.fastForwardsUsed === 0) return 0;
+  if (state.freeFastForwards > 0) return 0; // Gabriel's gift credits
   return Math.max(1, Math.ceil(action.remainingSec / FASTFORWARD_SEC_PER_VSCOIN));
 }
 
@@ -813,6 +836,8 @@ export function fastForwardAction(state: GameState, actionId: number): string | 
     if (cost > 0) {
       const err = spendVsCoin(state, cost, `shop:fast-forward-${action.kind}`);
       if (err) return err;
+    } else if (state.fastForwardsUsed > 0 && state.freeFastForwards > 0) {
+      state.freeFastForwards -= 1; // the tutorial freebie takes precedence
     }
     state.fastForwardsUsed += 1;
     company.timedActions = company.timedActions.filter((a) => a.id !== actionId);
@@ -870,6 +895,11 @@ function completeTimedAction(
         newDefId: station.defId,
       });
       autoSeat(company); // best workers migrate to the improved desk
+      return;
+    }
+    case 'floor-build': {
+      company.floors = Math.min(MAX_FLOORS, company.floors + 1);
+      events.floorBuildsDone.push({ companyId: company.id, floors: company.floors });
       return;
     }
   }
@@ -1218,15 +1248,55 @@ export function buyWorkstation(state: GameState, defId: string): string | null {
   return null;
 }
 
-/** Unlock the next floor of the active company's building. */
+/**
+ * Start building the next floor of the active company's building: paid up
+ * front, raised by a builder over floorBuildDurationSec, the floor exists
+ * only on completion.
+ */
 export function buyFloor(state: GameState): string | null {
   const country = activeCountry(state);
   const company = activeCompany(state);
   if (company.floors >= MAX_FLOORS) return 'Building is already at max height';
+  if (floorUnderConstruction(company)) return 'error.floorAlreadyBuilding';
+  if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = floorCost(company);
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
-  company.floors += 1;
+  const duration = floorBuildDurationSec(country, company);
+  company.timedActions.push({
+    id: state.nextEntityId++,
+    kind: 'floor-build',
+    targetId: company.id,
+    remainingSec: duration,
+    totalSec: duration,
+  });
+  return null;
+}
+
+/**
+ * Gabriel's once-per-game floor gift: available on the second floor of the
+ * player's very first company (first country, first company) only.
+ */
+export function floorGiftAvailable(state: GameState): boolean {
+  if (state.floorGiftClaimed) return false;
+  const firstCountry = state.countries[0];
+  if (!firstCountry || state.activeCountryId !== firstCountry.id) return false;
+  const company = activeCompany(state);
+  if (firstCountry.companies[0]?.id !== company.id) return false;
+  return company.floors === 1 && !floorUnderConstruction(company);
+}
+
+/**
+ * Claim Gabriel's gift: the second floor appears instantly and free, and a
+ * free fast-forward credit comes with it (teaching the skip mechanic).
+ * Both effects are durable counters, so offline simulation is unaffected.
+ */
+export function claimFloorGift(state: GameState): string | null {
+  if (!floorGiftAvailable(state)) return 'error.floorGiftUnavailable';
+  const company = activeCompany(state);
+  company.floors = 2;
+  state.floorGiftClaimed = true;
+  state.freeFastForwards += 1;
   return null;
 }
 
