@@ -164,6 +164,8 @@ export interface TimedAction {
   toDefId?: string;
   /** company-build: the map site the new company rises on. */
   siteId?: string;
+  /** company-build: what founding cost (floor for rename pricing later). */
+  price?: number;
 }
 
 export interface WorkerState {

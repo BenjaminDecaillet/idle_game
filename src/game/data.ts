@@ -55,6 +55,12 @@ export const FLOOR_BUILD_DURATION_BASE = 600; // 10 min — the cheapest floor
 export const FLOOR_BUILD_FLOOR_GROWTH = 1.5; // ^ (floorIndex − 2)
 export const FLOOR_BUILD_COMPANY_GROWTH = 1.15; // ^ company index in country
 
+// Company founding: pay on start, the base office rises over time. Ramps
+// with the companies already founded in the country; the country's first
+// company (the garage) is instant (see balance.md).
+export const COMPANY_BUILD_DURATION_BASE = 600;
+export const COMPANY_BUILD_DURATION_GROWTH = 1.6; // ^ companies founded
+
 // Builder pool ("Workers" in the UI, per country): every in-flight timed
 // action occupies one builder. #1 is Gabriel's free gift; #2-#3 cost cash,
 // #4-#5 VsCoin, #6+ an open-ended exponential VsCoin sink (see balance.md).

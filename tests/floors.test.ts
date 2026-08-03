@@ -23,6 +23,7 @@ import {
   floorGiftAvailable,
   floorUnderConstruction,
   simulateOffline,
+  siteUnderConstruction,
   tick,
   trainWorker,
 } from '../src/game/engine';
@@ -30,6 +31,15 @@ import { migrate } from '../src/game/save';
 import type { WorkerState, WorkstationState } from '../src/game/types';
 
 const NOW = 1_700_000_000_000;
+
+/** Helper: after buyCompany, complete the build. */
+function completeBuild(state: any, siteId: string): any {
+  const country = activeCountry(state);
+  const action = siteUnderConstruction(country, siteId);
+  if (!action) return country.companies.find((c) => c.siteId === siteId);
+  tick(state, action.remainingSec + 1);
+  return country.companies.find((c) => c.siteId === siteId)!;
+}
 
 describe('company building structure', () => {
   it('new company starts with 1 floor and deskCapacity === FLOOR_CAPACITY', () => {
@@ -192,7 +202,8 @@ describe('floorCost — growth and site scaling', () => {
     const loftSite = COMPANY_SITES.find((s) => s.id === 'loft')!;
     country.money = loftSite.cost;
     buyCompany(state, 'loft');
-    const loft = activeCompany(state);
+    completeBuild(state, 'loft');
+    const loft = activeCountry(state).companies.find((c) => c.siteId === 'loft')!;
 
     const loftCost = floorCost(loft);
     expect(loftCost).toBe(

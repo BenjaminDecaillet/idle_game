@@ -71,6 +71,12 @@ export const fr: Record<keyof typeof en, string> = {
   'error.floorAlreadyBuilding': 'Un étage est déjà en construction.',
   'error.floorGiftUnavailable': 'Le cadeau de Gabriel n’est pas disponible ici.',
 
+  // --- Fondation de sociétés ------------------------------------------------
+  'ui.siteBuilding': 'En construction · ouverture dans {time}',
+  'ui.companyBuildStarted': 'Équipe de chantier envoyée !',
+  'ui.companyBuilt': '{name} ouvre ses portes !',
+  'error.siteAlreadyBuilding': 'Une société est déjà en construction à cet endroit.',
+
   // --- Améliorations de bureaux ---------------------------------------------
   'ui.renovations': 'Rénovations',
   'ui.upgradeDesk': 'Améliorer',

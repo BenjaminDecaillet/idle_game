@@ -66,6 +66,19 @@ be revisited cheaply.
     at 1 (Gabriel's named gift, `ui.builderGiftName`) so early trainings
     are never blocked; parallelism is what the ladder sells (cash → VsCoin
     → open-ended VsCoin sink, see balance.md Phase W).
+15b. **company-build lives on `CountryState.timedActions`** (Phase W): a
+    company under construction has no `CompanyState` to carry its action,
+    so country-level actions were preferred over a pending-companies list —
+    they reuse the exact countdown/completion/fast-forward machinery
+    (tickCountry runs both loops; `completeCountryTimedAction` is the
+    country-level sibling of `completeTimedAction`). The action stores
+    `siteId` + `price`; the parody name is drawn on completion. Founding
+    escalation (`companyCost`) counts pending builds so parallel starts
+    can't dodge it; `availableSites` hides sites under construction.
+    Completion does NOT switch `activeCompanyId` — a build finishing
+    mid-play or offline must not yank the player to another office; the
+    map + `companyBuildsDone` toast surface the opening. A country's first
+    company stays instant (tutorial + prestige restarts).
 16. **Nothing produces while it is being worked on** (Phase W, reverses
     the desk half of decision 4): a desk under renovation is a construction
     site — its employee is auto-unseated on start, autoSeat never seats

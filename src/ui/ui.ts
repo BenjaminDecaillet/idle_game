@@ -36,6 +36,7 @@ import {
   floorUnderConstruction,
   freeBuilders,
   hireBuilder,
+  siteUnderConstruction,
   deskUpgradeCost,
   deskUpgradeDurationSec,
   fastForwardAction,
@@ -664,7 +665,14 @@ export class UI {
     const country = activeCountry(s);
     const sites: SiteView[] = COMPANY_SITES.map((site) => {
       const company = companyAtSite(s, site.id);
-      if (!company) return { id: site.id, status: 'free' as const, label: site.name };
+      if (!company) {
+        const building = siteUnderConstruction(country, site.id);
+        return {
+          id: site.id,
+          status: 'free' as const,
+          label: building ? `🏗️ ${site.name}` : site.name,
+        };
+      }
       return {
         id: site.id,
         status: company.id === country.activeCompanyId ? ('active' as const) : ('owned' as const),
@@ -790,6 +798,25 @@ export class UI {
               : `<button class="btn btn-primary" data-action="switch-company:${company.id}">
                    Manage this company</button>`
           }
+        </div>`;
+    }
+    const building = siteUnderConstruction(activeCountry(s), site.id);
+    if (building) {
+      const pct = Math.min(100, (1 - building.remainingSec / building.totalSec) * 100);
+      const ffCost = fastForwardCost(s, building);
+      return `
+        <div class="sheet-head"><h2>🏗️ ${site.name}</h2></div>
+        <p class="sheet-blurb">${t('ui.siteBuilding', {
+          time: formatDuration(building.remainingSec),
+        })} · 👷 ${t('ui.builderOnSite')}</p>
+        <div class="progress mini training">
+          <div class="progress-fill" style="width:${pct}%"></div>
+        </div>
+        <div class="sheet-actions">
+          <button class="btn btn-primary" ${ffCost === 0 || s.vsCoin >= ffCost ? '' : 'disabled'}
+                  data-action="fast-forward:${building.id}">
+            ⚡ ${ffCost === 0 ? t('ui.free') : `${icon('vscoin', 14)} ${ffCost}`}
+          </button>
         </div>`;
     }
     const price = companyCost(s, site.id);
@@ -1643,10 +1670,11 @@ export class UI {
         break;
       case 'found-company':
         // No naming prompt: only the very first company is player-named;
-        // every other company auto-assigns a local parody name.
+        // every other company auto-assigns a local parody name on opening.
         error = buyCompany(s, arg);
         if (!error) {
-          this.toast(`🏗️ ${t('ui.companyFounded', { name: activeCompany(s).name })}`, 'info');
+          this.toast(`🏗️ ${t('ui.companyBuildStarted')}`, 'info');
+          this.refreshSheet();
         }
         break;
       case 'unlock-project':

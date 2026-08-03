@@ -4,6 +4,8 @@ import {
   BUILDER_VSCOIN_BASE,
   BUILDER_VSCOIN_COSTS,
   BUILDER_VSCOIN_GROWTH,
+  COMPANY_BUILD_DURATION_BASE,
+  COMPANY_BUILD_DURATION_GROWTH,
   COMPANY_COST_GROWTH,
   COMPANY_SITES,
   COUNTRY_STARTING_MONEY,
@@ -829,6 +831,21 @@ export function fastForwardCost(state: GameState, action: TimedAction): number {
 
 /** Instantly complete a timed action, paying its fast-forward price. */
 export function fastForwardAction(state: GameState, actionId: number): string | null {
+  const country = activeCountry(state);
+  const countryAction = country.timedActions.find((a) => a.id === actionId);
+  if (countryAction) {
+    const cost = fastForwardCost(state, countryAction);
+    if (cost > 0) {
+      const err = spendVsCoin(state, cost, `shop:fast-forward-${countryAction.kind}`);
+      if (err) return err;
+    } else if (state.fastForwardsUsed > 0 && state.freeFastForwards > 0) {
+      state.freeFastForwards -= 1;
+    }
+    state.fastForwardsUsed += 1;
+    country.timedActions = country.timedActions.filter((a) => a.id !== actionId);
+    completeCountryTimedAction(state, country, countryAction, emptyEvents());
+    return null;
+  }
   for (const company of activeCountry(state).companies) {
     const action = company.timedActions.find((a) => a.id === actionId);
     if (!action) continue;
@@ -905,13 +922,68 @@ function completeTimedAction(
   }
 }
 
+/**
+ * Apply a finished country-level timed action (company-build): the company
+ * comes to life, parody-named, at the price paid on start. Deliberately no
+ * activeCompanyId switch — completion can happen mid-play or offline, and
+ * yanking the player to another office would be hostile; the map (and the
+ * companyBuildsDone event) surface the opening instead.
+ */
+function completeCountryTimedAction(
+  state: GameState,
+  country: CountryState,
+  action: TimedAction,
+  events: TickEvents,
+): void {
+  if (action.kind !== 'company-build' || !action.siteId) return;
+  if (country.companies.some((c) => c.siteId === action.siteId)) return; // hygiene
+  const company = createCompany(
+    state,
+    country,
+    action.siteId,
+    nextParodyName(country, action.siteId),
+    action.price ?? 0,
+  );
+  events.companyBuildsDone.push({
+    countryId: country.id,
+    companyId: company.id,
+    siteId: action.siteId,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Sites & company purchase (per-country city)
 // ---------------------------------------------------------------------------
 
 /** Sites where a company can still be founded in the active country. */
 export function availableSites(state: GameState): string[] {
-  return COMPANY_SITES.filter((s) => !companyAtSite(state, s.id)).map((s) => s.id);
+  const country = activeCountry(state);
+  return COMPANY_SITES.filter(
+    (s) => !companyAtSite(state, s.id) && !siteUnderConstruction(country, s.id),
+  ).map((s) => s.id);
+}
+
+/** The in-flight founding at a site of this country, if any. */
+export function siteUnderConstruction(
+  country: CountryState,
+  siteId: string,
+): TimedAction | null {
+  return (
+    country.timedActions.find((a) => a.kind === 'company-build' && a.siteId === siteId) ?? null
+  );
+}
+
+/**
+ * Build time of the country's next company. Ramps with the companies
+ * already founded there (pending builds included); the country's first
+ * company — the tutorial garage, or a fresh start abroad — is instant.
+ */
+export function companyBuildDurationSec(country: CountryState): number {
+  const founded =
+    country.companies.length +
+    country.timedActions.filter((a) => a.kind === 'company-build').length;
+  if (founded === 0) return 0;
+  return COMPANY_BUILD_DURATION_BASE * Math.pow(COMPANY_BUILD_DURATION_GROWTH, founded);
 }
 
 /**
@@ -922,7 +994,11 @@ export function availableSites(state: GameState): string[] {
  */
 export function companyCost(state: GameState, siteId: string): number {
   const site = siteById(siteId);
-  const extraCompanies = Math.max(0, activeCountry(state).companies.length - 1);
+  const country = activeCountry(state);
+  // Pending foundings count: starting several builds in parallel must not
+  // dodge the escalation.
+  const pending = country.timedActions.filter((a) => a.kind === 'company-build').length;
+  const extraCompanies = Math.max(0, country.companies.length + pending - 1);
   return Math.round(site.cost * Math.pow(COMPANY_COST_GROWTH, extraCompanies));
 }
 
@@ -1171,6 +1247,19 @@ function tickCountry(
       }
     }
   }
+
+  // 6. Country-level timed actions (company-build) run down the same way.
+  if (country.timedActions.length > 0) {
+    const finished: TimedAction[] = [];
+    for (const action of country.timedActions) {
+      action.remainingSec -= dt;
+      if (action.remainingSec <= 0) finished.push(action);
+    }
+    if (finished.length > 0) {
+      country.timedActions = country.timedActions.filter((a) => a.remainingSec > 0);
+      for (const action of finished) completeCountryTimedAction(state, country, action, events);
+    }
+  }
 }
 
 /**
@@ -1366,11 +1455,27 @@ export function buyCompany(state: GameState, siteId: string): string | null {
   const country = activeCountry(state);
   siteById(siteId);
   if (companyAtSite(state, siteId)) return 'Site already occupied';
+  if (siteUnderConstruction(country, siteId)) return 'error.siteAlreadyBuilding';
+  const duration = companyBuildDurationSec(country);
+  if (duration > 0 && freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = companyCost(state, siteId);
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
-  const company = createCompany(state, country, siteId, nextParodyName(country, siteId), cost);
-  country.activeCompanyId = company.id;
+  if (duration <= 0) {
+    // A country's first company is instant (tutorial / fresh start abroad).
+    const company = createCompany(state, country, siteId, nextParodyName(country, siteId), cost);
+    country.activeCompanyId = company.id;
+    return null;
+  }
+  country.timedActions.push({
+    id: state.nextEntityId++,
+    kind: 'company-build',
+    targetId: 0, // no CompanyState exists yet; siteId identifies the build
+    remainingSec: duration,
+    totalSec: duration,
+    siteId,
+    price: cost,
+  });
   return null;
 }
 

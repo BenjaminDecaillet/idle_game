@@ -13,7 +13,7 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 | S2 builder pool gating + purchase ladder | done |
 | S3 zero-output rules (desk-upgrade unseat, training/promo verify) | done |
 | S4 timed floor construction + Gabriel floor gift + freeFastForwards | done |
-| S5 timed company founding (country-level actions) | not started |
+| S5 timed company founding (country-level actions) | done |
 | S6 Shop tab (VsCoin → cash packs) | not started |
 | S7 VsCoin tab (BETA_FREE_IAP free starter pack) | not started |
 | S8 i18n EN+FR | not started |
@@ -23,14 +23,15 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 
 ## 2. In-progress unit
 
-None — S4 just landed: buyFloor starts a 'floor-build' timed action
-(pay up front, one per company, builder-gated), completion adds the floor
-+ floorBuildsDone event/toast; floorBuildDurationSec ramp; Gabriel's
-floorGift (claim button, first company of first country, floors 1→2 +
-freeFastForwards credit consumed by fastForwardAction when the tutorial
-first-free isn't in play); Office tab shows scaffolding block +
-progress/👷/ff card. 371 tests. Beta-reset notice copy still describes
-v8 — refresh in S8.
+None — S5 just landed: buyCompany pushes 'company-build' onto
+country.timedActions (siteId + price payload, builder-gated, first
+company of a country instant), tickCountry runs the country-level
+countdown + completeCountryTimedAction (parody name on completion, NO
+active-company switch), fastForwardAction covers country actions,
+companyCost/availableSites count pending builds, Map sheet shows the
+construction w/ progress + ff, save hygiene round-trips country actions
+(tests added). 380 tests. decisions.md 15b. Beta-reset notice copy still
+describes v8 — refresh in S8.
 
 ## 3. Decisions & assumptions (autonomous, veto-able)
 
@@ -52,16 +53,15 @@ v8 — refresh in S8.
 
 ## 4. Next action
 
-S5: timed company founding — `data.ts`: COMPANY_BUILD_DURATION_BASE 600,
-COMPANY_BUILD_DURATION_GROWTH 1.6. `engine.ts`: `companyBuildDurationSec`
-(instant when country has 0 companies), `siteUnderConstruction(country,
-siteId)`, buyCompany → pushes 'company-build' onto country.timedActions
-(targetId 0, siteId + price payload, builder-gated); tickCountry counts
-down country.timedActions and calls new `completeCountryTimedAction`
-(createCompany + nextParodyName + companyBuildsDone event, NO active-
-company switch); fastForwardAction searches country.timedActions too;
-companyCost/availableSites count pending builds. Map tab: site sheet +
-map status show construction w/ progress + ff. main.ts toast on done.
+S6: Shop tab — `types.ts` ShopCashPackDef; `data.ts` SHOP_CASH_PACKS
+(seed/series-a/series-b/series-c/ipo per balance.md Phase W); `engine.ts`
+shopPackCash = max(floorCash, round(grossRewardRate×60×minutes)),
+shopPackUnlocked (requiresCompanies in active country), buyShopPack via
+spendVsCoin('shop:<sku>') then country.money += cash (NOT totalEarned —
+missions must not be purchasable); `ui.ts` Tab union + TABS ('shop',
+icon 'coin' — TABS entries need an icon field since 'shop' has no own
+icon), renderShop() with per-pack cards (lookup shop.pack.<id>.name),
+debt note when wallet < 0, 'buy-pack:<id>' action. i18n EN+FR.
 
 ## 5. Build health
 

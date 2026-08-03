@@ -74,6 +74,12 @@ export const en = {
   'error.floorAlreadyBuilding': 'A floor is already under construction.',
   'error.floorGiftUnavailable': 'Gabriel’s gift isn’t available here.',
 
+  // --- Company founding -----------------------------------------------------
+  'ui.siteBuilding': 'Under construction · opens in {time}',
+  'ui.companyBuildStarted': 'Construction crew dispatched!',
+  'ui.companyBuilt': '{name} is open for business!',
+  'error.siteAlreadyBuilding': 'A company is already under construction there.',
+
   // --- Desk upgrades --------------------------------------------------------
   'ui.renovations': 'Renovations',
   'ui.upgradeDesk': 'Upgrade',
