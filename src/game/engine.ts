@@ -43,6 +43,7 @@ import {
   PROJECT_SLOT_COSTS,
   PROJECT_SLOT_FLOOR_REQ,
   PROJECT_WORK_SCALE_EXP,
+  OFFLINE_DOUBLER_COOLDOWN_SEC,
   PROJECTS,
   PRESTIGE_MIN_LIFETIME,
   PRESTIGE_OUTPUT_ALPHA,
@@ -142,6 +143,8 @@ export function createInitialState(now = Date.now(), countryId: CountryId = DEFA
     floorGiftClaimed: false,
     promotionsDone: 0,
     prestige: { count: 0, reputation: 0 },
+    doublerLastClaimedAt: 0,
+    offlineDoublesClaimed: 0,
     nextEntityId: 1,
   };
   createCountry(state, countryId, 'My Startup');
@@ -326,6 +329,37 @@ export function globalOutputMultiplier(state: GameState, company: CompanyState):
     boost *
     siteById(company.siteId).outputBonus
   );
+}
+
+// ---------------------------------------------------------------------------
+// Offline earnings doubler — "Gabriel's blessing" (free while in beta; the
+// button is the future rewarded-ad placement, see docs/monetization.md)
+// ---------------------------------------------------------------------------
+
+/** The blessing has recharged (once per OFFLINE_DOUBLER_COOLDOWN_SEC). */
+export function offlineDoublerReady(state: GameState, now = Date.now()): boolean {
+  return now - state.doublerLastClaimedAt >= OFFLINE_DOUBLER_COOLDOWN_SEC * 1000;
+}
+
+/**
+ * Double the offline earnings just shown: credit the same amount again to
+ * the active country's wallet. Counts as real earnings (lifetime totals →
+ * missions and reputation), like the simulated income it mirrors.
+ */
+export function claimOfflineDoubler(
+  state: GameState,
+  amount: number,
+  now = Date.now(),
+): string | null {
+  if (!(amount > 0)) return 'ui.doublerNothing';
+  if (!offlineDoublerReady(state, now)) return 'ui.doublerCooldown';
+  const country = activeCountry(state);
+  country.money += amount;
+  country.totalEarned += amount;
+  state.totalEarned += amount;
+  state.doublerLastClaimedAt = now;
+  state.offlineDoublesClaimed += 1;
+  return null;
 }
 
 // ---------------------------------------------------------------------------

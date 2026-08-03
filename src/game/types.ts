@@ -419,6 +419,10 @@ export interface GameState {
   promotionsDone: number;
   /** IPO resets & banked reputation (permanent output multiplier). */
   prestige: PrestigeState;
+  /** Last claim of the offline-earnings doubler (wall-clock ms, 0 = never). */
+  doublerLastClaimedAt: number;
+  /** Lifetime doubler claims (analytics / future missions). */
+  offlineDoublesClaimed: number;
   nextEntityId: number;
 }
 

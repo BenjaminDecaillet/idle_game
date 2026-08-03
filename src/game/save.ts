@@ -138,6 +138,18 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
         ? Math.floor(parsed.freeFastForwards)
         : 0,
     floorGiftClaimed: parsed.floorGiftClaimed === true,
+    doublerLastClaimedAt:
+      typeof parsed.doublerLastClaimedAt === 'number' &&
+      Number.isFinite(parsed.doublerLastClaimedAt) &&
+      parsed.doublerLastClaimedAt >= 0
+        ? parsed.doublerLastClaimedAt
+        : 0,
+    offlineDoublesClaimed:
+      typeof parsed.offlineDoublesClaimed === 'number' &&
+      Number.isFinite(parsed.offlineDoublesClaimed) &&
+      parsed.offlineDoublesClaimed >= 0
+        ? Math.floor(parsed.offlineDoublesClaimed)
+        : 0,
     prestige: {
       count:
         typeof parsed.prestige?.count === 'number' &&
