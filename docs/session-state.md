@@ -23,15 +23,8 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 
 ## 2. In-progress unit
 
-None — S5 just landed: buyCompany pushes 'company-build' onto
-country.timedActions (siteId + price payload, builder-gated, first
-company of a country instant), tickCountry runs the country-level
-countdown + completeCountryTimedAction (parody name on completion, NO
-active-company switch), fastForwardAction covers country actions,
-companyCost/availableSites count pending builds, Map sheet shows the
-construction w/ progress + ff, save hygiene round-trips country actions
-(tests added). 380 tests. decisions.md 15b. Beta-reset notice copy still
-describes v8 — refresh in S8.
+None. All scope shipped; **PR #6 is open against master**
+(https://github.com/BenjaminDecaillet/idle_game/pull/6).
 
 ## 3. Decisions & assumptions (autonomous, veto-able)
 
@@ -53,11 +46,12 @@ describes v8 — refresh in S8.
 
 ## 4. Next action
 
-S11 (optional art) by remaining budget: art-skinner for a scaffolding
-decor on the in-construction floor block in the Office tab (art-svg
-conventions). Then open THE single PR (check for a PR template first).
-Story beats/missions deliberately skipped → improvements.md #19.
+Nothing pending. Post-merge follow-ups live in `docs/improvements.md`
+#19–#22 (narrative touchpoints for the builder economy, tab-label i18n
+via skeleton rebuild, richer construction art, builder idle visibility).
+Story beats/missions were deliberately skipped this round (#19).
 
 ## 5. Build health
 
-`npm test`: 352/352 green (19 files). `npm run build`: green.
+`npm test`: 398/398 green (20 files). `npm run build`: green
+(tsc + vite + PWA precache). Everything committed and pushed; PR #6 open.
