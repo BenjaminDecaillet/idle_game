@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  PRESTIGE_MIN_LIFETIME,
-  PRESTIGE_POINTS_PER_DECADE,
-  PRESTIGE_OUTPUT_ALPHA,
-  PRESTIGE_OUTPUT_K,
-  PRESTIGE_STORY_BEAT,
-} from '../src/game/data';
+import { PRESTIGE_MIN_LIFETIME, PRESTIGE_STORY_BEAT } from '../src/game/data';
 import {
   activeCompany,
   activeCountry,
@@ -14,36 +8,18 @@ import {
   createCountry,
   grantVsCoin,
   globalOutputMultiplier,
-  getProject,
   hireWorker,
   prestigeMultiplier,
   prestigePreview,
   prestigeRepFor,
   prestigeReset,
-  tick,
-  buyUpgrade,
 } from '../src/game/engine';
 import { migrate } from '../src/game/save';
 import { advanceStory } from '../src/game/story';
 import { skipTutorial } from '../src/game/tutorial';
-import type { GameState, WorkerState } from '../src/game/types';
+import type { GameState } from '../src/game/types';
 
 const NOW = 1_700_000_000_000;
-
-function makeWorker(id: number, overrides: Partial<WorkerState> = {}): WorkerState {
-  return {
-    tierId: 'intern',
-    specialization: 'Backend',
-    skillLevel: 1,
-    experience: 0,
-    stationId: null,
-    timesTrained: 0,
-    promotions: 0,
-    ...overrides,
-    id,
-    name: `Worker ${id}`,
-  };
-}
 
 describe('prestigeRepFor', () => {
   it('returns 0 at PRESTIGE_MIN_LIFETIME (1e14)', () => {
@@ -343,8 +319,8 @@ describe('prestigeReset successful reset', () => {
     const state = createInitialState(NOW);
     skipTutorial(state);
 
-    state.boosts.push({ mult: 3, remainingSec: 100 });
-    state.boosts.push({ mult: 2, remainingSec: 50 });
+    state.boosts.push({ mult: 3, remainingSec: 100, source: 'dev' });
+    state.boosts.push({ mult: 2, remainingSec: 50, source: 'dev' });
 
     state.story.seen = [PRESTIGE_STORY_BEAT];
     state.totalEarned = 3e14;
@@ -361,7 +337,7 @@ describe('prestigeReset successful reset', () => {
     const originalCountryId = state.countries[0].id;
 
     // Create a second country
-    const country2 = createCountry(state, 'fr', 'Second Startup');
+    createCountry(state, 'fr', 'Second Startup');
     expect(state.countries).toHaveLength(2);
 
     state.story.seen = [PRESTIGE_STORY_BEAT];
