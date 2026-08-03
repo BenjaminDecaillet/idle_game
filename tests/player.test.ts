@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PLAYER_LOOK, PLAYER_LOOK_OPTIONS } from '../src/game/data';
-import { activeCountry, buyCompany, createInitialState, getProject } from '../src/game/engine';
+import { activeCountry, buyCompany, createInitialState, getProject, siteUnderConstruction, tick } from '../src/game/engine';
 import {
   cyclePlayerLook,
   officeStage,
@@ -10,6 +10,15 @@ import {
 import { migrate } from '../src/game/save';
 
 const NOW = 1_700_000_000_000;
+
+/** Helper: after buyCompany, complete the build. */
+function completeBuild(state: any, siteId: string): any {
+  const country = activeCountry(state);
+  const action = siteUnderConstruction(country, siteId);
+  if (!action) return country.companies.find((c) => c.siteId === siteId);
+  tick(state, action.remainingSec + 1);
+  return country.companies.find((c) => c.siteId === siteId)!;
+}
 
 describe('player look', () => {
   it('starts with the default look', () => {
@@ -50,13 +59,18 @@ describe('office stage', () => {
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     expect(officeStage(state)).toBe(0);
     buyCompany(state, 'loft');
+    completeBuild(state, 'loft');
     expect(officeStage(state)).toBe(1);
     buyCompany(state, 'paloalto');
+    completeBuild(state, 'paloalto');
     buyCompany(state, 'campus');
+    completeBuild(state, 'campus');
     expect(officeStage(state)).toBe(1);
     buyCompany(state, 'tower');
+    completeBuild(state, 'tower');
     expect(officeStage(state)).toBe(2); // 5 companies
     buyCompany(state, 'orbital');
+    completeBuild(state, 'orbital');
     expect(officeStage(state)).toBe(2); // orbital owned but AGI not shipped
     const orbital = activeCountry(state).companies.find((c) => c.siteId === 'orbital')!;
     getProject(orbital, 'agi').completions = 1;

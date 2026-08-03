@@ -6,10 +6,25 @@ description: Register a new timed action (training, promotion, desk upgrade, ...
 # Adding a timed action
 
 All time-consuming mechanics run through the generic timed-action system in
-`src/game/engine.ts` (`TimedAction` in `types.ts`, stored on
-`CompanyState.timedActions`). They advance only inside `tick()`, which means
-offline simulation and time-skips handle them with zero extra code, and every
-one of them is fast-forwardable with VsCoin.
+`src/game/engine.ts` (`TimedAction` in `types.ts`). They advance only inside
+`tick()`, which means offline simulation and time-skips handle them with zero
+extra code, and every one of them is fast-forwardable with VsCoin.
+
+Existing kinds: `training`, `promotion`, `desk-upgrade`, `floor-build` (all
+on `CompanyState.timedActions`) and `company-build` (on
+`CountryState.timedActions` — a company under construction has no
+CompanyState to carry it; its completion runs through
+`completeCountryTimedAction`, its countdown through the country-level loop
+at the end of `tickCountry`, and `fastForwardAction` searches country-level
+actions first).
+
+**Builder gating:** every in-flight timed action occupies one builder from
+the per-country pool (`CountryState.builders`). Availability is DERIVED —
+`freeBuilders(country)` = `builders.count` − in-flight actions (company +
+country level) — never stored. Any new start function must check
+`freeBuilders(country) <= 0` and return the `'error.noFreeBuilders'` key id
+(the UI toasts engine errors through `lookup()`, so i18n key ids work as
+error returns).
 
 ## Checklist
 
@@ -19,13 +34,19 @@ one of them is fast-forwardable with VsCoin.
 2. **data.ts** — add the duration/cost constants (base + growth curve). No
    numbers anywhere else.
 3. **engine.ts**:
-   - Start function: validate (`string | null` error return), charge costs,
-     push `{ id: state.nextEntityId++, kind, companyId, targetId,
-     remainingSec, totalSec, ... }` via `startTimedAction()`. If the target
-     is a worker who leaves the floor, `autoSeat(company)` after starting.
-   - Completion: add a case to `completeTimedAction()` — apply the effect on
-     durable state, push a `TickEvents` entry if the UI should react.
-   - Do NOT touch the countdown loop in `tick()` — it is generic.
+   - Start function: validate (`string | null` error return, incl. the
+     `freeBuilders` gate), charge costs, push `{ id: state.nextEntityId++,
+     kind, targetId, remainingSec, totalSec, ...payload }` onto
+     `company.timedActions` (or `country.timedActions` if no company exists
+     yet). If the target is a worker who leaves the floor, or a desk that
+     becomes unusable, `autoSeat(company)` after starting.
+   - Completion: add a case to `completeTimedAction()` (company-level) or
+     extend `completeCountryTimedAction()` (country-level) — apply the
+     effect on durable state, push a `TickEvents` entry if the UI reacts.
+   - Do NOT touch the countdown loops in `tickCountry()` — they are generic.
+   - "Nothing produces while it is being worked on": if the action occupies
+     a desk or worker, make sure their output is zero for the duration
+     (see `stationUnderUpgrade` / `workerBusy`).
 4. **Fast-forward is free**: `fastForwardCost()` / `fastForwardAction()`
    already cover every kind (VsCoin, scaled to remaining time,
    `FASTFORWARD_SEC_PER_VSCOIN` in data.ts). Nothing to add.

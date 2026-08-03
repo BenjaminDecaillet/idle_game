@@ -131,6 +131,13 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
       typeof parsed.promotionsDone === 'number' && parsed.promotionsDone >= 0
         ? parsed.promotionsDone
         : 0,
+    freeFastForwards:
+      typeof parsed.freeFastForwards === 'number' &&
+      Number.isFinite(parsed.freeFastForwards) &&
+      parsed.freeFastForwards >= 0
+        ? Math.floor(parsed.freeFastForwards)
+        : 0,
+    floorGiftClaimed: parsed.floorGiftClaimed === true,
     countries:
       Array.isArray(parsed.countries) && parsed.countries.length > 0
         ? parsed.countries
@@ -207,6 +214,7 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
   // companies, timed actions) so fresh entities never collide.
   let maxId = 0;
   for (const country of state.countries) {
+    for (const a of country.timedActions) maxId = Math.max(maxId, a.id);
     for (const c of country.companies) {
       maxId = Math.max(maxId, c.id);
       for (const w of c.workers) maxId = Math.max(maxId, w.id);
@@ -226,6 +234,15 @@ function migrateCountry(saved: CountryState, template: CountryState): CountrySta
     money: typeof saved.money === 'number' && Number.isFinite(saved.money) ? saved.money : 0,
     usedCompanyNames: Array.isArray(saved.usedCompanyNames) ? saved.usedCompanyNames : [],
     companies: Array.isArray(saved.companies) ? saved.companies : [],
+    builders: {
+      count:
+        typeof saved.builders?.count === 'number' &&
+        Number.isFinite(saved.builders.count) &&
+        saved.builders.count >= 1
+          ? Math.floor(saved.builders.count)
+          : 1,
+    },
+    timedActions: Array.isArray(saved.timedActions) ? saved.timedActions : [],
   };
   const companyTemplate = template.companies[0];
   const knownSites = new Set(COMPANY_SITES.map((s) => s.id));

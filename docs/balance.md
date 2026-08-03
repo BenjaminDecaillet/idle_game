@@ -61,8 +61,10 @@ Upgrade desk tier i → i+1 in place:
   escalation) so upgrading stays attractive when many desks are owned.
 - duration = `DESK_UPGRADE_DURATION_BASE (180 s) × DESK_UPGRADE_DURATION_GROWTH (2)^targetTierIndex`
   → standing 6 min, dual 12 min, corner 24 min.
-- The seated worker keeps working during the upgrade (friendliness; the money
-  + time cost is the constraint).
+- (Phase W revision) The desk is a construction site for the duration: its
+  employee is auto-unseated on start and the desk produces nothing until the
+  renovation completes — downtime is part of the price, consistent with the
+  "nothing produces while it is being worked on" rule.
 
 ## Company soft caps (Phase 5)
 
@@ -123,3 +125,153 @@ story 2/beat). Watch: if fast-forward proves too cheap late-game, raise
 - VsCoin = `RENAME_VSCOIN_BASE (2) × RENAME_COST_GROWTH^renames`
 - Both are charged. First cash rename ≥ purchase price by construction
   (garage purchase price is 0 → the 1 000 floor applies).
+
+## Workforce, construction & shop (Phase W)
+
+A per-country **builder pool** gates every timed action (training, promotion,
+desk upgrade, plus the two new ones below: floor construction and company
+founding). Each in-flight action occupies exactly 1 builder; an action cannot
+start while all builders are busy. Fast-forwarding completes the action and
+frees its builder immediately — builder scarcity is therefore itself a soft
+VsCoin sink, on top of the explicit builder prices.
+
+### Builder purchase ladder (per country)
+
+- Builder #1: free (granted with the country — the tutorial's timed actions
+  must never be blocked).
+- Builders #2–#3: cash, `BUILDER_CASH_COSTS = [2_500, 250_000]`
+  (index 0 = builder #2).
+- Builders #4–#5: VsCoin, `BUILDER_VSCOIN_COSTS = [8, 15]`.
+- Builder #6+: `cost = ceil(BUILDER_VSCOIN_BASE (12) × BUILDER_VSCOIN_GROWTH (1.8)^(n−5))`
+  — an open-ended VsCoin sink.
+
+| builder # | cost | expected TTV |
+|---|---|---|
+| 2 | $2 500 | first session, ~min 10–15 (a few minutes of early ~10–40 $/s income) |
+| 3 | $250 000 | just after the SoMa Loft — ~17–40 min at the 100–250 $/s garage plateau, so it's the *next* save after company #2 |
+| 4 | 8 VsCoin | mid-game; ~½ of the mission income earned by company 3 |
+| 5 | 15 VsCoin | late mid-game; forces a real choice vs. Founder's Aura / boosts |
+| 6 / 7 / 8 | 22 / 39 / 70 VsCoin | late-game aspiration: 131 total ≈ most of a free player's remaining budget |
+| 10 | 227 VsCoin | prestige/whale territory (above lifetime free income ~150) |
+
+Rationale: builder #2 removes the first "training blocks promotion"
+frustration inside session one; #3 deliberately mirrors the second-company
+price band (250k vs 200k) so parallelism is an earned mid-game comfort, not
+a default. The VsCoin tail (12 × 1.8^(n−5), ceil'd) continues smoothly from
+the fixed 8/15 prices (…15, 22, 39, 70, 126, 227…) and, being **per
+country**, multiplies into an effectively unbounded sink across 8 countries
+without any single price looking abusive. 5 builders comfortably cover a
+full 8-company city's routine actions; #6+ is pure parallelism luxury.
+
+### Floor construction time (new timed action)
+
+Floors were instant; now
+`duration = FLOOR_BUILD_DURATION_BASE (600 s) × FLOOR_BUILD_FLOOR_GROWTH (1.5)^(floorIndex − 2) × FLOOR_BUILD_COMPANY_GROWTH (1.15)^companyIndex`
+where `floorIndex` is the floor being built (2..8; floor 1 ships with the
+building) and `companyIndex` is 0-based within the country. Cash cost
+(`floorCost`) is unchanged and paid up front when construction starts.
+
+| floor, company | duration | fast-forward |
+|---|---|---|
+| floor 2, company #1 | 10 min | 1 VsCoin |
+| floor 5, company #3 | ~45 min | 5 VsCoin |
+| floor 8, company #8 | ~5.0 h | 31 VsCoin |
+
+Rationale: the 600 s base satisfies the hard 10-real-minute minimum for the
+cheapest floor; 1.5^6 ≈ 11.4× per building and 1.15^7 ≈ 2.7× per city keep
+the worst case (last floor, last company) at ~5 h — hours-not-days, i.e. one
+offline gap or a 31-VsCoin skip, never a wall. The company ramp makes later
+companies *build* slower even though they *earn* faster, which is what keeps
+income plateaus pointing at the next purchase instead of instant scale-up.
+
+### Company founding time (new timed action)
+
+`duration = COMPANY_BUILD_DURATION_BASE (600 s) × COMPANY_BUILD_DURATION_GROWTH (1.6)^companiesFoundedInCountry`.
+**Company #1 is exempt entirely** (founded instantly): the garage is the
+tutorial and must not depend on builder availability — recommended over a
+"near-instant" duration because it also keeps prestige restarts (fresh
+country, 1 free builder) friction-free. The exponent counts companies
+already founded in the country, so the timer applies from founding #2.
+
+| company # | duration | fast-forward |
+|---|---|---|
+| 2 | 16 min | 2 VsCoin |
+| 4 | ~41 min | 5 VsCoin |
+| 8 | ~4.5 h | 27 VsCoin |
+
+Rationale: 16 min for company #2 lands inside the 20–40 min loft save
+(start the founding while the plateau pays it off — good overlap, no dead
+time); 1.6× matches the training-growth feel and puts company #8 at ~4.5 h,
+a satisfying "empire capstone" that a 27-VsCoin skip (vs the company-8
+mission's 12) prices as a genuine luxury.
+
+### Shop cash packs (VsCoin → cash, "funding rounds")
+
+One formula, anchored on the active country's **gross** reward rate (same
+anchor as `marketingCost`; gross is never negative, unlike net income during
+a debt spiral):
+
+`cashGranted = max(pack.floorCash, round(grossRewardRate(state) × 60 × pack.minutes))`
+
+`SHOP_CASH_PACKS` (each: minutes of income, cash floor, VsCoin price,
+`requiresCompanies` in the active country — same gating pattern as the
+company-count upgrades):
+
+| pack | minutes | floorCash | VsCoin | requires |
+|---|---|---|---|---|
+| 🌱 Seed | 5 | 1 000 | 4 | — |
+| 💼 Series A | 15 | 10 000 | 10 | 2 companies |
+| 🏦 Series B | 40 | 100 000 | 20 | 3 companies |
+| 🏛️ Series C | 100 | 1 000 000 | 40 | 5 companies |
+| 🔔 IPO | 240 | 10 000 000 | 75 | 7 companies |
+
+TTV/value check: at the garage plateau (~100–250 $/s gross) Seed grants
+30k–75k ≈ 15–37% of the 200k loft — a nudge, not a skip. Series A first
+becomes buyable *after* company #2, when the 3M Palo Alto target is already
+~30–120 min of income, so 15 min ≈ 12–50% of it. The `requiresCompanies`
+gate is the anti-trivialization mechanism: no pack can ever pre-pay the
+milestone it would trivialize, because owning that milestone is its unlock
+condition. Anti-exploit reasoning for the floor: income-anchored grants go
+to ~0 for a fresh/prestiged country (or if the player unassigns projects to
+game the anchor — gross only counts assigned projects), so `floorCash`
+guarantees a minimum; floors are sized at roughly the pack's value for a
+player one tier *below* its unlock, so idling income to 0 before buying is
+never profitable. Per-coin value rises with pack size (~1.3 → ~3.2 min of
+income per VsCoin) — a standard value ladder that still stays below the
+10 min/VsCoin fast-forward parity, so packs never dominate the
+fast-forward sink.
+
+### VsCoin tab SKUs (IAP-shaped; beta = free starter)
+
+`VSCOIN_PACKS` — future CHF prices as comments only, no real checkout yet:
+
+| SKU | VsCoin | future price (comment) | CHF/coin |
+|---|---|---|---|
+| Starter | 20 | CHF 2.00 — **free & unlimited while `BETA_FREE_IAP = true`** | 0.100 |
+| Angel | 50 | CHF 4.00 | 0.080 |
+| Venture | 150 | CHF 9.00 | 0.060 |
+| Growth | 400 | CHF 19.00 | 0.048 |
+| Unicorn | 1 000 | CHF 39.00 | 0.039 |
+
+Rationale: the 20-coin starter ≈ 200 min of fast-forward or Seed+Series A —
+enough that a casual free player can skip regularly, while each claim is
+only ~13% of the ~150 lifetime mission income, so missions stay the
+headline source (and claiming is a deliberate button press, which gives
+beta telemetry on sink demand). Unlimited-in-beta is intentional: we want
+sink data, and the save-reset beta policy wipes any hoards before 1.0.
+Prices follow the monetization doc's anchor rule (the CHF 39 whale pack
+makes CHF 4–9 look reasonable); per-coin discount deepens monotonically.
+`VSCOIN_LEDGER_CAP (200)` is a ledger *history* cap, not a balance cap, so
+large SKUs need no engine change. When real IAP ships, only the Starter
+SKU's `BETA_FREE_IAP` branch is removed.
+
+### VsCoin budget sanity check (free player, whole game)
+
+Lifetime free income ~150 (missions + story) + beta starter claims. Sinks
+now competing: fast-forwards (1–31 per use), builders #4+ (23 for #4–5,
+131 more for #6–8, per country), cash packs (4–75), Aura (2/4/8/16),
+boosts (3), Diamond wallpaper (8), renames. A free player can afford *one*
+identity (e.g. "5 builders everywhere I settle" or "regular skipper" or
+"pack buyer") but not all — which is the design goal. Watch metric: if
+builders #4–5 are bought by <20% of players reaching company 3, drop
+`BUILDER_VSCOIN_COSTS` toward [5, 10] — one knob per segment.

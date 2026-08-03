@@ -54,6 +54,67 @@ export const en = {
   'ui.free': 'Free',
   'ui.workerQuit': '{name} quit over unpaid wages!',
 
+  // --- Builder pool (code: builders — displays as "Workers") ----------------
+  'ui.builders': 'Workers',
+  'ui.buildersFree': '{free}/{total} available',
+  'ui.hireBuilder': 'Hire a worker',
+  'ui.builderGiftName': 'Doug Foundations',
+  'ui.builderGiftHint':
+    'Your work crew builds floors, renovates desks and runs the trainings. {name} — your first worker — was a gift from Gabriel.',
+  'error.noFreeBuilders': 'All workers are busy — wait for a job to finish or hire another.',
+
+  // --- Floor construction ---------------------------------------------------
+  'ui.floorBuilding': 'Floor {floor} under construction · done in {time}',
+  'ui.floorBuildingShort': 'Under construction',
+  'ui.builderOnSite': '1 worker on site',
+  'ui.floorBuildStarted': 'Construction started!',
+  'ui.floorBuilt': 'New floor ready!',
+  'ui.floorGift': 'Claim Gabriel’s gift: a free second floor',
+  'ui.floorGiftClaimed': 'Gabriel built you a floor — and left a free fast-forward!',
+  'error.floorAlreadyBuilding': 'A floor is already under construction.',
+  'error.floorGiftUnavailable': 'Gabriel’s gift isn’t available here.',
+
+  // --- Company founding -----------------------------------------------------
+  'ui.siteBuilding': 'Under construction · opens in {time}',
+  'ui.companyBuildStarted': 'Construction crew dispatched!',
+  'ui.companyBuilt': '{name} is open for business!',
+  'error.siteAlreadyBuilding': 'A company is already under construction there.',
+
+  // --- Shop (funding rounds: VsCoin → cash) --------------------------------
+  'ui.shopTitle': 'Funding rounds',
+  'ui.shopHint':
+    'Trade VsCoin for a cash injection into the country you are managing. Pack value scales with your current income, so a round stays meaningful at every stage.',
+  'ui.shopDebtNote': 'You are in debt: fresh funding pays the debt down first — it is one wallet.',
+  'ui.packRequires': 'Needs {count} companies',
+  'ui.packBought': '{name} closed — {cash} wired!',
+  'shop.pack.seed.name': 'Seed round',
+  'shop.pack.seed.blurb': 'A friendly angel wires you a little runway.',
+  'shop.pack.series-a.name': 'Series A',
+  'shop.pack.series-a.blurb': 'A real term sheet. The partners want a demo.',
+  'shop.pack.series-b.name': 'Series B',
+  'shop.pack.series-b.blurb': 'Growth capital — the board deck writes itself.',
+  'shop.pack.series-c.name': 'Series C',
+  'shop.pack.series-c.blurb': 'Late-stage money. Private jets circle the block.',
+  'shop.pack.ipo.name': 'IPO bell',
+  'shop.pack.ipo.blurb': 'Ring it. The market does the rest.',
+
+  // --- VsCoin acquisition tab -----------------------------------------------
+  'ui.vscoinTitle': 'Get VsCoin',
+  'ui.vscoinHint':
+    'VsCoin buys fast-forwards, workers, funding rounds and premium perks. You also earn it through missions and your story.',
+  'ui.betaBadge': 'BETA',
+  'ui.claimFree': 'Claim free',
+  'ui.vscoinClaimed': '+{coins} VsCoin — enjoy!',
+  'ui.comingSoon': 'Coming with monetization',
+  'ui.vscoinBetaNote':
+    'While the beta runs, the starter pack is free and unlimited — no strings attached.',
+  'error.iapComingSoon': 'Real purchases arrive after the beta — the starter pack is on us!',
+  'vscoin.pack.vsc-starter.name': 'Starter espresso',
+  'vscoin.pack.vsc-angel.name': 'Angel wings',
+  'vscoin.pack.vsc-venture.name': 'Venture vault',
+  'vscoin.pack.vsc-growth.name': 'Growth rocket',
+  'vscoin.pack.vsc-unicorn.name': 'Unicorn hoard',
+
   // --- Desk upgrades --------------------------------------------------------
   'ui.renovations': 'Renovations',
   'ui.upgradeDesk': 'Upgrade',
@@ -90,7 +151,7 @@ export const en = {
   // --- Beta reset ----------------------------------------------------------
   'ui.betaResetTitle': 'A fresh start (beta)',
   'ui.betaResetText':
-    'The world just got a lot bigger: countries, promotions, debt and more. This beta update rebuilds the game from the ground up, so your old save could not come along. Thank you for testing — your next empire will rise even faster!',
+    'Construction crews have arrived: a workforce that builds your floors and companies over time, funding rounds, and a VsCoin shop. This beta update reworks how your empire grows, so your old save could not come along. Thank you for testing — your next empire will rise even faster!',
 
   // --- Countries -----------------------------------------------------------
   'country.ch.name': 'Switzerland',

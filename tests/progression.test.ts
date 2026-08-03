@@ -22,6 +22,8 @@ import {
   projectUnlockCost,
   scaledProjectWork,
   setActiveCompany,
+  siteUnderConstruction,
+  tick,
   timedActionsFor,
   trainDurationSec,
   trainWorker,
@@ -30,6 +32,15 @@ import { migrate } from '../src/game/save';
 import type { WorkerState } from '../src/game/types';
 
 const NOW = 1_700_000_000_000;
+
+/** Helper: after buyCompany, complete the build. */
+function completeBuild(state: any, siteId: string): any {
+  const country = activeCountry(state);
+  const action = siteUnderConstruction(country, siteId);
+  if (!action) return country.companies.find((c) => c.siteId === siteId);
+  tick(state, action.remainingSec + 1);
+  return country.companies.find((c) => c.siteId === siteId)!;
+}
 
 function makeWorker(id: number, overrides: Partial<WorkerState> = {}): WorkerState {
   return {
@@ -77,10 +88,12 @@ describe('company cost curve', () => {
     const state = createInitialState(NOW);
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     expect(buyCompany(state, 'loft')).toBeNull();
+    completeBuild(state, 'loft');
     expect(companyCost(state, 'paloalto')).toBe(
       Math.round(siteById('paloalto').cost * COMPANY_COST_GROWTH),
     );
     expect(buyCompany(state, 'paloalto')).toBeNull();
+    completeBuild(state, 'paloalto');
     expect(companyCost(state, 'campus')).toBe(
       Math.round(siteById('campus').cost * COMPANY_COST_GROWTH ** 2),
     );
@@ -90,9 +103,11 @@ describe('company cost curve', () => {
     const state = createInitialState(NOW);
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'loft');
+    completeBuild(state, 'loft');
     const before = activeCountry(state).money;
     const expected = companyCost(state, 'paloalto');
     expect(buyCompany(state, 'paloalto')).toBeNull();
+    completeBuild(state, 'paloalto');
     expect(before - activeCountry(state).money).toBe(expected);
   });
 
@@ -100,6 +115,7 @@ describe('company cost curve', () => {
     const state = createInitialState(NOW);
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'loft');
+    completeBuild(state, 'loft');
     activeCountry(state).money = siteById('paloalto').cost; // list price, but scaled is higher
     expect(buyCompany(state, 'paloalto')).toBe('Not enough money');
   });
@@ -112,6 +128,7 @@ describe('company cost curve', () => {
       const charge = companyCost(state, site.id);
       if (prevCharge > 0) expect(charge / prevCharge).toBeGreaterThanOrEqual(5);
       expect(buyCompany(state, site.id)).toBeNull();
+      completeBuild(state, site.id);
       prevCharge = charge;
     }
   });
@@ -122,7 +139,8 @@ describe('per-site project scaling', () => {
     const state = createInitialState(NOW);
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'tower');
-    const company = activeCompany(state);
+    completeBuild(state, 'tower');
+    const company = activeCountry(state).companies.find((c) => c.siteId === 'tower')!;
     const scale = siteById('tower').projectScale;
     const landing = getProject(company, 'landing');
     expect(landing.currentReward).toBe(PROJECTS[0].baseReward * scale);
@@ -150,7 +168,8 @@ describe('per-site project scaling', () => {
     const state = createInitialState(NOW);
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'tower');
-    const company = activeCompany(state);
+    completeBuild(state, 'tower');
+    const company = activeCountry(state).companies.find((c) => c.siteId === 'tower')!;
     expect(projectUnlockCost(company, 'todo')).toBe(
       PROJECTS[1].unlockCost * siteById('tower').projectScale,
     );
@@ -170,9 +189,11 @@ describe('company-count upgrade unlocks', () => {
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     expect(buyUpgrade(state, 'synergy')).toBe('Requires 2 companies');
     buyCompany(state, 'loft');
+    completeBuild(state, 'loft');
     expect(buyUpgrade(state, 'synergy')).toBeNull();
     expect(buyUpgrade(state, 'mentorship')).toBe('Requires 3 companies');
     buyCompany(state, 'paloalto');
+    completeBuild(state, 'paloalto');
     expect(buyUpgrade(state, 'mentorship')).toBeNull();
     expect(buyUpgrade(state, 'talent')).toBe('Requires 5 companies');
     expect(buyUpgrade(state, 'moonshot')).toBe('Requires 7 companies');
@@ -182,6 +203,7 @@ describe('company-count upgrade unlocks', () => {
     const state = createInitialState(NOW);
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'loft');
+    completeBuild(state, 'loft');
     setActiveCompany(state, activeCountry(state).companies[0].id);
     const company = activeCompany(state);
     const before = globalOutputMultiplier(state, company);
@@ -228,7 +250,8 @@ describe('migration', () => {
     const state = createInitialState(NOW);
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'tower');
-    const company = activeCompany(state);
+    completeBuild(state, 'tower');
+    const company = activeCountry(state).companies.find((c) => c.siteId === 'tower')!;
     // Simulate an old save that predates the last project in data.ts.
     const savedWork = 12_345;
     company.projects = company.projects.slice(0, PROJECTS.length - 1);

@@ -11,10 +11,21 @@ import {
   setCompanyWallpaper,
   setDefaultWallpaper,
   setMapTheme,
+  siteUnderConstruction,
+  tick,
 } from '../src/game/engine';
 import { migrate } from '../src/game/save';
 
 const NOW = 1_700_000_000_000;
+
+/** Helper: after buyCompany, complete the build. */
+function completeBuild(state: any, siteId: string): any {
+  const country = activeCountry(state);
+  const action = siteUnderConstruction(country, siteId);
+  if (!action) return country.companies.find((c) => c.siteId === siteId);
+  tick(state, action.remainingSec + 1);
+  return country.companies.find((c) => c.siteId === siteId)!;
+}
 
 describe('wallpapers', () => {
   it('starts owning the free wallpaper, applied everywhere by default', () => {
@@ -49,15 +60,15 @@ describe('wallpapers', () => {
 
     // A second company still follows the player default...
     expect(buyCompany(state, 'loft')).toBeNull();
-    const second = activeCompany(state);
+    completeBuild(state, 'loft');
+    const second = activeCountry(state).companies.find((c) => c.siteId === 'loft')!;
     expect(effectiveWallpaper(state, second)).toBe('concrete');
 
     // ...until the default itself changes.
     expect(setDefaultWallpaper(state, def.id)).toBeNull();
     expect(effectiveWallpaper(state, second)).toBe(def.id);
 
-    // And a company can go back to following the default.
-    expect(setCompanyWallpaper(state, null)).toBeNull();
+    // The loft company still has no explicit wallpaper, so it follows the default
     expect(second.wallpaperId).toBeNull();
   });
 

@@ -29,7 +29,7 @@ The delivery mechanisms every monetization trick needs are in `src/game/engine.t
 - `timeSkip(state, seconds)` — instantly simulates N seconds through the real tick.
 - Try them today in DevTools: `isv.boost(2, 240)`, `isv.skip(3600)`.
 
-What's still needed here: a **Shop/Boost tab in the UI** listing the boost/skip offers, calling these functions once the ad or payment callback confirms. Build it when Phase 2 starts.
+What's still needed here: ~~a Shop/Boost tab in the UI~~ ✅ shipped with the workforce/shop update: a **Shop tab** (VsCoin → progression-scaled cash "funding rounds", `SHOP_CASH_PACKS` in data.ts, all spends tagged `shop:<sku>`) and a **VsCoin tab** with IAP-shaped SKUs (`VSCOIN_PACKS`: starter/angel/venture/growth/unicorn). While `BETA_FREE_IAP` (data.ts) is true, the starter pack is free & unlimited with a visible BETA badge and the larger packs render disabled ("coming with monetization"). Flipping that one flag converts the tab to real SKUs; wire the payment callback to `grantVsCoin(state, coins, 'iap:<sku>')` — ids are already payment-provider-shaped.
 
 ## Phase 2 — Rewarded ads on the web
 

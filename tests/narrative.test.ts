@@ -9,6 +9,7 @@ import {
   createInitialState,
   setLanguage,
   setStartingCountry,
+  siteUnderConstruction,
   tick,
   trainWorker,
 } from '../src/game/engine';
@@ -48,6 +49,15 @@ function makeWorker(id: number, overrides: Partial<WorkerState> = {}): WorkerSta
     promotions: 0,
     ...overrides,
   };
+}
+
+/** Helper: after buyCompany, complete the build. */
+function completeBuild(state: any, siteId: string): any {
+  const country = activeCountry(state);
+  const action = siteUnderConstruction(country, siteId);
+  if (!action) return country.companies.find((c) => c.siteId === siteId);
+  tick(state, action.remainingSec + 1);
+  return country.companies.find((c) => c.siteId === siteId)!;
 }
 
 describe('i18n', () => {
@@ -218,6 +228,7 @@ describe('story', () => {
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     advanceStory(state);
     buyCompany(state, 'loft');
+    completeBuild(state, 'loft');
     expect(advanceStory(state)).toContain('site-loft');
   });
 
@@ -226,6 +237,7 @@ describe('story', () => {
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     advanceStory(state);
     buyCompany(state, 'orbital');
+    completeBuild(state, 'orbital');
     const orbital = activeCountry(state).companies.find((c) => c.siteId === 'orbital')!;
     orbital.projects.find((p) => p.defId === 'agi')!.completions = 1;
     const fired = advanceStory(state);

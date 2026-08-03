@@ -1,5 +1,12 @@
 import {
   AURA_OUTPUT_PER_LEVEL,
+  BETA_FREE_IAP,
+  BUILDER_CASH_COSTS,
+  BUILDER_VSCOIN_BASE,
+  BUILDER_VSCOIN_COSTS,
+  BUILDER_VSCOIN_GROWTH,
+  COMPANY_BUILD_DURATION_BASE,
+  COMPANY_BUILD_DURATION_GROWTH,
   COMPANY_COST_GROWTH,
   COMPANY_SITES,
   COUNTRY_STARTING_MONEY,
@@ -19,6 +26,9 @@ import {
   FASTFORWARD_SEC_PER_VSCOIN,
   FIRST_NAMES,
   FLOOR_BASE_COST,
+  FLOOR_BUILD_COMPANY_GROWTH,
+  FLOOR_BUILD_DURATION_BASE,
+  FLOOR_BUILD_FLOOR_GROWTH,
   FLOOR_CAPACITY,
   FLOOR_COST_GROWTH,
   LAST_NAMES,
@@ -56,12 +66,15 @@ import {
   VSCOIN_BOOST_DURATION_SEC,
   VSCOIN_BOOST_MULT,
   VSCOIN_LEDGER_CAP,
+  VSCOIN_PACKS,
   WORKER_TIERS,
   WORLD_OUTPUT_PER_COUNTRY,
   countryDefById,
   mapThemeById,
   projectDefById,
+  shopPackById,
   siteById,
+  vsCoinPackById,
   stationDefById,
   tierById,
   upgradeDefById,
@@ -87,7 +100,10 @@ import type {
 // v8: BETA RESET — per-country economies, generic timed actions, employee
 //     grades/promotion, debt, soft caps, multi-project companies. Saves
 //     below v8 are discarded (see save.ts).
-export const SAVE_VERSION = 8;
+// v9: per-country builder pool gating every timed action, country-level
+//     timed actions (company-build), timed floor construction, Gabriel's
+//     floor gift + free fast-forward credits, Shop/VsCoin tabs.
+export const SAVE_VERSION = 9;
 
 // ---------------------------------------------------------------------------
 // State creation
@@ -117,6 +133,8 @@ export function createInitialState(now = Date.now(), countryId: CountryId = DEFA
     missionsClaimed: [],
     globalUpgrades: {},
     fastForwardsUsed: 0,
+    freeFastForwards: 0,
+    floorGiftClaimed: false,
     promotionsDone: 0,
     nextEntityId: 1,
   };
@@ -144,6 +162,8 @@ export function createCountry(
     activeCompanyId: 0,
     debtQuitCooldownSec: DEBT_QUIT_INTERVAL_SEC,
     usedCompanyNames: [],
+    builders: { count: 1 }, // #1 is Gabriel's free, named gift
+    timedActions: [],
   };
   state.countries.push(country);
   const name = firstCompanyName ?? nextParodyName(country, 'garage');
@@ -306,8 +326,16 @@ export function activeBoost(state: GameState): { mult: number; remainingSec: num
   return { mult, remainingSec };
 }
 
+/** A desk being renovated is a construction site: unusable, zero output. */
+export function stationUnderUpgrade(company: CompanyState, stationInstanceId: number): boolean {
+  return company.timedActions.some(
+    (a) => a.kind === 'desk-upgrade' && a.targetId === stationInstanceId,
+  );
+}
+
 export function stationMultiplier(company: CompanyState, stationInstanceId: number | null): number {
   if (stationInstanceId === null) return 0; // no desk, no output
+  if (stationUnderUpgrade(company, stationInstanceId)) return 0; // construction site
   const instance = company.workstations.find((w) => w.id === stationInstanceId);
   if (!instance) return 0;
   const base = stationDefById(instance.defId).multiplier;
@@ -533,6 +561,25 @@ export function floorCost(company: CompanyState): number {
   );
 }
 
+/** The company's in-flight floor construction, if any (one at a time). */
+export function floorUnderConstruction(company: CompanyState): TimedAction | null {
+  return company.timedActions.find((a) => a.kind === 'floor-build') ?? null;
+}
+
+/** Build time of the company's next floor (ramps per floor and company). */
+export function floorBuildDurationSec(country: CountryState, company: CompanyState): number {
+  const floorIndex = company.floors + 1; // the floor being built (2..MAX_FLOORS)
+  const companyIndex = Math.max(
+    0,
+    country.companies.findIndex((c) => c.id === company.id),
+  );
+  return (
+    FLOOR_BUILD_DURATION_BASE *
+    Math.pow(FLOOR_BUILD_FLOOR_GROWTH, floorIndex - 2) *
+    Math.pow(FLOOR_BUILD_COMPANY_GROWTH, companyIndex)
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Training, promotion & desk upgrades (all generic timed actions)
 // ---------------------------------------------------------------------------
@@ -584,6 +631,52 @@ export function workerBusy(company: CompanyState, workerId: number): boolean {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Builder pool — the per-country labour that every timed action occupies
+// ---------------------------------------------------------------------------
+
+/**
+ * Builders occupied right now = every in-flight timed action in the country
+ * (company- and country-level alike). Derived, never stored, so it can never
+ * desync across save/load or offline simulation.
+ */
+export function busyBuilders(country: CountryState): number {
+  let busy = country.timedActions.length;
+  for (const company of country.companies) busy += company.timedActions.length;
+  return busy;
+}
+
+export function freeBuilders(country: CountryState): number {
+  return country.builders.count - busyBuilders(country);
+}
+
+/** Price of the country's next builder: cash early, then VsCoin forever. */
+export function builderCost(country: CountryState): { cash: number } | { vsCoin: number } {
+  const n = country.builders.count + 1; // the builder number being bought
+  const cashIndex = n - 2; // builder #2 = index 0
+  if (cashIndex < BUILDER_CASH_COSTS.length) return { cash: BUILDER_CASH_COSTS[cashIndex] };
+  const vsCoinIndex = cashIndex - BUILDER_CASH_COSTS.length; // builder #4 = index 0
+  if (vsCoinIndex < BUILDER_VSCOIN_COSTS.length) {
+    return { vsCoin: BUILDER_VSCOIN_COSTS[vsCoinIndex] };
+  }
+  return { vsCoin: Math.ceil(BUILDER_VSCOIN_BASE * Math.pow(BUILDER_VSCOIN_GROWTH, n - 5)) };
+}
+
+/** Hire the active country's next builder off the ladder. */
+export function hireBuilder(state: GameState): string | null {
+  const country = activeCountry(state);
+  const price = builderCost(country);
+  if ('cash' in price) {
+    if (country.money < price.cash) return 'Not enough money';
+    country.money -= price.cash;
+  } else {
+    const err = spendVsCoin(state, price.vsCoin, 'shop:builder');
+    if (err) return err;
+  }
+  country.builders.count += 1;
+  return null;
+}
+
 /** The tier a worker gets promoted into (null = already at the top). */
 export function nextTier(worker: WorkerState): string | null {
   const index = WORKER_TIERS.findIndex((t) => t.id === worker.tierId);
@@ -624,6 +717,7 @@ export function trainWorker(state: GameState, workerId: number): string | null {
   if (atSkillCap(worker)) {
     return nextTier(worker) ? 'At skill cap — promote instead' : 'Already at max skill level';
   }
+  if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = trainCost(worker);
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
@@ -654,6 +748,7 @@ export function promoteWorker(state: GameState, workerId: number): string | null
   const to = nextTier(worker);
   if (!to) return 'Already at the top grade';
   if (!atSkillCap(worker)) return 'Not at the skill cap yet';
+  if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = promoteCost(worker)!;
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
@@ -696,7 +791,9 @@ export function deskUpgradeDurationSec(defId: string): number | null {
 
 /**
  * Upgrade a desk in place to the next workstation tier: money + time.
- * The seated worker keeps working at the old multiplier meanwhile.
+ * The desk becomes a construction site for the duration: its employee is
+ * unseated (autoSeat may find them another free desk) and it produces
+ * nothing until the renovation completes.
  */
 export function upgradeDesk(state: GameState, stationId: number): string | null {
   const country = activeCountry(state);
@@ -708,6 +805,7 @@ export function upgradeDesk(state: GameState, stationId: number): string | null 
   }
   const to = nextStationDef(station.defId);
   if (!to) return 'Already the best desk';
+  if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = deskUpgradeCost(station.defId)!;
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
@@ -720,6 +818,7 @@ export function upgradeDesk(state: GameState, stationId: number): string | null 
     totalSec: duration,
     toDefId: to,
   });
+  autoSeat(company); // evict the sitter; they may find another free desk
   return null;
 }
 
@@ -730,11 +829,27 @@ export function upgradeDesk(state: GameState, stationId: number): string | null 
  */
 export function fastForwardCost(state: GameState, action: TimedAction): number {
   if (state.fastForwardsUsed === 0) return 0;
+  if (state.freeFastForwards > 0) return 0; // Gabriel's gift credits
   return Math.max(1, Math.ceil(action.remainingSec / FASTFORWARD_SEC_PER_VSCOIN));
 }
 
 /** Instantly complete a timed action, paying its fast-forward price. */
 export function fastForwardAction(state: GameState, actionId: number): string | null {
+  const country = activeCountry(state);
+  const countryAction = country.timedActions.find((a) => a.id === actionId);
+  if (countryAction) {
+    const cost = fastForwardCost(state, countryAction);
+    if (cost > 0) {
+      const err = spendVsCoin(state, cost, `shop:fast-forward-${countryAction.kind}`);
+      if (err) return err;
+    } else if (state.fastForwardsUsed > 0 && state.freeFastForwards > 0) {
+      state.freeFastForwards -= 1;
+    }
+    state.fastForwardsUsed += 1;
+    country.timedActions = country.timedActions.filter((a) => a.id !== actionId);
+    completeCountryTimedAction(state, country, countryAction, emptyEvents());
+    return null;
+  }
   for (const company of activeCountry(state).companies) {
     const action = company.timedActions.find((a) => a.id === actionId);
     if (!action) continue;
@@ -742,6 +857,8 @@ export function fastForwardAction(state: GameState, actionId: number): string | 
     if (cost > 0) {
       const err = spendVsCoin(state, cost, `shop:fast-forward-${action.kind}`);
       if (err) return err;
+    } else if (state.fastForwardsUsed > 0 && state.freeFastForwards > 0) {
+      state.freeFastForwards -= 1; // the tutorial freebie takes precedence
     }
     state.fastForwardsUsed += 1;
     company.timedActions = company.timedActions.filter((a) => a.id !== actionId);
@@ -801,7 +918,41 @@ function completeTimedAction(
       autoSeat(company); // best workers migrate to the improved desk
       return;
     }
+    case 'floor-build': {
+      company.floors = Math.min(MAX_FLOORS, company.floors + 1);
+      events.floorBuildsDone.push({ companyId: company.id, floors: company.floors });
+      return;
+    }
   }
+}
+
+/**
+ * Apply a finished country-level timed action (company-build): the company
+ * comes to life, parody-named, at the price paid on start. Deliberately no
+ * activeCompanyId switch — completion can happen mid-play or offline, and
+ * yanking the player to another office would be hostile; the map (and the
+ * companyBuildsDone event) surface the opening instead.
+ */
+function completeCountryTimedAction(
+  state: GameState,
+  country: CountryState,
+  action: TimedAction,
+  events: TickEvents,
+): void {
+  if (action.kind !== 'company-build' || !action.siteId) return;
+  if (country.companies.some((c) => c.siteId === action.siteId)) return; // hygiene
+  const company = createCompany(
+    state,
+    country,
+    action.siteId,
+    nextParodyName(country, action.siteId),
+    action.price ?? 0,
+  );
+  events.companyBuildsDone.push({
+    countryId: country.id,
+    companyId: company.id,
+    siteId: action.siteId,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -810,7 +961,33 @@ function completeTimedAction(
 
 /** Sites where a company can still be founded in the active country. */
 export function availableSites(state: GameState): string[] {
-  return COMPANY_SITES.filter((s) => !companyAtSite(state, s.id)).map((s) => s.id);
+  const country = activeCountry(state);
+  return COMPANY_SITES.filter(
+    (s) => !companyAtSite(state, s.id) && !siteUnderConstruction(country, s.id),
+  ).map((s) => s.id);
+}
+
+/** The in-flight founding at a site of this country, if any. */
+export function siteUnderConstruction(
+  country: CountryState,
+  siteId: string,
+): TimedAction | null {
+  return (
+    country.timedActions.find((a) => a.kind === 'company-build' && a.siteId === siteId) ?? null
+  );
+}
+
+/**
+ * Build time of the country's next company. Ramps with the companies
+ * already founded there (pending builds included); the country's first
+ * company — the tutorial garage, or a fresh start abroad — is instant.
+ */
+export function companyBuildDurationSec(country: CountryState): number {
+  const founded =
+    country.companies.length +
+    country.timedActions.filter((a) => a.kind === 'company-build').length;
+  if (founded === 0) return 0;
+  return COMPANY_BUILD_DURATION_BASE * Math.pow(COMPANY_BUILD_DURATION_GROWTH, founded);
 }
 
 /**
@@ -821,7 +998,11 @@ export function availableSites(state: GameState): string[] {
  */
 export function companyCost(state: GameState, siteId: string): number {
   const site = siteById(siteId);
-  const extraCompanies = Math.max(0, activeCountry(state).companies.length - 1);
+  const country = activeCountry(state);
+  // Pending foundings count: starting several builds in parallel must not
+  // dodge the escalation.
+  const pending = country.timedActions.filter((a) => a.kind === 'company-build').length;
+  const extraCompanies = Math.max(0, country.companies.length + pending - 1);
   return Math.round(site.cost * Math.pow(COMPANY_COST_GROWTH, extraCompanies));
 }
 
@@ -911,6 +1092,8 @@ function emptyEvents(): TickEvents {
     trainingsDone: [],
     promotionsDone: [],
     deskUpgradesDone: [],
+    floorBuildsDone: [],
+    companyBuildsDone: [],
     quits: [],
   };
 }
@@ -1068,6 +1251,19 @@ function tickCountry(
       }
     }
   }
+
+  // 6. Country-level timed actions (company-build) run down the same way.
+  if (country.timedActions.length > 0) {
+    const finished: TimedAction[] = [];
+    for (const action of country.timedActions) {
+      action.remainingSec -= dt;
+      if (action.remainingSec <= 0) finished.push(action);
+    }
+    if (finished.length > 0) {
+      country.timedActions = country.timedActions.filter((a) => a.remainingSec > 0);
+      for (const action of finished) completeCountryTimedAction(state, country, action, events);
+    }
+  }
 }
 
 /**
@@ -1145,15 +1341,55 @@ export function buyWorkstation(state: GameState, defId: string): string | null {
   return null;
 }
 
-/** Unlock the next floor of the active company's building. */
+/**
+ * Start building the next floor of the active company's building: paid up
+ * front, raised by a builder over floorBuildDurationSec, the floor exists
+ * only on completion.
+ */
 export function buyFloor(state: GameState): string | null {
   const country = activeCountry(state);
   const company = activeCompany(state);
   if (company.floors >= MAX_FLOORS) return 'Building is already at max height';
+  if (floorUnderConstruction(company)) return 'error.floorAlreadyBuilding';
+  if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = floorCost(company);
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
-  company.floors += 1;
+  const duration = floorBuildDurationSec(country, company);
+  company.timedActions.push({
+    id: state.nextEntityId++,
+    kind: 'floor-build',
+    targetId: company.id,
+    remainingSec: duration,
+    totalSec: duration,
+  });
+  return null;
+}
+
+/**
+ * Gabriel's once-per-game floor gift: available on the second floor of the
+ * player's very first company (first country, first company) only.
+ */
+export function floorGiftAvailable(state: GameState): boolean {
+  if (state.floorGiftClaimed) return false;
+  const firstCountry = state.countries[0];
+  if (!firstCountry || state.activeCountryId !== firstCountry.id) return false;
+  const company = activeCompany(state);
+  if (firstCountry.companies[0]?.id !== company.id) return false;
+  return company.floors === 1 && !floorUnderConstruction(company);
+}
+
+/**
+ * Claim Gabriel's gift: the second floor appears instantly and free, and a
+ * free fast-forward credit comes with it (teaching the skip mechanic).
+ * Both effects are durable counters, so offline simulation is unaffected.
+ */
+export function claimFloorGift(state: GameState): string | null {
+  if (!floorGiftAvailable(state)) return 'error.floorGiftUnavailable';
+  const company = activeCompany(state);
+  company.floors = 2;
+  state.floorGiftClaimed = true;
+  state.freeFastForwards += 1;
   return null;
 }
 
@@ -1223,11 +1459,27 @@ export function buyCompany(state: GameState, siteId: string): string | null {
   const country = activeCountry(state);
   siteById(siteId);
   if (companyAtSite(state, siteId)) return 'Site already occupied';
+  if (siteUnderConstruction(country, siteId)) return 'error.siteAlreadyBuilding';
+  const duration = companyBuildDurationSec(country);
+  if (duration > 0 && freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = companyCost(state, siteId);
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
-  const company = createCompany(state, country, siteId, nextParodyName(country, siteId), cost);
-  country.activeCompanyId = company.id;
+  if (duration <= 0) {
+    // A country's first company is instant (tutorial / fresh start abroad).
+    const company = createCompany(state, country, siteId, nextParodyName(country, siteId), cost);
+    country.activeCompanyId = company.id;
+    return null;
+  }
+  country.timedActions.push({
+    id: state.nextEntityId++,
+    kind: 'company-build',
+    targetId: 0, // no CompanyState exists yet; siteId identifies the build
+    remainingSec: duration,
+    totalSec: duration,
+    siteId,
+    price: cost,
+  });
   return null;
 }
 
@@ -1396,6 +1648,49 @@ export function marketingCost(state: GameState): number {
   return Math.max(MARKETING_MIN_COST, Math.round(grossRewardRate(state) * MARKETING_COST_SEC));
 }
 
+// ---------------------------------------------------------------------------
+// Shop — VsCoin → cash funding rounds
+// ---------------------------------------------------------------------------
+
+/** Cash a shop pack grants right now (progression-scaled, never trivial). */
+export function shopPackCash(state: GameState, packId: string): number {
+  const pack = shopPackById(packId);
+  return Math.max(pack.floorCash, Math.round(grossRewardRate(state) * 60 * pack.minutes));
+}
+
+/** Whether the active country has enough companies to unlock a pack. */
+export function shopPackUnlocked(state: GameState, packId: string): boolean {
+  return activeCountry(state).companies.length >= shopPackById(packId).requiresCompanies;
+}
+
+/**
+ * Claim a VsCoin acquisition SKU. In beta only the starter pack is
+ * claimable — free and unlimited while BETA_FREE_IAP is true; the larger
+ * packs wait for real payments (their grant will arrive through the
+ * payment callback with source 'iap:<sku>').
+ */
+export function claimVsCoinPack(state: GameState, skuId: string): string | null {
+  const pack = vsCoinPackById(skuId);
+  if (!BETA_FREE_IAP || pack.id !== VSCOIN_PACKS[0].id) return 'error.iapComingSoon';
+  return grantVsCoin(state, pack.coins, `shop:${pack.id}`);
+}
+
+/**
+ * Buy a funding round: VsCoin out (audited, sink 'shop:<sku>'), cash into
+ * the active country's wallet. In debt the credit pays the debt down first
+ * — it is the same wallet. Deliberately NOT added to totalEarned: missions
+ * and story feed on earnings and must not be purchasable.
+ */
+export function buyShopPack(state: GameState, packId: string): string | null {
+  const pack = shopPackById(packId);
+  if (!shopPackUnlocked(state, packId)) return 'error.packLocked';
+  const cash = shopPackCash(state, packId);
+  const err = spendVsCoin(state, pack.vsCoin, `shop:${pack.id}`);
+  if (err) return err;
+  activeCountry(state).money += cash;
+  return null;
+}
+
 /**
  * Buy a marketing campaign: a MARKETING_MULT x output boost for
  * MARKETING_DURATION_SEC, paid with project money. Re-buying extends it.
@@ -1543,9 +1838,10 @@ const WORKSTATION_ORDER = ['basic', 'standing', 'dual', 'corner'];
  * desk produce nothing.
  */
 export function autoSeat(company: CompanyState): void {
-  const stations = [...company.workstations].sort(
-    (a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier,
-  );
+  // Desks under renovation are construction sites — nobody sits there.
+  const stations = company.workstations
+    .filter((w) => !stationUnderUpgrade(company, w.id))
+    .sort((a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier);
   const potential = (w: WorkerState) => {
     const tier = tierById(w.tierId);
     const specBonus =

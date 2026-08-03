@@ -20,8 +20,8 @@ be revisited cheaply.
    starting country while no progress exists. Skipping the tutorial keeps US.
 4. **Worker `training` field replaced** by the generic timed-action system
    (`CompanyState.timedActions`). A worker is "busy" (off the floor, no
-   desk) while targeted by a training or promotion action. Desk upgrades do
-   NOT evict the seated worker (friendliness; see balance.md).
+   desk) while targeted by a training or promotion action. ~~Desk upgrades
+   do NOT evict the seated worker~~ — reversed by decision 16.
 5. **Promotion keeps skill level** and is cheaper than a fresh hire at the
    target tier — the reward for the training grind (see balance.md).
 6. **Soft cap = plateau, not decline**: at the per-project reward cap both
@@ -57,3 +57,32 @@ be revisited cheaply.
 14. **New-country start is a clean 50-money start** (same as a new game,
     no angel gift — the tutorial is done); the world output bonus is the
     carry-over that keeps it fun.
+15. **The builder pool is the single throttle on all progression** (Phase
+    W): every timed action — training, promotion, desk upgrades, floor
+    construction, company founding — occupies exactly one builder from the
+    per-country pool for its duration. Occupancy is derived from the
+    in-flight actions (company- and country-level), never stored, so it
+    cannot desync across save/load or offline simulation. The pool starts
+    at 1 (Gabriel's named gift, `ui.builderGiftName`) so early trainings
+    are never blocked; parallelism is what the ladder sells (cash → VsCoin
+    → open-ended VsCoin sink, see balance.md Phase W).
+15b. **company-build lives on `CountryState.timedActions`** (Phase W): a
+    company under construction has no `CompanyState` to carry its action,
+    so country-level actions were preferred over a pending-companies list —
+    they reuse the exact countdown/completion/fast-forward machinery
+    (tickCountry runs both loops; `completeCountryTimedAction` is the
+    country-level sibling of `completeTimedAction`). The action stores
+    `siteId` + `price`; the parody name is drawn on completion. Founding
+    escalation (`companyCost`) counts pending builds so parallel starts
+    can't dodge it; `availableSites` hides sites under construction.
+    Completion does NOT switch `activeCompanyId` — a build finishing
+    mid-play or offline must not yank the player to another office; the
+    map + `companyBuildsDone` toast surface the opening. A country's first
+    company stays instant (tutorial + prestige restarts).
+16. **Nothing produces while it is being worked on** (Phase W, reverses
+    the desk half of decision 4): a desk under renovation is a construction
+    site — its employee is auto-unseated on start, autoSeat never seats
+    anyone there, and stationMultiplier returns 0 for it (defense in
+    depth). Training/promotion targets already produced zero via
+    workerBusy + autoSeat. Identical in tick() and simulateOffline() by
+    construction — the rules live in engine helpers, not the UI.

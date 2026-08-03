@@ -50,6 +50,70 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.free': 'Gratuit',
   'ui.workerQuit': '{name} a démissionné pour salaires impayés !',
 
+  // --- Ouvriers (code : builders — affichés « Ouvriers ») -------------------
+  'ui.builders': 'Ouvriers',
+  'ui.buildersFree': '{free}/{total} disponibles',
+  'ui.hireBuilder': 'Embaucher un ouvrier',
+  'ui.builderGiftName': 'Gérard Fondations',
+  'ui.builderGiftHint':
+    'Votre équipe de chantier construit les étages, rénove les bureaux et anime les formations. {name} — votre premier ouvrier — est un cadeau de Gabriel.',
+  'error.noFreeBuilders':
+    'Tous les ouvriers sont occupés — attendez la fin d’un chantier ou embauchez-en un autre.',
+
+  // --- Construction d’étages ------------------------------------------------
+  'ui.floorBuilding': 'Étage {floor} en construction · terminé dans {time}',
+  'ui.floorBuildingShort': 'En construction',
+  'ui.builderOnSite': '1 ouvrier sur le chantier',
+  'ui.floorBuildStarted': 'Chantier lancé !',
+  'ui.floorBuilt': 'Nouvel étage prêt !',
+  'ui.floorGift': 'Réclamer le cadeau de Gabriel : un 2ᵉ étage gratuit',
+  'ui.floorGiftClaimed': 'Gabriel vous a construit un étage — avec une avance rapide gratuite !',
+  'error.floorAlreadyBuilding': 'Un étage est déjà en construction.',
+  'error.floorGiftUnavailable': 'Le cadeau de Gabriel n’est pas disponible ici.',
+
+  // --- Fondation de sociétés ------------------------------------------------
+  'ui.siteBuilding': 'En construction · ouverture dans {time}',
+  'ui.companyBuildStarted': 'Équipe de chantier envoyée !',
+  'ui.companyBuilt': '{name} ouvre ses portes !',
+  'error.siteAlreadyBuilding': 'Une société est déjà en construction à cet endroit.',
+
+  // --- Boutique (levées de fonds : VsCoin → cash) ---------------------------
+  'ui.shopTitle': 'Levées de fonds',
+  'ui.shopHint':
+    'Échangez des VsCoin contre une injection de cash dans le pays que vous gérez. La valeur des packs suit vos revenus actuels : une levée reste utile à chaque étape.',
+  'ui.shopDebtNote':
+    'Vous êtes endetté : les fonds levés remboursent d’abord la dette — c’est le même portefeuille.',
+  'ui.packRequires': 'Nécessite {count} sociétés',
+  'ui.packBought': '{name} : c’est bouclé — {cash} virés !',
+  'shop.pack.seed.name': 'Tour Seed',
+  'shop.pack.seed.blurb': 'Un business angel bienveillant vous vire un peu de trésorerie.',
+  'shop.pack.series-a.name': 'Série A',
+  'shop.pack.series-a.blurb': 'Une vraie term sheet. Les associés veulent une démo.',
+  'shop.pack.series-b.name': 'Série B',
+  'shop.pack.series-b.blurb': 'Du capital de croissance — le board deck s’écrit tout seul.',
+  'shop.pack.series-c.name': 'Série C',
+  'shop.pack.series-c.blurb': 'De l’argent late-stage. Des jets privés tournent autour du pâté de maisons.',
+  'shop.pack.ipo.name': 'Cloche d’IPO',
+  'shop.pack.ipo.blurb': 'Sonnez-la. Le marché fait le reste.',
+
+  // --- Onglet d’acquisition de VsCoin ---------------------------------------
+  'ui.vscoinTitle': 'Obtenir des VsCoin',
+  'ui.vscoinHint':
+    'Les VsCoin paient les avances rapides, les ouvriers, les levées de fonds et les bonus premium. Vous en gagnez aussi via les missions et votre histoire.',
+  'ui.betaBadge': 'BÊTA',
+  'ui.claimFree': 'Récupérer gratuitement',
+  'ui.vscoinClaimed': '+{coins} VsCoin — profitez-en !',
+  'ui.comingSoon': 'Disponible avec la monétisation',
+  'ui.vscoinBetaNote':
+    'Pendant la bêta, le pack de départ est gratuit et illimité — sans conditions.',
+  'error.iapComingSoon':
+    'Les vrais achats arriveront après la bêta — le pack de départ est offert !',
+  'vscoin.pack.vsc-starter.name': 'Espresso de départ',
+  'vscoin.pack.vsc-angel.name': 'Ailes d’ange',
+  'vscoin.pack.vsc-venture.name': 'Coffre venture',
+  'vscoin.pack.vsc-growth.name': 'Fusée de croissance',
+  'vscoin.pack.vsc-unicorn.name': 'Trésor de licorne',
+
   // --- Améliorations de bureaux ---------------------------------------------
   'ui.renovations': 'Rénovations',
   'ui.upgradeDesk': 'Améliorer',
@@ -86,7 +150,7 @@ export const fr: Record<keyof typeof en, string> = {
   // --- Réinitialisation bêta ------------------------------------------------
   'ui.betaResetTitle': 'Un nouveau départ (bêta)',
   'ui.betaResetText':
-    'Le monde vient de beaucoup grandir : des pays, des promotions, des dettes et bien plus. Cette mise à jour bêta reconstruit le jeu de fond en comble, et votre ancienne sauvegarde n’a pas pu suivre. Merci de tester — votre prochain empire grandira encore plus vite !',
+    'Les équipes de chantier sont arrivées : des ouvriers qui construisent vos étages et vos sociétés au fil du temps, des levées de fonds et une boutique VsCoin. Cette mise à jour bêta repense la croissance de votre empire, et votre ancienne sauvegarde n’a pas pu suivre. Merci de tester — votre prochain empire grandira encore plus vite !',
 
   // --- Pays -----------------------------------------------------------------
   'country.ch.name': 'Suisse',

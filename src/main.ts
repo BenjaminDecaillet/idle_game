@@ -67,6 +67,17 @@ function loop(now: number): void {
     }
   }
   if (events.deskUpgradesDone.length > 0) ui.officeNeedsRebuild();
+  for (const done of events.floorBuildsDone) {
+    ui.officeNeedsRebuild();
+    if (done.companyId === shownCompanyId) {
+      ui.toast(`🏗️ ${t('ui.floorBuilt')}`, 'info');
+    }
+  }
+  for (const done of events.companyBuildsDone) {
+    const doneCountry = state.countries.find((c) => c.id === done.countryId);
+    const company = doneCountry?.companies.find((c) => c.id === done.companyId);
+    if (company) ui.toast(`🏢 ${t('ui.companyBuilt', { name: company.name })}`, 'info');
+  }
   for (const quit of events.quits) {
     ui.officeNeedsRebuild();
     ui.toast(`😞 ${t('ui.workerQuit', { name: quit.name })}`, 'error');

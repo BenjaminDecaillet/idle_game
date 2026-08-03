@@ -20,6 +20,7 @@ import {
   grantVsCoin,
   globalOutputMultiplier,
   simulateOffline,
+  siteUnderConstruction,
   tick,
   unlockCountry,
   setActiveCountry,
@@ -43,6 +44,15 @@ function makeWorker(overrides: Partial<WorkerState> = {}): WorkerState {
     promotions: 0,
     ...overrides,
   };
+}
+
+/** Helper: after buyCompany, complete the build. */
+function completeBuild(state: any, siteId: string): any {
+  const country = activeCountry(state);
+  const action = siteUnderConstruction(country, siteId);
+  if (!action) return country.companies.find((c) => c.siteId === siteId);
+  tick(state, action.remainingSec + 1);
+  return country.companies.find((c) => c.siteId === siteId)!;
 }
 
 describe('countries — new game defaults', () => {
@@ -140,6 +150,7 @@ describe('worldUnlocked', () => {
     for (const site of COMPANY_SITES.slice(1)) {
       const result = buyCompany(state, site.id);
       expect(result).toBeNull();
+      completeBuild(state, site.id);
     }
 
     expect(country.companies.length).toBe(COMPANY_SITES.length);
@@ -168,6 +179,7 @@ describe('unlockCountry', () => {
     // Fill all sites to unlock world
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
 
     // Set money to less than unlock cost
@@ -184,6 +196,7 @@ describe('unlockCountry', () => {
     // Fill all sites
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
 
     const cost = countryUnlockCost(state);
@@ -213,6 +226,7 @@ describe('unlockCountry', () => {
     // Fill all sites
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
 
     unlockCountry(state, 'ch');
@@ -231,6 +245,7 @@ describe('unlockCountry', () => {
     // Fill all sites
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
 
     const firstCost = countryUnlockCost(state);
@@ -257,6 +272,7 @@ describe('setActiveCountry', () => {
     // Fill all sites to unlock world
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
 
     // Unlock CH
@@ -292,6 +308,7 @@ describe('per-country isolation', () => {
     // Fill all US sites to unlock world
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
 
     const moneyAfterCompanies = usCountry.money;
@@ -312,6 +329,7 @@ describe('per-country isolation', () => {
     // Setup to unlock
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
 
     unlockCountry(state, 'ch');
@@ -333,6 +351,7 @@ describe('per-country isolation', () => {
     usCountry.money = 200_000_000_000_000;
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
     unlockCountry(state, 'ch');
     const chCountry = countryById(state, 'ch')!;
@@ -358,6 +377,7 @@ describe('per-country isolation', () => {
     // Unlock CH
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
     unlockCountry(state, 'ch');
     const chCountry = activeCountry(state);
@@ -396,6 +416,8 @@ describe('global output multiplier with world expansion', () => {
       activeCompanyId: 0,
       debtQuitCooldownSec: 60,
       usedCompanyNames: [],
+      builders: { count: 1 },
+      timedActions: [],
     };
     state.countries.push(fakeCountry);
 
@@ -433,6 +455,8 @@ describe('global output multiplier with world expansion', () => {
       activeCompanyId: 0,
       debtQuitCooldownSec: 60,
       usedCompanyNames: [],
+      builders: { count: 1 },
+      timedActions: [],
     };
     state.countries.push(fakeCountry);
 
@@ -556,6 +580,7 @@ describe('VsCoin and missions are global', () => {
     usCountry.money = 200_000_000_000_000;
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
     unlockCountry(state, 'ch');
 
@@ -576,6 +601,7 @@ describe('VsCoin and missions are global', () => {
     usCountry.money = 200_000_000_000_000;
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
     unlockCountry(state, 'ch');
 
@@ -602,6 +628,7 @@ describe('VsCoin and missions are global', () => {
     usCountry.money = 200_000_000_000_000;
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
     unlockCountry(state, 'ch');
 
@@ -623,6 +650,7 @@ describe('parody company name pools', () => {
     for (let i = 0; i < COMPANY_SITES.length - 1; i++) {
       const site = COMPANY_SITES[i + 1]; // skip garage
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
       const company = country.companies[i + 1]; // second company onwards
       expect(company.name).toBe(expectedNames[i]);
     }
@@ -636,6 +664,7 @@ describe('parody company name pools', () => {
     // Fill all 8 sites to exhaust the US pool
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
 
     // Verify that usedCompanyNames has 7 parody names (7 companies purchased + 1 initial garage)
@@ -650,6 +679,7 @@ describe('parody company name pools', () => {
 
     country.money = 200_000_000_000_000;
     buyCompany(state, 'loft');
+    completeBuild(state, 'loft');
 
     // Second company gets the first parody name
     expect(country.companies[1].name).toBe('MicroHard');
@@ -664,6 +694,7 @@ describe('parody company name pools', () => {
     // Fill all US sites
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
 
     // Unlock CH
@@ -684,6 +715,7 @@ describe('parody company name pools', () => {
     // Add multiple companies
     for (const site of COMPANY_SITES.slice(1).slice(0, 3)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
 
     // Verify no duplicates
@@ -700,11 +732,13 @@ describe('countries — integration with allCompanies', () => {
 
     // Add a company in US
     buyCompany(state, 'loft');
+    completeBuild(state, 'loft');
     expect(usCountry.companies.length).toBe(2);
 
     // Unlock CH
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
+      completeBuild(state, site.id);
     }
     unlockCountry(state, 'ch');
     const chCountry = activeCountry(state);

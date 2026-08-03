@@ -16,7 +16,9 @@ import {
   buyWorkstation,
   createInitialState,
   grantVsCoin,
+  siteUnderConstruction,
   spendVsCoin,
+  tick,
   upgradeVsCoinCost,
 } from '../src/game/engine';
 import {
@@ -46,6 +48,15 @@ function makeWorker(id: number): WorkerState {
     timesTrained: 0,
     promotions: 0,
   };
+}
+
+/** Helper: after buyCompany, complete the build. */
+function completeBuild(state: any, siteId: string): any {
+  const country = activeCountry(state);
+  const action = siteUnderConstruction(country, siteId);
+  if (!action) return country.companies.find((c) => c.siteId === siteId);
+  tick(state, action.remainingSec + 1);
+  return country.companies.find((c) => c.siteId === siteId)!;
 }
 
 describe('vsCoin ledger API', () => {
@@ -206,6 +217,7 @@ describe('story milestones grant VsCoin', () => {
     advanceStory(state);
     activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'loft');
+    completeBuild(state, 'loft');
     advanceStory(state);
     expect(state.story.seen).toContain('site-loft');
     expect(claimMission(state, 'company-2')).toBeNull();

@@ -1528,3 +1528,55 @@ export function lobbyDecor(wallpaperId: string): string {
   }
   return out;
 }
+
+/**
+ * Decor for the floor currently under construction (wall band, 64 px):
+ * scaffolding with planks and bricks, a hanging warning-stripe banner and a
+ * toolbox + paint bucket. Wallpaper-independent and fully deterministic.
+ */
+export function constructionDecor(): string {
+  const key = '__construction';
+  let out = decorCache.get(key);
+  if (out === undefined) {
+    const scaffold = item(
+      58,
+      60,
+      shadow(29, 57, 24) +
+        `<rect x="6" y="4" width="4" height="53" rx="1.5" fill="#ff8a2a" ${S1}/>` +
+        `<rect x="48" y="4" width="4" height="53" rx="1.5" fill="#ff8a2a" ${S1}/>` +
+        tube('M9 36 L49 22', '#b9c4d2', 2) +
+        tube('M9 22 L49 36', '#b9c4d2', 2) +
+        `<rect x="2" y="16" width="54" height="5" rx="1.5" fill="#d9a05b" ${S1}/>` +
+        `<rect x="2" y="37" width="54" height="5" rx="1.5" fill="#d9a05b" ${S1}/>` +
+        `<line x1="20" y1="17" x2="20" y2="20" stroke="${INK}" stroke-width="1" opacity=".35"/>` +
+        `<line x1="38" y1="38" x2="38" y2="41" stroke="${INK}" stroke-width="1" opacity=".35"/>` +
+        `<rect x="12" y="10.5" width="9" height="5.5" rx="1" fill="#e2604f" ${S1}/>` +
+        `<rect x="23" y="10.5" width="9" height="5.5" rx="1" fill="#e2604f" ${S1}/>` +
+        `<rect x="17" y="31.5" width="9" height="5.5" rx="1" fill="#e2604f" ${S1}/>`
+    );
+    const banner = item(
+      46,
+      58,
+      `<path d="M10 0 V11 M36 0 V11" fill="none" stroke="${INK}" stroke-width="1.5" stroke-linecap="round"/>` +
+        `<rect x="4" y="10" width="38" height="16" rx="2" fill="#ffb02e" ${S}/>` +
+        `<path d="M7 24.5 l7 -13 h5 l-7 13 z M19 24.5 l7 -13 h5 l-7 13 z M31 24.5 l7 -13 h4 l-7 13 z" fill="${INK}" opacity=".85"/>`
+    );
+    const tools = item(
+      48,
+      32,
+      shadow(24, 29, 20) +
+        tube('M39 13 L44 3', '#d9a05b', 2.5) +
+        `<circle cx="44" cy="3" r="1.6" fill="#ff8a2a" stroke="none"/>` +
+        `<path d="M29.5 15.5 h14 l-1.6 11.5 h-10.8 z" fill="#f0f4f8" ${S}/>` +
+        `<rect x="28" y="12" width="17" height="3.5" rx="1.5" fill="#d5dde8" ${S1}/>` +
+        `<path d="M33.5 17 q1 4 -1.5 4.5" fill="none" stroke="#ff8a2a" stroke-width="2" stroke-linecap="round"/>` +
+        `<rect x="3" y="14" width="21" height="13" rx="2" fill="#ff5d55" ${S}/>` +
+        `<line x1="3" y1="19" x2="24" y2="19" stroke="${INK}" stroke-width="1" opacity=".35"/>` +
+        `<path d="M9 14 v-2.5 a4.5 4.5 0 0 1 9 0 V14" fill="none" ${S1}/>` +
+        `<rect x="11.5" y="17" width="4" height="4" rx="1" fill="#ffb02e" ${S1}/>`
+    );
+    out = scaffold + banner + tools;
+    decorCache.set(key, out);
+  }
+  return out;
+}

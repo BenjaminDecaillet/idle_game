@@ -5,6 +5,7 @@ import {
   activeCountry,
   autoSeat,
   buyWorkstation,
+  companyWorkRate,
   createInitialState,
   deskUpgradeCost,
   deskUpgradeDurationSec,
@@ -13,6 +14,7 @@ import {
   nextStationDef,
   simulateOffline,
   stationMultiplier,
+  stationUnderUpgrade,
   tick,
   upgradeDesk,
 } from '../src/game/engine';
@@ -168,8 +170,8 @@ describe('upgradeDesk — cost & action creation', () => {
   });
 });
 
-describe('upgradeDesk — worker continues working', () => {
-  it('keeps the worker seated and working during the upgrade at the old multiplier', () => {
+describe('upgradeDesk — construction site: zero output', () => {
+  it('unseats the worker so they produce nothing (stationMultiplier is 0 for a desk under upgrade)', () => {
     const state = createInitialState(NOW);
     const c = activeCompany(state);
     const country = activeCountry(state);
@@ -181,18 +183,17 @@ describe('upgradeDesk — worker continues working', () => {
     autoSeat(c);
 
     expect(worker.stationId).not.toBeNull();
-    const stationIdBefore = worker.stationId;
-    const multiplierBefore = stationMultiplier(c, stationIdBefore);
-
     const deskId = c.workstations[0].id;
+
     upgradeDesk(state, deskId);
 
-    // Worker is still on the same desk
-    expect(worker.stationId).toBe(stationIdBefore);
-    // Multiplier is still the old value (basic = 1)
-    const multiplierDuring = stationMultiplier(c, stationIdBefore);
-    expect(multiplierDuring).toBeCloseTo(multiplierBefore, 10);
-    expect(multiplierDuring).toBeCloseTo(1, 10);
+    // Worker is unseated during construction
+    expect(worker.stationId).toBeNull();
+    // Desk is marked as under upgrade
+    expect(stationUnderUpgrade(c, deskId)).toBe(true);
+    // If they were still on the desk, its multiplier would be 0
+    const multiplierIfSeated = stationMultiplier(c, deskId);
+    expect(multiplierIfSeated).toBe(0);
   });
 });
 
@@ -235,6 +236,7 @@ describe('upgradeDesk — completion after tick', () => {
     const desk1Id = c.workstations[0].id;
     const desk2Id = c.workstations[1].id;
 
+    country.builders.count = 2; // two concurrent renovations need two builders
     upgradeDesk(state, desk1Id);
     upgradeDesk(state, desk2Id);
     expect(c.timedActions).toHaveLength(2);
@@ -440,5 +442,111 @@ describe('desk upgrade lifecycle — comprehensive flow', () => {
     // Now it's at the best, can't upgrade further
     const errMsg = upgradeDesk(state, deskId);
     expect(errMsg).toBe('Already the best desk');
+  });
+});
+
+describe('upgradeDesk — construction downtime', () => {
+  it('unseats a seated worker when their desk starts upgrading', () => {
+    const state = createInitialState(NOW);
+    const c = activeCompany(state);
+    const country = activeCountry(state);
+    country.money = 10_000;
+
+    buyWorkstation(state, 'basic');
+    const worker = makeWorker({ id: state.nextEntityId++, tierId: 'junior' });
+    c.workers.push(worker);
+    autoSeat(c);
+
+    expect(worker.stationId).not.toBeNull();
+    const deskId = c.workstations[0].id;
+    upgradeDesk(state, deskId);
+
+    // Worker is unseated
+    expect(worker.stationId).toBeNull();
+    // Desk is marked as under upgrade
+    expect(stationUnderUpgrade(c, deskId)).toBe(true);
+  });
+
+  it('produces nothing during the upgrade (stationMultiplier is 0)', () => {
+    const state = createInitialState(NOW);
+    const c = activeCompany(state);
+    const country = activeCountry(state);
+    country.money = 10_000;
+
+    buyWorkstation(state, 'basic');
+    const worker = makeWorker({ id: state.nextEntityId++, tierId: 'junior', skillLevel: 5 });
+    c.workers.push(worker);
+    autoSeat(c);
+
+    const deskId = c.workstations[0].id;
+    const rateBefore = companyWorkRate(state, c);
+    expect(rateBefore).toBeGreaterThan(0);
+
+    upgradeDesk(state, deskId);
+    const rateDuringUpgrade = companyWorkRate(state, c);
+    expect(rateDuringUpgrade).toBe(0);
+
+    // Tick partway through upgrade, still no production
+    const duration = deskUpgradeDurationSec('basic')!;
+    tick(state, duration / 2);
+    const rateMidway = companyWorkRate(state, c);
+    expect(rateMidway).toBe(0);
+  });
+
+  it('re-seats the evicted worker at a second free desk if available', () => {
+    const state = createInitialState(NOW);
+    const c = activeCompany(state);
+    const country = activeCountry(state);
+    country.money = 10_000;
+
+    buyWorkstation(state, 'basic');
+    buyWorkstation(state, 'basic');
+    const deskId1 = c.workstations[0].id;
+    const deskId2 = c.workstations[1].id;
+
+    const worker = makeWorker({ id: state.nextEntityId++, tierId: 'junior' });
+    c.workers.push(worker);
+    autoSeat(c);
+
+    // Worker is seated (on first desk)
+    expect(worker.stationId).not.toBeNull();
+
+    // Upgrade the first desk
+    upgradeDesk(state, deskId1);
+
+    // Worker should be re-seated on the second desk
+    expect(worker.stationId).toBe(deskId2);
+    expect(stationUnderUpgrade(c, deskId1)).toBe(true);
+  });
+
+  it('re-seats the worker at the upgraded desk after completion', () => {
+    const state = createInitialState(NOW);
+    const c = activeCompany(state);
+    const country = activeCountry(state);
+    country.money = 10_000;
+
+    buyWorkstation(state, 'basic');
+    const deskId = c.workstations[0].id;
+    const worker = makeWorker({ id: state.nextEntityId++, tierId: 'junior', skillLevel: 5 });
+    c.workers.push(worker);
+    autoSeat(c);
+
+    const rateBefore = companyWorkRate(state, c);
+    expect(rateBefore).toBeGreaterThan(0);
+
+    upgradeDesk(state, deskId);
+    expect(worker.stationId).toBeNull();
+    expect(companyWorkRate(state, c)).toBe(0);
+
+    // Tick past the upgrade completion
+    const duration = deskUpgradeDurationSec('basic')!;
+    tick(state, duration + 1);
+
+    // Worker should be re-seated
+    expect(worker.stationId).toBe(deskId);
+    expect(stationUnderUpgrade(c, deskId)).toBe(false);
+    // Production should resume
+    const rateAfter = companyWorkRate(state, c);
+    expect(rateAfter).toBeGreaterThan(0);
   });
 });

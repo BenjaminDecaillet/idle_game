@@ -124,3 +124,27 @@ in `plan.md` (analytics, shop tab, ads, IAP, Capacitor…) are not repeated here
     projectScale) from guesswork into a 30-second check. The engine's purity
     makes this nearly free to build, and it would validate the "~1 week to
     Orbital HQ" pacing target.
+
+## Workforce & shop follow-ups (post-v9)
+
+19. **Story/mission touchpoints for the builder economy** — A Gabriel beat
+    when the floor gift is claimed (`floorGiftClaimed`, durable) and/or a
+    small mission chain on `builders.count` across countries would tie the
+    new systems into the narrative + VsCoin faucets. Skipped in the v9
+    slice to keep scope; both triggers are already durable state.
+
+20. **Tab bar label i18n needs a skeleton rebuild on language change** —
+    The new Shop/VsCoin tabs kept hardcoded EN labels like the existing
+    seven because `buildSkeleton()` runs once at boot; switching language
+    mid-session cannot re-label tabs without a rebuild hook. Fold into #16.
+
+21. **Construction art pass** — The in-progress floor renders as a dimmed
+    floor block + progress bar; a proper scaffolding/crane illustration
+    (art-svg conventions, `officeScene.ts`) and a builder persona on site
+    would sell the fantasy. Same for sites under construction on the city
+    map (currently a 🏗️ label prefix).
+
+22. **Builder idle visibility** — Show idle vs busy builders somewhere
+    persistent (HUD chip or Office header is count-only today); consider a
+    per-action "which builder" attribution purely cosmetically (engine
+    keeps occupancy derived).

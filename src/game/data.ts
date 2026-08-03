@@ -5,8 +5,10 @@ import type {
   MapThemeDef,
   MissionDef,
   ProjectDef,
+  ShopCashPackDef,
   Specialization,
   UpgradeDef,
+  VsCoinPackDef,
   WallpaperDef,
   WorkerTierDef,
   WorkstationDef,
@@ -47,6 +49,27 @@ export const FASTFORWARD_SEC_PER_VSCOIN = 600;
 export const DESK_UPGRADE_COST_FACTOR = 0.8; // × (next.baseCost - current.baseCost)
 export const DESK_UPGRADE_DURATION_BASE = 180;
 export const DESK_UPGRADE_DURATION_GROWTH = 2; // ^ target workstation index
+
+// Floor construction: floors are paid up front and built over time by a
+// builder. Duration ramps with the floor being built and with the company's
+// index in its country (later companies build slower — see balance.md).
+export const FLOOR_BUILD_DURATION_BASE = 600; // 10 min — the cheapest floor
+export const FLOOR_BUILD_FLOOR_GROWTH = 1.5; // ^ (floorIndex − 2)
+export const FLOOR_BUILD_COMPANY_GROWTH = 1.15; // ^ company index in country
+
+// Company founding: pay on start, the base office rises over time. Ramps
+// with the companies already founded in the country; the country's first
+// company (the garage) is instant (see balance.md).
+export const COMPANY_BUILD_DURATION_BASE = 600;
+export const COMPANY_BUILD_DURATION_GROWTH = 1.6; // ^ companies founded
+
+// Builder pool ("Workers" in the UI, per country): every in-flight timed
+// action occupies one builder. #1 is Gabriel's free gift; #2-#3 cost cash,
+// #4-#5 VsCoin, #6+ an open-ended exponential VsCoin sink (see balance.md).
+export const BUILDER_CASH_COSTS = [2_500, 250_000]; // builders #2, #3
+export const BUILDER_VSCOIN_COSTS = [8, 15]; // builders #4, #5
+export const BUILDER_VSCOIN_BASE = 12; // #6+: ceil(base × growth^(n-5))
+export const BUILDER_VSCOIN_GROWTH = 1.8;
 
 // Per-company soft cap: a project's reward stops growing at
 // baseReward × site.projectScale × PROJECT_REWARD_CAP_MULT; work growth
@@ -458,6 +481,45 @@ export const LAST_NAMES = [
   'Chen', 'Patel', 'Kim', 'Garcia', 'Müller', 'Rossi', 'Dubois', 'Silva',
   'Novak', 'Ivanov', 'Tanaka', 'Okafor', 'Berg', 'Costa', 'Haber', 'Wu',
 ];
+
+// Shop: VsCoin → cash "funding rounds". Grant = max(floorCash,
+// grossRewardRate × 60 × minutes); requiresCompanies (in the active
+// country) is the anti-trivialization gate — a pack can never pre-pay the
+// milestone it would skip (see balance.md Phase W).
+export const SHOP_CASH_PACKS: ShopCashPackDef[] = [
+  { id: 'seed', emoji: '🌱', minutes: 5, floorCash: 1_000, vsCoin: 4, requiresCompanies: 1 },
+  { id: 'series-a', emoji: '💼', minutes: 15, floorCash: 10_000, vsCoin: 10, requiresCompanies: 2 },
+  { id: 'series-b', emoji: '🏦', minutes: 40, floorCash: 100_000, vsCoin: 20, requiresCompanies: 3 },
+  { id: 'series-c', emoji: '🏛️', minutes: 100, floorCash: 1_000_000, vsCoin: 40, requiresCompanies: 5 },
+  { id: 'ipo', emoji: '🔔', minutes: 240, floorCash: 10_000_000, vsCoin: 75, requiresCompanies: 7 },
+];
+
+// VsCoin acquisition SKUs (IAP-shaped, payment-provider-ready ids). While
+// BETA_FREE_IAP is true the starter pack is free and unlimited (we want
+// sink telemetry, and the beta reset policy wipes hoards before 1.0);
+// larger packs render disabled. Flipping the flag converts the tab to real
+// SKUs: grants then move from source 'shop:<sku>' to 'iap:<sku>'
+// (docs/monetization.md, Phase 3).
+export const BETA_FREE_IAP = true;
+export const VSCOIN_PACKS: VsCoinPackDef[] = [
+  { id: 'vsc-starter', emoji: '☕', coins: 20 }, // future CHF 2.00
+  { id: 'vsc-angel', emoji: '😇', coins: 50 }, // future CHF 4.00
+  { id: 'vsc-venture', emoji: '💎', coins: 150 }, // future CHF 9.00
+  { id: 'vsc-growth', emoji: '📈', coins: 400 }, // future CHF 19.00
+  { id: 'vsc-unicorn', emoji: '🦄', coins: 1000 }, // future CHF 39.00
+];
+
+export function vsCoinPackById(id: string): VsCoinPackDef {
+  const p = VSCOIN_PACKS.find((p) => p.id === id);
+  if (!p) throw new Error(`Unknown VsCoin pack: ${id}`);
+  return p;
+}
+
+export function shopPackById(id: string): ShopCashPackDef {
+  const p = SHOP_CASH_PACKS.find((p) => p.id === id);
+  if (!p) throw new Error(`Unknown shop pack: ${id}`);
+  return p;
+}
 
 export function tierById(id: string): WorkerTierDef {
   const t = WORKER_TIERS.find((t) => t.id === id);

@@ -241,6 +241,50 @@ describe('migrate (same-version hygiene)', () => {
     // nextEntityId stays above every restored id.
     expect(migrated.nextEntityId).toBeGreaterThan(9);
   });
+
+  it('round-trips an in-flight country-level company-build action', () => {
+    const state = createInitialState(NOW);
+    const actionId = state.nextEntityId++;
+    activeCountry(state).timedActions.push({
+      id: actionId,
+      kind: 'company-build',
+      targetId: 0,
+      remainingSec: 800,
+      totalSec: 960,
+      siteId: 'soma-loft',
+      price: 200_000,
+    });
+
+    const migrated = migrate(JSON.parse(JSON.stringify(state)), NOW);
+    const restored = migrated.countries[0].timedActions;
+    expect(restored).toHaveLength(1);
+    expect(restored[0]).toMatchObject({
+      id: actionId,
+      kind: 'company-build',
+      remainingSec: 800,
+      totalSec: 960,
+      siteId: 'soma-loft',
+      price: 200_000,
+    });
+    // nextEntityId stays above the country-level action's id too.
+    expect(migrated.nextEntityId).toBeGreaterThan(actionId);
+  });
+
+  it('defaults missing builders and country timedActions fields', () => {
+    const state = createInitialState(NOW);
+    const save = JSON.parse(JSON.stringify(state)) as GameState;
+    const country = save.countries[0];
+    delete (country as Partial<typeof country>).builders;
+    delete (country as Partial<typeof country>).timedActions;
+    delete (save as Partial<GameState>).freeFastForwards;
+    delete (save as Partial<GameState>).floorGiftClaimed;
+
+    const migrated = migrate(save, NOW);
+    expect(migrated.countries[0].builders).toEqual({ count: 1 });
+    expect(migrated.countries[0].timedActions).toEqual([]);
+    expect(migrated.freeFastForwards).toBe(0);
+    expect(migrated.floorGiftClaimed).toBe(false);
+  });
 });
 
 describe('resetGame', () => {

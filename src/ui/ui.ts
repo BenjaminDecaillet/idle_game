@@ -1,4 +1,5 @@
 import {
+  BETA_FREE_IAP,
   COMPANY_SITES,
   COUNTRIES,
   FLOOR_CAPACITY,
@@ -7,12 +8,14 @@ import {
   MARKETING_MULT,
   MAX_FLOORS,
   PROJECTS,
+  SHOP_CASH_PACKS,
   TIME_SCALES,
   TUTORIAL_ANGEL_GIFT,
   UPGRADES,
   VSCOIN_BOOST_COST,
   VSCOIN_BOOST_DURATION_SEC,
   VSCOIN_BOOST_MULT,
+  VSCOIN_PACKS,
   WALLPAPERS,
   WORKSTATIONS,
   WORLD_OUTPUT_PER_COUNTRY,
@@ -20,6 +23,7 @@ import {
   siteById,
   stationDefById,
   tierById,
+  vsCoinPackById,
 } from '../game/data';
 import {
   activeBoost,
@@ -28,8 +32,19 @@ import {
   allCompanies,
   assignFloorProject,
   atSkillCap,
+  builderCost,
   buyCompany,
+  buyShopPack,
+  claimFloorGift,
+  claimVsCoinPack,
+  shopPackCash,
+  shopPackUnlocked,
   countryUnlockCost,
+  floorGiftAvailable,
+  floorUnderConstruction,
+  freeBuilders,
+  hireBuilder,
+  siteUnderConstruction,
   deskUpgradeCost,
   deskUpgradeDurationSec,
   fastForwardAction,
@@ -136,8 +151,8 @@ import {
   playerPortrait,
 } from './portraits';
 import { cityMapSvg, type SiteView } from './cityMap';
-import { icon } from './icons';
-import { lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
+import { icon, type IconName } from './icons';
+import { constructionDecor, lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
 import { projectArt, stationArt, upgradeArt, upgradeProp } from './itemArt';
 import { emptyDeskSvg, founderOffice, personaAtDesk, personaStanding } from './persona';
 
@@ -156,14 +171,26 @@ const SPEECH_LINES = [
   'TODO: fix later',
 ];
 
-type Tab = 'map' | 'projects' | 'team' | 'office' | 'upgrades' | 'missions' | 'stats';
+type Tab =
+  | 'map'
+  | 'projects'
+  | 'team'
+  | 'office'
+  | 'upgrades'
+  | 'shop'
+  | 'vscoin'
+  | 'missions'
+  | 'stats';
 
-const TABS: { id: Tab; label: string }[] = [
+// `icon` overrides the tab-bar icon when a tab has no icon of its own name.
+const TABS: { id: Tab; label: string; icon?: IconName }[] = [
   { id: 'map', label: 'Map' },
   { id: 'projects', label: 'Projects' },
   { id: 'team', label: 'Team' },
   { id: 'office', label: 'Office' },
   { id: 'upgrades', label: 'Upgrades' },
+  { id: 'shop', label: 'Shop', icon: 'coin' },
+  { id: 'vscoin', label: 'VsCoin', icon: 'vscoin' },
   { id: 'missions', label: 'Missions' },
   { id: 'stats', label: 'Stats' },
 ];
@@ -265,7 +292,7 @@ export class UI {
         ${TABS.map(
           (t) => `
           <button class="tab-btn" data-action="tab:${t.id}" id="tab-btn-${t.id}">
-            <span class="tab-icon">${icon(t.id, 24)}</span><span>${t.label}</span>
+            <span class="tab-icon">${icon(t.icon ?? (t.id as IconName), 24)}</span><span>${t.label}</span>
           </button>`,
         ).join('')}
       </nav>
@@ -644,6 +671,12 @@ export class UI {
       case 'upgrades':
         content.innerHTML = this.renderUpgrades();
         break;
+      case 'shop':
+        content.innerHTML = this.renderShop();
+        break;
+      case 'vscoin':
+        content.innerHTML = this.renderVsCoinShop();
+        break;
       case 'stats':
         content.innerHTML = this.renderStats();
         break;
@@ -652,13 +685,111 @@ export class UI {
     this.positionCoach();
   }
 
+  /** Shop tab: funding rounds — VsCoin in, progression-scaled cash out. */
+  private renderShop(): string {
+    const s = this.state;
+    const inDebt = walletMoney(s) < 0;
+    const cards = SHOP_CASH_PACKS.map((pack) => {
+      const name = lookup(`shop.pack.${pack.id}.name`);
+      if (!shopPackUnlocked(s, pack.id)) {
+        return `
+        <div class="card">
+          <div class="card-row">
+            <span class="muted">${pack.emoji} <b>${name}</b></span>
+            <span class="muted">${icon('lock', 14)} ${t('ui.packRequires', {
+              count: pack.requiresCompanies,
+            })}</span>
+          </div>
+        </div>`;
+      }
+      const cash = shopPackCash(s, pack.id);
+      const affordable = s.vsCoin >= pack.vsCoin;
+      return `
+        <div class="card">
+          <div class="card-row">
+            <span>${pack.emoji} <b>${name}</b></span>
+            <strong>+${formatMoney(cash)}</strong>
+          </div>
+          <p class="muted">${lookup(`shop.pack.${pack.id}.blurb`)}</p>
+          <div class="card-row">
+            <span></span>
+            <button class="btn btn-small ${affordable ? 'btn-primary' : ''}"
+                    ${affordable ? '' : 'disabled'} data-action="buy-pack:${pack.id}">
+              ${icon('vscoin', 14)} ${pack.vsCoin}
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="stack">
+        <div class="section-head"><h2>💸 ${t('ui.shopTitle')}</h2>
+          <span class="muted">${icon('vscoin', 16)} ${formatNumber(s.vsCoin)}</span>
+        </div>
+        <p class="hint">${t('ui.shopHint')}</p>
+        ${inDebt ? `<div class="warning-banner">⚠️ ${t('ui.shopDebtNote')}</div>` : ''}
+        ${cards}
+      </div>`;
+  }
+
+  /** VsCoin tab: IAP-shaped SKUs; the starter pack is free during beta. */
+  private renderVsCoinShop(): string {
+    const s = this.state;
+    const cards = VSCOIN_PACKS.map((pack, i) => {
+      const name = lookup(`vscoin.pack.${pack.id}.name`);
+      const freeBeta = BETA_FREE_IAP && i === 0;
+      if (freeBeta) {
+        return `
+        <div class="card">
+          <div class="card-row">
+            <span>${pack.emoji} <b>${name}</b>
+              <span class="badge badge-vscoin">${t('ui.betaBadge')}</span></span>
+            <strong>${icon('vscoin', 16)} ${pack.coins}</strong>
+          </div>
+          <p class="muted">${t('ui.vscoinBetaNote')}</p>
+          <div class="card-row">
+            <span></span>
+            <button class="btn btn-small btn-primary" data-action="claim-vscoin:${pack.id}">
+              🎁 ${t('ui.claimFree')}
+            </button>
+          </div>
+        </div>`;
+      }
+      return `
+        <div class="card">
+          <div class="card-row">
+            <span class="muted">${pack.emoji} <b>${name}</b></span>
+            <span class="muted">${icon('vscoin', 16)} ${pack.coins}</span>
+          </div>
+          <div class="card-row">
+            <span></span>
+            <button class="btn btn-small" disabled>${icon('lock', 14)} ${t('ui.comingSoon')}</button>
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="stack">
+        <div class="section-head"><h2>${icon('vscoin', 20)} ${t('ui.vscoinTitle')}</h2>
+          <span class="muted">${icon('vscoin', 16)} ${formatNumber(s.vsCoin)}</span>
+        </div>
+        <p class="hint">${t('ui.vscoinHint')}</p>
+        ${cards}
+      </div>`;
+  }
+
   /** The map: an illustrated city where every site is a tappable building. */
   private renderMap(): string {
     const s = this.state;
     const country = activeCountry(s);
     const sites: SiteView[] = COMPANY_SITES.map((site) => {
       const company = companyAtSite(s, site.id);
-      if (!company) return { id: site.id, status: 'free' as const, label: site.name };
+      if (!company) {
+        const building = siteUnderConstruction(country, site.id);
+        return {
+          id: site.id,
+          status: 'free' as const,
+          label: building ? `🏗️ ${site.name}` : site.name,
+        };
+      }
       return {
         id: site.id,
         status: company.id === country.activeCompanyId ? ('active' as const) : ('owned' as const),
@@ -784,6 +915,25 @@ export class UI {
               : `<button class="btn btn-primary" data-action="switch-company:${company.id}">
                    Manage this company</button>`
           }
+        </div>`;
+    }
+    const building = siteUnderConstruction(activeCountry(s), site.id);
+    if (building) {
+      const pct = Math.min(100, (1 - building.remainingSec / building.totalSec) * 100);
+      const ffCost = fastForwardCost(s, building);
+      return `
+        <div class="sheet-head"><h2>🏗️ ${site.name}</h2></div>
+        <p class="sheet-blurb">${t('ui.siteBuilding', {
+          time: formatDuration(building.remainingSec),
+        })} · 👷 ${t('ui.builderOnSite')}</p>
+        <div class="progress mini training">
+          <div class="progress-fill" style="width:${pct}%"></div>
+        </div>
+        <div class="sheet-actions">
+          <button class="btn btn-primary" ${ffCost === 0 || s.vsCoin >= ffCost ? '' : 'disabled'}
+                  data-action="fast-forward:${building.id}">
+            ⚡ ${ffCost === 0 ? t('ui.free') : `${icon('vscoin', 14)} ${ffCost}`}
+          </button>
         </div>`;
     }
     const price = companyCost(s, site.id);
@@ -1136,12 +1286,64 @@ export class UI {
     }
     const atMax = c.floors >= MAX_FLOORS;
     const nextCost = floorCost(c);
-    const floorBtn = atMax
-      ? `<span class="muted">🏁 Max height reached</span>`
-      : `<button class="btn ${walletMoney(s) >= nextCost ? 'btn-primary' : ''}"
+    const building = floorUnderConstruction(c);
+    if (building) {
+      // The rising floor tops the building as scaffolding while it builds.
+      floorBlocks.unshift(`
+        <div class="floor-block" style="opacity:.65">
+          <div class="floor-wall">
+            <span class="floor-label">🏗️ ${t('ui.floorBuildingShort')}</span>
+            ${constructionDecor()}
+          </div>
+        </div>`);
+    }
+    const buildPct = building
+      ? Math.min(100, (1 - building.remainingSec / building.totalSec) * 100)
+      : 0;
+    const buildFfCost = building ? fastForwardCost(s, building) : 0;
+    const floorBtn = building
+      ? `<div class="card" style="flex:1">
+           <div class="card-row">
+             <span>🏗️ ${t('ui.floorBuilding', {
+               floor: c.floors + 1,
+               time: formatDuration(building.remainingSec),
+             })} · 👷 ${t('ui.builderOnSite')}</span>
+             <button class="btn btn-small btn-primary"
+                     ${buildFfCost === 0 || s.vsCoin >= buildFfCost ? '' : 'disabled'}
+                     data-action="fast-forward:${building.id}">
+               ⚡ ${buildFfCost === 0 ? t('ui.free') : `${icon('vscoin', 14)} ${buildFfCost}`}
+             </button>
+           </div>
+           <div class="progress mini training">
+             <div class="progress-fill" style="width:${buildPct}%"></div>
+           </div>
+         </div>`
+      : atMax
+        ? `<span class="muted">🏁 Max height reached</span>`
+        : floorGiftAvailable(s)
+          ? `<button class="btn btn-primary" data-action="claim-floor-gift">
+               🎁 ${t('ui.floorGift')}
+             </button>`
+          : `<button class="btn ${walletMoney(s) >= nextCost ? 'btn-primary' : ''}"
                  ${walletMoney(s) >= nextCost ? '' : 'disabled'} data-action="buy-floor">
            ${icon('floor-up', 16)} Add floor ${formatMoney(nextCost)}
          </button>`;
+
+    const country = activeCountry(s);
+    const free = freeBuilders(country);
+    const price = builderCost(country);
+    const canHire = 'cash' in price ? walletMoney(s) >= price.cash : s.vsCoin >= price.vsCoin;
+    const priceLabel =
+      'cash' in price ? formatMoney(price.cash) : `${icon('vscoin', 14)} ${price.vsCoin}`;
+    const builderBar = `
+      <div class="floor-actions" title="${t('ui.builderGiftHint', { name: t('ui.builderGiftName') })}">
+        <span class="${free > 0 ? '' : 'muted'}">👷 <b>${t('ui.builders')}</b> ·
+          ${t('ui.buildersFree', { free, total: country.builders.count })}</span>
+        <button class="btn btn-small ${canHire ? 'btn-primary' : ''}" ${canHire ? '' : 'disabled'}
+                data-action="hire-builder">
+          ${t('ui.hireBuilder')} ${priceLabel}
+        </button>
+      </div>`;
 
     const standing = c.workers
       .filter((w) => w.stationId === null && !workerBusy(c, w.id))
@@ -1174,6 +1376,7 @@ export class UI {
         <span class="muted">${c.workstations.length}/${deskCapacity(c)} desks ·
           ${c.floors}/${MAX_FLOORS} floors</span>
       </div>
+      ${builderBar}
       <div class="floor-actions">${floorBtn}</div>
       <div class="building card" style="${officeWallVars(wpId)}">
         <div class="roof-band">${roofDecor(wpId)}</div>
@@ -1585,10 +1788,11 @@ export class UI {
         break;
       case 'found-company':
         // No naming prompt: only the very first company is player-named;
-        // every other company auto-assigns a local parody name.
+        // every other company auto-assigns a local parody name on opening.
         error = buyCompany(s, arg);
         if (!error) {
-          this.toast(`🏗️ ${t('ui.companyFounded', { name: activeCompany(s).name })}`, 'info');
+          this.toast(`🏗️ ${t('ui.companyBuildStarted')}`, 'info');
+          this.refreshSheet();
         }
         break;
       case 'unlock-project':
@@ -1630,7 +1834,33 @@ export class UI {
         break;
       case 'buy-floor':
         error = buyFloor(s);
-        if (!error) this.toast('⬆️ New floor unlocked!', 'info');
+        if (!error) this.toast(`🏗️ ${t('ui.floorBuildStarted')}`, 'info');
+        break;
+      case 'claim-floor-gift':
+        error = claimFloorGift(s);
+        if (!error) this.toast(`🎁 ${t('ui.floorGiftClaimed')}`, 'info');
+        break;
+      case 'hire-builder':
+        error = hireBuilder(s);
+        if (!error) this.toast(`👷 ${t('ui.hireBuilder')} ✓`, 'info');
+        break;
+      case 'claim-vscoin': {
+        const coins = vsCoinPackById(arg).coins;
+        error = claimVsCoinPack(s, arg);
+        if (!error) this.toast(`${t('ui.vscoinClaimed', { coins })}`, 'info');
+        break;
+      }
+      case 'buy-pack':
+        error = buyShopPack(s, arg);
+        if (!error) {
+          this.toast(
+            `💸 ${t('ui.packBought', {
+              name: lookup(`shop.pack.${arg}.name`),
+              cash: formatMoney(shopPackCash(s, arg)),
+            })}`,
+            'info',
+          );
+        }
         break;
       case 'buy-wallpaper':
         error = buyWallpaper(s, arg);
@@ -1820,7 +2050,9 @@ export class UI {
     }
 
     if (error) {
-      this.toast(error);
+      // Engine errors are either raw text or i18n key ids; lookup() falls
+      // back to the string itself, so both render.
+      this.toast(lookup(error));
     } else if (action !== 'tab' && action !== 'poke') {
       this.fx.click();
       saveGame(this.state);
@@ -1840,7 +2072,7 @@ export class UI {
     if (kind === 'floor-project') {
       const error = assignFloorProject(this.state, Number(arg), el.value === '' ? null : el.value);
       if (error) {
-        this.toast(error);
+        this.toast(lookup(error));
       } else {
         saveGame(this.state);
       }

@@ -5,17 +5,21 @@ description: Change GameState safely in Idle Silicon Valley - bump SAVE_VERSION 
 
 # Changing GameState (beta policy)
 
-**Current policy: BETA RESET.** The game is in beta; a one-time save reset
-was approved with the v8 progression/expansion update. `loadGame()` discards
-any save whose `version` is below the current `SAVE_VERSION` and returns a
-fresh game with `betaReset: true`, which the UI surfaces as a friendly
-translated notice (`ui.betaResetTitle` / `ui.betaResetText`). There is **no
-cross-version migration chain**, and this rule does not need to return to
-strict migration after 1.0 unless explicitly decided anew.
+**Current policy: BETA RESET.** The game is in beta; save resets were
+approved with the v8 progression/expansion update and again with the v9
+workforce/construction/shop update. `loadGame()` discards any save whose
+`version` is below the current `SAVE_VERSION` (9) and returns a fresh game
+with `betaReset: true`, which the UI surfaces as a friendly translated
+notice (`ui.betaResetTitle` / `ui.betaResetText` — refresh that copy to
+describe the update that bumps the version). There is **no cross-version
+migration chain**, and this rule does not need to return to strict
+migration after 1.0 unless explicitly decided anew.
 
 `migrate()` still exists — but only as a **same-version hygiene pass**
 (merge-onto-fresh): it fills defaults for fields added in later same-version
-builds, repairs corrupt values, and drops unknown content ids.
+builds, repairs corrupt values, and drops unknown content ids. Country-level
+fields (`builders`, `timedActions`) are defaulted in `migrateCountry()`; the
+`nextEntityId` sweep covers country-level timed-action ids too.
 
 ## Steps when changing GameState
 
