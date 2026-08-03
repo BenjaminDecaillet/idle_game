@@ -152,7 +152,7 @@ import {
 } from './portraits';
 import { cityMapSvg, type SiteView } from './cityMap';
 import { icon, type IconName } from './icons';
-import { lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
+import { constructionDecor, lobbyDecor, officeWallVars, roofDecor, wallDecor } from './officeScene';
 import { projectArt, stationArt, upgradeArt, upgradeProp } from './itemArt';
 import { emptyDeskSvg, founderOffice, personaAtDesk, personaStanding } from './persona';
 
@@ -1293,6 +1293,7 @@ export class UI {
         <div class="floor-block" style="opacity:.65">
           <div class="floor-wall">
             <span class="floor-label">🏗️ ${t('ui.floorBuildingShort')}</span>
+            ${constructionDecor()}
           </div>
         </div>`);
     }

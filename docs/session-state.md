@@ -19,7 +19,7 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 | S8 i18n EN+FR | done |
 | S9 tests | done |
 | S10 docs + skills updates | done |
-| S11 optional art | not started |
+| S11 optional art (construction scaffolding decor) | done |
 
 ## 2. In-progress unit
 
