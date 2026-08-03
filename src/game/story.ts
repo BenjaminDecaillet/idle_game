@@ -74,6 +74,8 @@ export const STORY_BEATS: StoryBeatDef[] = [
     id: 'dream-achieved',
     trigger: (s) => anyCompanyAtSite(s, 'orbital') !== undefined && agiCompletions(s) >= 1,
   },
+  // Epilogue: fires right after the first IPO reset (durable counter).
+  { id: 'new-venture', trigger: (s) => s.prestige.count >= 1 },
 ];
 
 export function storyBeatById(id: string): StoryBeatDef {

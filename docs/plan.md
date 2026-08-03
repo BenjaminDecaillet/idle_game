@@ -44,7 +44,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [x] **Shop/Boost tab** — closed by the workforce/shop update above: Shop + VsCoin tabs over `spendVsCoin`/`grantVsCoin`; the rewarded-ad boost offers still plug in via `grantBoost`/`timeSkip` when Phase 2 starts
 - [ ] **Rewarded ads** — portal SDK (CrazyGames/Poki) or H5 Games Ads + consent banner
 - [ ] **Web IAP** — Founder Edition / Starter Pack via a Merchant of Record
-- [ ] **Prestige** ("IPO & found a new startup"): reset for permanent multiplier based on `totalEarned`
+- [x] **Prestige** ("IPO & open-source the dream") — post-epilogue reset banking permanent Reputation from all-time earnings (`1 + 0.5·√rep` output multiplier, docs/balance.md Phase P, decisions.md #18); keeps VsCoin/cosmetics/story, restarts from the garage; epilogue beat `new-venture`
 - [ ] **Achievements** (first hire, $1M, 100 completions…) with small permanent bonuses
 - [ ] **Statistics graphs** — money-over-time sparkline on the Stats tab
 - [ ] **Random events** — "Investor visit: 2× output for 60 s", outage debuffs

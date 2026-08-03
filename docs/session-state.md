@@ -10,8 +10,8 @@ section, to be added by the balance-designer pass).
 | Slice | Branch | Status |
 |---|---|---|
 | A1 beta force-refresh + build stamp (PR #7) | `fix/beta-force-refresh` | merged (master `27ad222`) |
-| B1 backlog re-baseline + plan/session docs | `docs/backlog-refresh` | in progress |
-| C1–C2 prestige (engine + story epilogue + UI) | `feat/prestige` | pending |
+| B1 backlog re-baseline + plan/session docs | `docs/backlog-refresh` | merged (PR #8) |
+| C1–C2 prestige (engine + story epilogue + UI) | `feat/prestige` | in progress |
 | C3 goal hint chip | `feat/goal-hint` | pending |
 | C4 offline doubler placement | `feat/offline-doubler` | pending |
 | C5 story recap journal | `feat/story-journal` | pending |
@@ -23,9 +23,13 @@ Slices C3+ are cut in priority order; at ~80% budget stop starting new ones.
 
 ## 2. In-progress unit
 
-B1: commit `docs/improvements.md` rewrite + `docs/plan.md` status +
-this file, push `docs/backlog-refresh`, PR, self-merge. **Exact next
-step:** commit this branch and open the PR.
+C1 prestige on `feat/prestige`: game layer + UI done (engine
+`prestigeRepFor/Preview/Multiplier/Reset`, data PRESTIGE_*, save
+hygiene — additive field, NO save bump —, story beat `new-venture`,
+Stats-tab card + `prestige` action). i18n-writer (prestige strings) and
+test-writer (tests/prestige.test.ts) running. **Exact next step:** on
+their completion run test-runner (`npm test` + `npm run build`), fix
+fallout, commit, PR, self-merge, verify deploy.
 
 ## 3. Decisions (autonomous, veto-able)
 

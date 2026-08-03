@@ -44,6 +44,11 @@ import {
   PROJECT_SLOT_FLOOR_REQ,
   PROJECT_WORK_SCALE_EXP,
   PROJECTS,
+  PRESTIGE_MIN_LIFETIME,
+  PRESTIGE_OUTPUT_ALPHA,
+  PRESTIGE_OUTPUT_K,
+  PRESTIGE_POINTS_PER_DECADE,
+  PRESTIGE_STORY_BEAT,
   PROMOTE_COST_FACTOR,
   PROMOTE_DURATION_BASE,
   PROMOTE_DURATION_GROWTH,
@@ -136,6 +141,7 @@ export function createInitialState(now = Date.now(), countryId: CountryId = DEFA
     freeFastForwards: 0,
     floorGiftClaimed: false,
     promotionsDone: 0,
+    prestige: { count: 0, reputation: 0 },
     nextEntityId: 1,
   };
   createCountry(state, countryId, 'My Startup');
@@ -310,8 +316,67 @@ export function globalOutputMultiplier(state: GameState, company: CompanyState):
   let boost = 1;
   for (const b of state.boosts) boost *= b.mult;
   return (
-    coffee * fiber * synergy * moonshot * aura * world * boost * siteById(company.siteId).outputBonus
+    coffee *
+    fiber *
+    synergy *
+    moonshot *
+    aura *
+    world *
+    prestigeMultiplier(state) *
+    boost *
+    siteById(company.siteId).outputBonus
   );
+}
+
+// ---------------------------------------------------------------------------
+// Prestige — "IPO & open-source the dream" (docs/balance.md, Phase P)
+// ---------------------------------------------------------------------------
+
+/** Cumulative reputation the given all-time earnings are worth. */
+export function prestigeRepFor(allTimeEarned: number): number {
+  if (allTimeEarned <= PRESTIGE_MIN_LIFETIME) return 0;
+  return Math.floor(
+    PRESTIGE_POINTS_PER_DECADE * Math.log10(allTimeEarned / PRESTIGE_MIN_LIFETIME),
+  );
+}
+
+/**
+ * Reputation an IPO would bank right now. Delta form against the already
+ * banked total, so preview and award can never disagree and fractional
+ * decades carry over to the next reset.
+ */
+export function prestigePreview(state: GameState): number {
+  return Math.max(0, prestigeRepFor(state.totalEarned) - state.prestige.reputation);
+}
+
+/** Permanent output multiplier from banked reputation. */
+export function prestigeMultiplier(state: GameState): number {
+  if (state.prestige.reputation <= 0) return 1;
+  return 1 + PRESTIGE_OUTPUT_K * Math.pow(state.prestige.reputation, PRESTIGE_OUTPUT_ALPHA);
+}
+
+/**
+ * IPO: bank reputation and restart every economy from the garage. Keeps
+ * everything global — VsCoin (+ledger, +premium upgrades), cosmetics, map
+ * themes, avatar, settings, story-seen, missions-claimed, lifetime
+ * counters (totalEarned/projectsCompleted/promotionsDone feed missions and
+ * reputation and never reset), Gabriel's gifts (floorGiftClaimed,
+ * freeFastForwards) and the finished tutorial. Wipes countries, companies
+ * and live boosts; restarts in the same starting country.
+ */
+export function prestigeReset(state: GameState, now = Date.now()): string | null {
+  if (!state.story.seen.includes(PRESTIGE_STORY_BEAT)) return 'ui.prestigeNeedStory';
+  const gained = prestigePreview(state);
+  if (gained < 1) return 'ui.prestigeNoRep';
+  const startCountryId = state.countries[0]?.id ?? state.activeCountryId;
+  state.prestige.count += 1;
+  state.prestige.reputation += gained;
+  state.countries = [];
+  state.boosts = [];
+  state.activeCountryId = startCountryId;
+  createCountry(state, startCountryId, 'My Startup');
+  state.lastSeen = now;
+  return null;
 }
 
 /** Strongest currently-active boost, for HUD display. Null if none. */
