@@ -113,3 +113,10 @@ be revisited cheaply.
     reputation:0}` from `migrate()`. Eligibility = `dream-achieved` seen
     (survives the reset) + at least 1 new reputation point — structurally
     prevents churn-prestiging (each point needs ×1.26 all-time growth).
+19. **Builder-economy narrative touchpoints** (backlog #6): the
+    `builders-guild` beat fires on the durable `floorGiftClaimed` flag
+    (placed after `first-upgrade` chronologically), and the `builders`
+    mission metric sums `country.builders.count` across countries
+    (targets 2/3/5, rewards 2/3/6 VsCoin — in line with the neighbor
+    chains; the VsCoin missions deliberately do not refund the
+    VsCoin-priced builders #4+, they just soften them).

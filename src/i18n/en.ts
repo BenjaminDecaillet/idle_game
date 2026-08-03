@@ -43,6 +43,7 @@ export const en = {
   'mission.desks': 'Own {target} workstations',
   'mission.promotions': 'Promote employees {target} times',
   'mission.countries': 'Expand to {target} countries',
+  'mission.builders': 'Grow your construction crew to {target} workers',
 
   // --- Employees: training, promotion, fast-forward ------------------------
   'ui.inTraining': 'In training · +{levels} levels in {time}',
