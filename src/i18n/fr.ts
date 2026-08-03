@@ -181,6 +181,12 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.betaResetText':
     'Les équipes de chantier sont arrivées : des ouvriers qui construisent vos étages et vos sociétés au fil du temps, des levées de fonds et une boutique VsCoin. Cette mise à jour bêta repense la croissance de votre empire, et votre ancienne sauvegarde n’a pas pu suivre. Merci de tester — votre prochain empire grandira encore plus vite !',
 
+  // --- Bon retour : le doubleur de Gabriel ------------------------------------
+  'ui.doublerButton': '×2 avec la bénédiction de Gabriel — gratuit',
+  'ui.doublerDone': 'Gabriel a doublé la mise : +{amount} !',
+  'ui.doublerCooldown': 'La bénédiction de Gabriel doit se recharger — revenez demain.',
+  'ui.doublerNothing': 'Rien à doubler pour le moment.',
+
   // --- Pays -----------------------------------------------------------------
   'country.ch.name': 'Suisse',
   'country.us.name': 'États-Unis',

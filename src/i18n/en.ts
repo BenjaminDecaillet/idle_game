@@ -182,6 +182,12 @@ export const en = {
   'ui.betaResetText':
     'Construction crews have arrived: a workforce that builds your floors and companies over time, funding rounds, and a VsCoin shop. This beta update reworks how your empire grows, so your old save could not come along. Thank you for testing — your next empire will rise even faster!',
 
+  // --- Welcome back: Gabriel's offline doubler -------------------------------
+  'ui.doublerButton': '×2 with Gabriel’s blessing — free',
+  'ui.doublerDone': 'Gabriel doubled it: +{amount}!',
+  'ui.doublerCooldown': 'Gabriel’s blessing needs to recharge — come back tomorrow.',
+  'ui.doublerNothing': 'Nothing to double right now.',
+
   // --- Countries -----------------------------------------------------------
   'country.ch.name': 'Switzerland',
   'country.us.name': 'USA',
