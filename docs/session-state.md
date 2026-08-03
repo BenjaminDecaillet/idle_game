@@ -13,8 +13,8 @@ section, to be added by the balance-designer pass).
 | B1 backlog re-baseline + plan/session docs | `docs/backlog-refresh` | merged (PR #8) |
 | C1–C2 prestige (engine + story epilogue + UI) | `feat/prestige` | merged (PR #9) |
 | C3 goal hint chip | `feat/goal-hint` | merged (PR #10) |
-| C4 offline doubler placement | `feat/offline-doubler` | in progress |
-| C5 story recap journal | `feat/story-journal` | pending |
+| C4 offline doubler placement | `feat/offline-doubler` | merged (PR #11) |
+| C5 story recap journal | `feat/story-journal` | in progress |
 | C6 locale number formatting | `feat/locale-format` | pending |
 | C7 builder story beats + missions | `feat/builder-story` | pending |
 | C8 CI: PR checks + smoke test | `ci/pr-checks` | pending |
@@ -23,15 +23,12 @@ Slices C3+ are cut in priority order; at ~80% budget stop starting new ones.
 
 ## 2. In-progress unit
 
-C4 offline doubler on `feat/offline-doubler`: engine
-`offlineDoublerReady`/`claimOfflineDoubler` (+2 additive GameState
-fields with migrate hygiene, no save bump), Welcome-back modal button
-(`double-offline` action, `pendingOfflineEarnings` on UI),
-`OFFLINE_DOUBLER_COOLDOWN_SEC = 20h` in data.ts. Doubled amount counts
-into lifetime totals (missions/reputation) and credits the ACTIVE
-country's wallet (decision, veto-able). i18n-writer (ui.doubler* —
-required for compile) + test-writer (tests/offline-doubler.test.ts)
-running. **Exact next step:** full test-runner run, commit, PR,
+C5 story journal on `feat/story-journal`: `renderStoryJournal()` card
+on the Stats tab (seen beats in STORY_BEATS order, <details> expand,
+progress line), styles appended to style.css. UI-only — no engine or
+save changes, no new tests (narrative tests already guarantee beat
+text). i18n-writer running (ui.storyJournal* keys — required for
+compile). **Exact next step:** full test-runner run, commit, PR,
 self-merge, verify deploy.
 
 ## 3. Decisions (autonomous, veto-able)
