@@ -1750,6 +1750,7 @@ export class UI {
           </div>
           <p class="hint">Progress is saved automatically every 10 seconds and when you close the
           app. Your team keeps working while you're away (up to 24h).</p>
+          <p class="hint">${t('ui.build')} ${__BUILD_SHA__} · ${__BUILD_DATE__}</p>
         </div>
       </div>`;
   }

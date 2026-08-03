@@ -501,6 +501,13 @@ export const SHOP_CASH_PACKS: ShopCashPackDef[] = [
 // SKUs: grants then move from source 'shop:<sku>' to 'iap:<sku>'
 // (docs/monetization.md, Phase 3).
 export const BETA_FREE_IAP = true;
+
+// While true, every deploy force-refreshes running clients: the service
+// worker re-checks for updates aggressively (interval + on focus) and the
+// page saves + reloads the moment a new version takes control (src/main.ts).
+// Flip to false before testing with real users so sessions are never
+// interrupted by a mid-play reload (docs/decisions.md #17).
+export const BETA_FORCE_REFRESH = true;
 export const VSCOIN_PACKS: VsCoinPackDef[] = [
   { id: 'vsc-starter', emoji: '☕', coins: 20 }, // future CHF 2.00
   { id: 'vsc-angel', emoji: '😇', coins: 50 }, // future CHF 4.00

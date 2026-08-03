@@ -1,9 +1,27 @@
+import { execSync } from 'node:child_process';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+// Short commit sha for the Settings build stamp: CI provides GITHUB_SHA,
+// local builds fall back to git, and anything else shows "dev".
+function buildSha(): string {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 7);
+  try {
+    return execSync('git rev-parse --short=7 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return 'dev';
+  }
+}
 
 // Deployed to GitHub Pages under /idle_game/ — override with VITE_BASE for other hosts.
 export default defineConfig({
   base: process.env.VITE_BASE ?? '/idle_game/',
+  define: {
+    __BUILD_SHA__: JSON.stringify(buildSha()),
+    __BUILD_DATE__: JSON.stringify(`${new Date().toISOString().slice(0, 16).replace('T', ' ')}Z`),
+  },
   build: {
     target: 'es2022',
   },

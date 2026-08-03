@@ -86,3 +86,15 @@ be revisited cheaply.
     depth). Training/promotion targets already produced zero via
     workerBusy + autoSeat. Identical in tick() and simulateOffline() by
     construction — the rules live in engine helpers, not the UI.
+17. **Beta force-refresh** (`BETA_FORCE_REFRESH` in `src/game/data.ts`):
+    the PWA precaches the whole app shell, so an installed app that is only
+    ever *resumed* (never cold-started) can serve a stale build for days —
+    this is why merged features "didn't arrive" on devices. While the flag
+    is true, `src/main.ts` re-checks for a new service worker on every
+    focus and every 60 s, and saves + reloads silently the moment an
+    updated worker takes control (never on first install). The Settings
+    tab shows a build stamp (`__BUILD_SHA__` · `__BUILD_DATE__`, injected
+    in `vite.config.ts` from `GITHUB_SHA`/git) to verify which build a
+    device runs. Flip the flag to false before testing with real users:
+    updates then wait for the next natural reload instead of interrupting
+    a session.

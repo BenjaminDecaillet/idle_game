@@ -16,6 +16,7 @@ export const en = {
   'ui.gabriel': 'Gabriel',
   'ui.storyTitle': 'Your story',
   'ui.language': 'Language',
+  'ui.build': 'Build',
   'ui.lang.auto': 'Auto',
   'ui.lang.en': 'English',
   'ui.lang.fr': 'Français',
