@@ -37,7 +37,7 @@ TypeScript PWA, Vite, vanilla DOM, vitest; zero runtime dependencies. Core loop:
 
 ## tests/
 
-19 vitest files; they import from `src/game/` only, never `src/ui/`. States are built via `createInitialState()` + public actions; time advances only via `tick()`/`simulateOffline`. Money is set/read via `activeCountry(state).money`.
+20 vitest files; they import from `src/game/` only, never `src/ui/`. States are built via `createInitialState()` + public actions; time advances only via `tick()`/`simulateOffline`. Money is set/read via `activeCountry(state).money`.
 
 ## Troubleshooting
 

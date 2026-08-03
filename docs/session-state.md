@@ -17,8 +17,8 @@ Contract: `.claude/skills/session-handoff/SKILL.md`. Plan:
 | S6 Shop tab (VsCoin → cash packs) | done |
 | S7 VsCoin tab (BETA_FREE_IAP free starter pack) | done |
 | S8 i18n EN+FR | done |
-| S9 tests | not started |
-| S10 docs + skills updates | not started |
+| S9 tests | done |
+| S10 docs + skills updates | done |
 | S11 optional art | not started |
 
 ## 2. In-progress unit
@@ -53,13 +53,10 @@ describes v8 — refresh in S8.
 
 ## 4. Next action
 
-S9 is in flight: a test-writer agent is finishing tests/shop.test.ts
-(builder ladder pricing, shop pack scaling/gating/ledger, free starter
-repeatability). When it lands green: commit S9, update the "19 vitest
-files" line in .claude/skills/codebase-overview (tests section) to 20,
-commit S10 docs (plan/specs/improvements/decisions/skills already
-edited), then decide S11 art by remaining budget, then open THE single
-PR. Story beats/missions deliberately skipped → improvements.md #19.
+S11 (optional art) by remaining budget: art-skinner for a scaffolding
+decor on the in-construction floor block in the Office tab (art-svg
+conventions). Then open THE single PR (check for a PR template first).
+Story beats/missions deliberately skipped → improvements.md #19.
 
 ## 5. Build health
 
