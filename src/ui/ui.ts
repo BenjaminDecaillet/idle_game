@@ -128,6 +128,8 @@ import {
   PLAYER_LOOK_FIELDS,
   type PlayerLookField,
 } from '../game/player';
+import { nextGoalHint } from '../game/goals';
+import type { GoalHint } from '../game/goals';
 import { exportSave, importSave, resetGame, saveGame } from '../game/save';
 import {
   advanceStory,
@@ -145,6 +147,7 @@ import {
 } from '../game/tutorial';
 import type { CompanyState, GameState, WorkerState } from '../game/types';
 import { lookup, resolveLang, setCurrentLang, t } from '../i18n';
+import type { StringKey } from '../i18n';
 import { placeCoach } from './coachPlacement';
 import type { Fx } from './fx';
 import { type GabrielPose } from './gabriel';
@@ -291,6 +294,7 @@ export class UI {
           <span class="hstat">${icon('check', 15)}<span id="hero-completions"></span></span>
         </div>
       </section>
+      <button class="goal-chip" id="goal-chip" hidden></button>
       <main id="tab-content"></main>
       <nav class="tabbar">
         ${TABS.map(
@@ -640,9 +644,42 @@ export class UI {
   // Tab rendering
   // -------------------------------------------------------------------------
 
+  /**
+   * Gabriel's next-best-action chip (2 Hz, with the tab rebuild). Hidden
+   * during the tutorial and at endgame; "save up" styling when the step
+   * isn't affordable yet.
+   */
+  private updateGoalChip(): void {
+    const chip = document.getElementById('goal-chip') as HTMLButtonElement | null;
+    if (!chip) return;
+    const hint = nextGoalHint(this.state);
+    if (!hint) {
+      chip.hidden = true;
+      return;
+    }
+    const GOAL_KEYS: Record<GoalHint['kind'], StringKey> = {
+      hire: 'ui.goal.hire',
+      desk: 'ui.goal.desk',
+      'unlock-project': 'ui.goal.unlockProject',
+      upgrade: 'ui.goal.upgrade',
+      floor: 'ui.goal.floor',
+      company: 'ui.goal.company',
+      country: 'ui.goal.country',
+    };
+    const goal = t(GOAL_KEYS[hint.kind], { name: hint.targetName ?? '' });
+    const label = hint.affordable
+      ? t('ui.goalNext', { goal, cost: formatMoney(hint.cost) })
+      : t('ui.goalSave', { goal, cost: formatMoney(hint.cost) });
+    chip.hidden = false;
+    chip.textContent = `💡 ${label}`;
+    chip.classList.toggle('goal-chip-save', !hint.affordable);
+    chip.dataset.action = `goal:${hint.tab}`;
+  }
+
   private rebuildTab(): void {
     const content = document.getElementById('tab-content');
     if (!content) return;
+    this.updateGoalChip();
     for (const t of TABS) {
       document.getElementById(`tab-btn-${t.id}`)?.classList.toggle('active', t.id === this.tab);
     }
@@ -1799,6 +1836,11 @@ export class UI {
 
     switch (action) {
       case 'tab':
+        this.tab = arg as Tab;
+        this.closeSheet();
+        break;
+      case 'goal':
+        // The goal chip: jump to the tab where the suggested step happens.
         this.tab = arg as Tab;
         this.closeSheet();
         break;
