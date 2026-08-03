@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   activeBoost,
   activeCompany,
+  activeCountry,
   buyWorkstation,
   createInitialState,
   globalOutputMultiplier,
@@ -17,7 +18,7 @@ const NOW = 1_700_000_000_000;
 function stateWithTeam(): GameState {
   const state = createInitialState(NOW);
   const c = activeCompany(state);
-  state.money = 1_000;
+  activeCountry(state).money = 1_000;
   c.workers.push({
     id: state.nextEntityId++,
     name: 'Test Dev',
@@ -26,7 +27,8 @@ function stateWithTeam(): GameState {
     skillLevel: 1,
     experience: 0,
     stationId: null,
-    training: null,
+    timesTrained: 0,
+    promotions: 0,
   });
   buyWorkstation(state, 'basic');
   return state;
@@ -112,7 +114,7 @@ describe('timeSkip (monetization groundwork)', () => {
 
     expect(skipped.totalEarned).toBeCloseTo(live.totalEarned, 6);
     expect(earned).toBeCloseTo(live.totalEarned, 6);
-    expect(skipped.money).toBeCloseTo(live.money, 6);
+    expect(activeCountry(skipped).money).toBeCloseTo(activeCountry(live).money, 6);
   });
 
   it('returns 0 for non-positive durations', () => {

@@ -11,6 +11,7 @@ import {
 } from '../src/game/data';
 import {
   activeCompany,
+  activeCountry,
   buyCompany,
   buyUpgrade,
   companyCost,
@@ -21,6 +22,7 @@ import {
   projectUnlockCost,
   scaledProjectWork,
   setActiveCompany,
+  timedActionsFor,
   trainDurationSec,
   trainWorker,
 } from '../src/game/engine';
@@ -38,7 +40,8 @@ function makeWorker(id: number, overrides: Partial<WorkerState> = {}): WorkerSta
     skillLevel: 1,
     experience: 0,
     stationId: null,
-    training: null,
+    timesTrained: 0,
+    promotions: 0,
     ...overrides,
   };
 }
@@ -72,7 +75,7 @@ describe('company cost curve', () => {
 
   it('multiplies the price by COMPANY_COST_GROWTH per extra owned company', () => {
     const state = createInitialState(NOW);
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     expect(buyCompany(state, 'loft')).toBeNull();
     expect(companyCost(state, 'paloalto')).toBe(
       Math.round(siteById('paloalto').cost * COMPANY_COST_GROWTH),
@@ -85,25 +88,25 @@ describe('company cost curve', () => {
 
   it('buyCompany charges the scaled price, not the list price', () => {
     const state = createInitialState(NOW);
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'loft');
-    const before = state.money;
+    const before = activeCountry(state).money;
     const expected = companyCost(state, 'paloalto');
     expect(buyCompany(state, 'paloalto')).toBeNull();
-    expect(before - state.money).toBe(expected);
+    expect(before - activeCountry(state).money).toBe(expected);
   });
 
   it('refuses a company the player cannot afford at the scaled price', () => {
     const state = createInitialState(NOW);
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'loft');
-    state.money = siteById('paloalto').cost; // list price, but scaled is higher
+    activeCountry(state).money = siteById('paloalto').cost; // list price, but scaled is higher
     expect(buyCompany(state, 'paloalto')).toBe('Not enough money');
   });
 
   it('each purchase in site order costs several times the previous one', () => {
     const state = createInitialState(NOW);
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     let prevCharge = 0;
     for (const site of COMPANY_SITES.slice(1)) {
       const charge = companyCost(state, site.id);
@@ -117,7 +120,7 @@ describe('company cost curve', () => {
 describe('per-site project scaling', () => {
   it('scales rewards linearly and work sub-linearly with projectScale', () => {
     const state = createInitialState(NOW);
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'tower');
     const company = activeCompany(state);
     const scale = siteById('tower').projectScale;
@@ -145,7 +148,7 @@ describe('per-site project scaling', () => {
 
   it('scales unlock costs with the site contract scale', () => {
     const state = createInitialState(NOW);
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'tower');
     const company = activeCompany(state);
     expect(projectUnlockCost(company, 'todo')).toBe(
@@ -164,7 +167,7 @@ describe('company-count upgrade unlocks', () => {
 
   it('refuses gated upgrades until enough companies are owned', () => {
     const state = createInitialState(NOW);
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     expect(buyUpgrade(state, 'synergy')).toBe('Requires 2 companies');
     buyCompany(state, 'loft');
     expect(buyUpgrade(state, 'synergy')).toBeNull();
@@ -177,9 +180,9 @@ describe('company-count upgrade unlocks', () => {
 
   it('synergy scales output with owned companies', () => {
     const state = createInitialState(NOW);
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'loft');
-    setActiveCompany(state, state.companies[0].id);
+    setActiveCompany(state, activeCountry(state).companies[0].id);
     const company = activeCompany(state);
     const before = globalOutputMultiplier(state, company);
     company.upgrades['synergy'] = 1;
@@ -211,18 +214,19 @@ describe('company-count upgrade unlocks', () => {
     company.upgrades['mentorship'] = 2;
     const expected = TRAIN_DURATION_SEC * MENTORSHIP_SPEED_FACTOR ** 2;
     expect(trainDurationSec(company)).toBeCloseTo(expected, 10);
-    state.money = 10_000;
-    company.workers.push(makeWorker(999));
+    activeCountry(state).money = 10_000;
+    const worker = makeWorker(999);
+    company.workers.push(worker);
     expect(trainWorker(state, 999)).toBeNull();
-    const worker = company.workers.find((w) => w.id === 999)!;
-    expect(worker.training!.totalSec).toBeCloseTo(expected, 10);
+    const timedAction = timedActionsFor(company, 999)[0];
+    expect(timedAction.totalSec).toBeCloseTo(expected, 10);
   });
 });
 
 describe('migration', () => {
   it('gives migrated companies scaled states for newly added projects only', () => {
     const state = createInitialState(NOW);
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     buyCompany(state, 'tower');
     const company = activeCompany(state);
     // Simulate an old save that predates the last project in data.ts.
@@ -230,7 +234,7 @@ describe('migration', () => {
     company.projects = company.projects.slice(0, PROJECTS.length - 1);
     company.projects[0].currentWork = savedWork;
     const migrated = migrate(JSON.parse(JSON.stringify(state)), NOW);
-    const migratedCompany = migrated.companies.find((c) => c.siteId === 'tower')!;
+    const migratedCompany = activeCountry(migrated).companies.find((c) => c.siteId === 'tower')!;
     expect(migratedCompany.projects).toHaveLength(PROJECTS.length);
     // Existing progress untouched, new entry scaled to the site.
     expect(migratedCompany.projects[0].currentWork).toBe(savedWork);
@@ -242,8 +246,8 @@ describe('migration', () => {
   it('keeps pre-update saves loading with the new sites present', () => {
     const state = createInitialState(NOW);
     const raw = JSON.parse(JSON.stringify(state));
-    delete raw.companies[0].siteId;
+    delete raw.countries[0].companies[0].siteId;
     const migrated = migrate(raw, NOW);
-    expect(migrated.companies[0].siteId).toBe('garage');
+    expect(activeCountry(migrated).companies[0].siteId).toBe('garage');
   });
 });

@@ -36,6 +36,67 @@ export const fr: Record<keyof typeof en, string> = {
   'mission.companies': 'Possédez {target} sociétés',
   'mission.upgradeLevels': 'Achetez {target} niveaux d’amélioration',
   'mission.desks': 'Possédez {target} postes de travail',
+  'mission.promotions': 'Promouvez des employés {target} fois',
+  'mission.countries': 'Implantez-vous dans {target} pays',
+
+  // --- Employés : formation, promotion, avance rapide ----------------------
+  'ui.inTraining': 'En formation · +{levels} niveaux dans {time}',
+  'ui.inPromotion': 'Promotion en {title} · terminée dans {time}',
+  'ui.promote': 'Promouvoir',
+  'ui.promotionStarted': 'Stage de leadership lancé !',
+  'ui.promoted': 'Promotion terminée !',
+  'ui.maxGrade': 'Sommet de l’échelle',
+  'ui.fastForwarded': 'Terminé — le temps, c’est de l’argent !',
+  'ui.free': 'Gratuit',
+  'ui.workerQuit': '{name} a démissionné pour salaires impayés !',
+
+  // --- Améliorations de bureaux ---------------------------------------------
+  'ui.renovations': 'Rénovations',
+  'ui.upgradeDesk': 'Améliorer',
+  'ui.deskUpgrading': 'En rénovation · terminé dans {time}',
+  'ui.deskUpgradeStarted': 'Rénovation lancée !',
+
+  // --- Missions UX ----------------------------------------------------------
+  'ui.missionComplete': 'Mission accomplie — réclamez vos VsCoin !',
+
+  // --- Sociétés : plafonds, créneaux, renommage ------------------------------
+  'ui.softCap': 'PLAFOND',
+  'ui.softCapHint':
+    'Ce contrat a atteint son plafond ici — une société plus grande ira plus loin.',
+  'ui.projectSlots': 'Créneaux de projets',
+  'ui.projectSlotsHint':
+    'Affectez les étages supérieurs à leurs propres projets — ou gardez tout le monde sur le principal.',
+  'ui.unlockSlot': 'Débloquer une seconde équipe',
+  'ui.slotNeedsFloors': 'Nécessite {floors} étages',
+  'ui.slotUnlocked': 'Nouveau créneau de projet débloqué !',
+  'ui.mainProject': 'Projet principal',
+  'ui.renameCostConfirm': 'Renommer coûte {cash} + {coins} VsCoin. Continuer ?',
+
+  'ui.companyFounded': '{name} est fondée !',
+
+  // --- International Business -----------------------------------------------
+  'ui.world': 'International Business',
+  'ui.worldHint':
+    'Chaque pays a sa propre économie — l’argent, les équipes et les immeubles restent locaux ; les VsCoin, les missions et votre histoire voyagent avec vous. Bonus mondial : +{bonus}% de production partout.',
+  'ui.travel': 'Voyager',
+  'ui.youAreHere': 'ICI',
+  'ui.freshEconomyHint': 'Un marché vierge — repartez de zéro, grandissez plus vite',
+  'ui.countryUnlocked': 'Nouvelle destination : {name} !',
+
+  // --- Réinitialisation bêta ------------------------------------------------
+  'ui.betaResetTitle': 'Un nouveau départ (bêta)',
+  'ui.betaResetText':
+    'Le monde vient de beaucoup grandir : des pays, des promotions, des dettes et bien plus. Cette mise à jour bêta reconstruit le jeu de fond en comble, et votre ancienne sauvegarde n’a pas pu suivre. Merci de tester — votre prochain empire grandira encore plus vite !',
+
+  // --- Pays -----------------------------------------------------------------
+  'country.ch.name': 'Suisse',
+  'country.us.name': 'États-Unis',
+  'country.ca.name': 'Canada',
+  'country.it.name': 'Italie',
+  'country.fr.name': 'France',
+  'country.de.name': 'Allemagne',
+  'country.sa.name': 'Arabie saoudite',
+  'country.cn.name': 'Chine',
 
   // --- Bureau du fondateur & personnalisation ------------------------------
   'ui.founderOffice': 'Bureau du fondateur',
@@ -56,6 +117,10 @@ export const fr: Record<keyof typeof en, string> = {
   // --- Tutoriel (Gabriel parle) -------------------------------------------
   'tutorial.welcome.text':
     'Salut ! Moi c’est Gabriel, ton investisseur providentiel — au sens littéral. Tu rêves d’une IA qui aide tout le monde, et je suis là pour te mener de ce garage jusqu’aux étoiles. On y va ?',
+  'tutorial.choose-country.text':
+    'Toute légende commence quelque part sur la carte. Où dans le monde se trouve ton garage ?',
+  'tutorial.fast-forward.text':
+    'Attendre, c’est pour les gens sans investisseur providentiel. Cette première avance rapide est pour moi — appuie sur le bouton ⚡ et ta recrue revient instantanément. Après celle-ci, chaque saut coûte des VsCoin.',
   'tutorial.name-avatar.text':
     'Commençons par le commencement : toute grande histoire de fondateur a un nom sur la couverture. Comment dois-je t’appeler ?',
   'tutorial.name-company.text':
@@ -95,6 +160,14 @@ export const fr: Record<keyof typeof en, string> = {
   'story.first-upgrade.title': 'Investir dans l’équipe',
   'story.first-upgrade.text':
     'Tu as dépensé pour ton équipe plutôt que pour toi. Retiens cette sensation — c’est exactement l’habitude qui bâtit des entreprises dignes de confiance.',
+
+  'story.debt-first.title': 'Dans le rouge',
+  'story.debt-first.text':
+    'Le jour de paie est arrivé et le compte a dit non. Écoute — tout fondateur frôle le zéro au moins une fois. Mais la dette accumule les intérêts comme les ragots accumulent les oreilles. Livre quelque chose, vite.',
+
+  'story.debt-crisis.title': 'L’exode commence',
+  'story.debt-crisis.text':
+    'Les gens croient aux rêves, pas aux reconnaissances de dette. Tes meilleurs éléments mettent à jour leur CV pendant que tu lis ceci. Réduis les coûts ou encaisse un contrat — avant que le bureau ne résonne.',
 
   'story.hundred-k.title': 'Six chiffres',
   'story.hundred-k.text':
@@ -143,6 +216,18 @@ export const fr: Record<keyof typeof en, string> = {
   'story.site-orbital.title': 'QG orbital',
   'story.site-orbital.text':
     'Zéro gravité, zéro distraction. De là-haut, la planète n’a aucune frontière — ça tombe bien, ton IA n’a jamais été conçue pour s’arrêter à l’une d’elles.',
+
+  'story.world-unlocked.title': 'Le monde appelle',
+  'story.world-unlocked.text':
+    'Chaque immeuble de la ville porte ton nom. La carte au mur paraît soudain petite — et le globe juste à côté très, très intéressant. L’International Business est ouvert.',
+
+  'story.second-country.title': 'Passeport tamponné',
+  'story.second-country.text':
+    'Un nouveau pays, un nouveau garage, cinquante dollars et le décalage horaire. Tu l’as déjà fait — et cette fois, le monde entier murmure déjà ton nom. Plus vite, plus fort, encore.',
+
+  'story.world-conqueror.title': 'Huit drapeaux',
+  'story.world-conqueror.text':
+    'Huit pays, huit fuseaux horaires, un seul rêve. Quelque part au-dessus de l’océan, tu réalises que la société a cessé d’être une société depuis longtemps. C’est un mouvement, maintenant.',
 
   'story.dream-achieved.title': 'Gratuite comme la lumière',
   'story.dream-achieved.text':

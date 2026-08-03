@@ -84,6 +84,14 @@ in `plan.md` (analytics, shop tab, ads, IAP, Capacitor…) are not repeated here
 
 ## Polish
 
+12b. **Bespoke per-country city scenes** — The 2026-08 expansion ships one
+    parameterized city renderer (`cityMap.ts` `COUNTRY_THEMES`: palette
+    overrides + skyline silhouette + 2–3 landmarks per country). The natural
+    next step is fully bespoke scenes per country — different street grids,
+    river shapes and site architecture (a Swiss lakeside, a Riyadh desert
+    highway, a Shanghai waterfront). The extension point is documented above
+    `COUNTRY_THEMES`; each scene is pure data+draw code with no engine impact.
+
 13. **Story recap journal** — Seen beats are already persisted; a "Your story"
     list (Stats tab or the founder office card) lets players re-read beats and
     shows newcomers how much narrative is ahead. Trivial to build

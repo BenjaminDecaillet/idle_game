@@ -14,7 +14,7 @@ Idle game as a TypeScript PWA (Vite, no frameworks). Deployed to GitHub Pages vi
 - `src/game/**` is pure logic — no DOM, no timers, no `Math.random()` outside injectable `rand` params. `tick(state, dt)` in `engine.ts` is the single source of progression truth; offline progress = `simulateOffline()` calling `tick`. Never duplicate progression math in the UI.
 - Player actions in `engine.ts` return `string | null` (error message or success); UI shows errors as toasts.
 - `src/ui/ui.ts` re-renders the active tab at 2 Hz via innerHTML and updates HUD at 60 fps via targeted `textContent`. Clicks use event delegation on `[data-action="verb:arg"]`.
-- Changing `GameState` → bump `SAVE_VERSION` and extend `migrate()` in `save.ts`; old saves must keep loading. Use the **bump-save-version** skill.
+- Changing `GameState` → follow the **bump-save-version** skill. Beta policy: saves below `SAVE_VERSION` are discarded on load with a translated notice (one-time approved reset; no migration chain). `migrate()` is a same-version hygiene pass only. This does not need to revert to strict migration after 1.0 unless decided anew.
 - Balance values (costs, rates, growth factors) live only in `src/game/data.ts`.
 - All user-facing text goes through i18n (`src/i18n/`, EN + FR, compile-checked complete). `src/game/**` stays language-agnostic (ids only). Use the **add-translation** skill.
 - Story beats and missions trigger only on durable state (counters, ownership) — never transient flags, or offline simulation skips them. VsCoin moves only through `grantVsCoin`/`spendVsCoin`. Use the **add-story-beat** / **add-mission** skills.

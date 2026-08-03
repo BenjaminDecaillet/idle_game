@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PLAYER_LOOK, PLAYER_LOOK_OPTIONS } from '../src/game/data';
-import { buyCompany, createInitialState, getProject } from '../src/game/engine';
+import { activeCountry, buyCompany, createInitialState, getProject } from '../src/game/engine';
 import {
   cyclePlayerLook,
   officeStage,
@@ -47,7 +47,7 @@ describe('player look', () => {
 describe('office stage', () => {
   it('progresses from garage to orbital study with the dream', () => {
     const state = createInitialState(NOW);
-    state.money = Number.MAX_SAFE_INTEGER;
+    activeCountry(state).money = Number.MAX_SAFE_INTEGER;
     expect(officeStage(state)).toBe(0);
     buyCompany(state, 'loft');
     expect(officeStage(state)).toBe(1);
@@ -58,14 +58,14 @@ describe('office stage', () => {
     expect(officeStage(state)).toBe(2); // 5 companies
     buyCompany(state, 'orbital');
     expect(officeStage(state)).toBe(2); // orbital owned but AGI not shipped
-    const orbital = state.companies.find((c) => c.siteId === 'orbital')!;
+    const orbital = activeCountry(state).companies.find((c) => c.siteId === 'orbital')!;
     getProject(orbital, 'agi').completions = 1;
     expect(officeStage(state)).toBe(3);
   });
 
   it('reaches stage 2 through AGI research alone', () => {
     const state = createInitialState(NOW);
-    getProject(state.companies[0], 'agi').unlocked = true;
+    getProject(activeCountry(state).companies[0], 'agi').unlocked = true;
     expect(officeStage(state)).toBe(2);
   });
 });

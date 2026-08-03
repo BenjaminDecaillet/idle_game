@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAP_THEMES, WALLPAPERS } from '../src/game/data';
 import {
   activeCompany,
+  activeCountry,
   buyCompany,
   buyMapTheme,
   buyWallpaper,
@@ -27,11 +28,11 @@ describe('wallpapers', () => {
   it('buyWallpaper checks money, deducts once, and unlocks globally', () => {
     const state = createInitialState(NOW);
     const def = WALLPAPERS.find((w) => w.cost > 0)!;
-    state.money = def.cost - 1;
+    activeCountry(state).money = def.cost - 1;
     expect(buyWallpaper(state, def.id)).toBe('Not enough money');
-    state.money = def.cost;
+    activeCountry(state).money = def.cost;
     expect(buyWallpaper(state, def.id)).toBeNull();
-    expect(state.money).toBe(0);
+    expect(activeCountry(state).money).toBe(0);
     expect(state.ownedWallpapers).toContain(def.id);
     expect(buyWallpaper(state, def.id)).toBe('Already owned');
   });
@@ -39,12 +40,12 @@ describe('wallpapers', () => {
   it('per-company apply and player default are independent', () => {
     const state = createInitialState(NOW);
     const def = WALLPAPERS.find((w) => w.cost > 0)!;
-    state.money = def.cost + 200_000;
+    activeCountry(state).money = def.cost + 200_000;
     expect(buyWallpaper(state, def.id)).toBeNull();
 
     // Apply to the first (active) company only.
     expect(setCompanyWallpaper(state, def.id)).toBeNull();
-    expect(effectiveWallpaper(state, state.companies[0])).toBe(def.id);
+    expect(effectiveWallpaper(state, activeCountry(state).companies[0])).toBe(def.id);
 
     // A second company still follows the player default...
     expect(buyCompany(state, 'loft')).toBeNull();
@@ -74,9 +75,9 @@ describe('map themes', () => {
     expect(state.mapThemeId).toBe('daylight');
     const def = MAP_THEMES.find((t) => t.cost > 0)!;
     expect(setMapTheme(state, def.id)).toBe('Map theme not owned');
-    state.money = def.cost;
+    activeCountry(state).money = def.cost;
     expect(buyMapTheme(state, def.id)).toBeNull();
-    expect(state.money).toBe(0);
+    expect(activeCountry(state).money).toBe(0);
     expect(state.mapThemeId).toBe(def.id);
     expect(setMapTheme(state, 'daylight')).toBeNull();
     expect(state.mapThemeId).toBe('daylight');
@@ -92,24 +93,24 @@ describe('cosmetics migration hygiene', () => {
     (parsed as Partial<typeof parsed>).defaultWallpaperId = undefined;
     (parsed as Partial<typeof parsed>).ownedMapThemes = undefined;
     (parsed as Partial<typeof parsed>).mapThemeId = undefined;
-    parsed.companies[0].wallpaperId = 'no-such-wallpaper';
+    activeCountry(parsed).companies[0].wallpaperId = 'no-such-wallpaper';
 
     const migrated = migrate(parsed, NOW);
     expect(migrated.ownedWallpapers).toContain('concrete');
     expect(migrated.defaultWallpaperId).toBe('concrete');
     expect(migrated.ownedMapThemes).toContain('daylight');
     expect(migrated.mapThemeId).toBe('daylight');
-    expect(migrated.companies[0].wallpaperId).toBeNull();
+    expect(activeCountry(migrated).companies[0].wallpaperId).toBeNull();
   });
 
   it('keeps owned cosmetics across migration', () => {
     const state = createInitialState(NOW);
     const wp = WALLPAPERS.find((w) => w.cost > 0)!;
-    state.money = wp.cost;
+    activeCountry(state).money = wp.cost;
     buyWallpaper(state, wp.id);
     setCompanyWallpaper(state, wp.id);
     const migrated = migrate(JSON.parse(JSON.stringify(state)), NOW);
     expect(migrated.ownedWallpapers).toContain(wp.id);
-    expect(migrated.companies[0].wallpaperId).toBe(wp.id);
+    expect(activeCountry(migrated).companies[0].wallpaperId).toBe(wp.id);
   });
 });

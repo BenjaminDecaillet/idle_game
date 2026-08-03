@@ -1,5 +1,5 @@
 import { TUTORIAL_ANGEL_GIFT } from './data';
-import { activeCompany } from './engine';
+import { activeCompany, activeCountry } from './engine';
 import type { GameState } from './types';
 
 /**
@@ -24,12 +24,13 @@ export interface TutorialStepDef {
   target?: string;
   /** Auto-advance condition. Undefined = manual step (Next button). */
   isComplete?: (state: GameState) => boolean;
-  /** Special input rendering: name the avatar / the company. */
-  input?: 'avatar-name' | 'company-name';
+  /** Special input rendering: name the avatar / the company / pick a country. */
+  input?: 'avatar-name' | 'company-name' | 'country';
 }
 
 export const TUTORIAL_STEPS: TutorialStepDef[] = [
   { id: 'welcome' },
+  { id: 'choose-country', input: 'country' },
   { id: 'name-avatar', input: 'avatar-name' },
   { id: 'name-company', input: 'company-name' },
   {
@@ -55,7 +56,18 @@ export const TUTORIAL_STEPS: TutorialStepDef[] = [
     tab: 'team',
     target: '[data-action^="train:"]',
     isComplete: (s) =>
-      activeCompany(s).workers.some((w) => w.training !== null || w.skillLevel > 1),
+      activeCompany(s).timedActions.some((a) => a.kind === 'training') ||
+      activeCompany(s).workers.some((w) => w.timesTrained > 0 || w.skillLevel > 1),
+  },
+  {
+    id: 'fast-forward',
+    tab: 'team',
+    target: '[data-action^="fast-forward:"]',
+    // Done once the training finished — by waiting it out or (the offered
+    // freebie) fast-forwarding it. Durable either way.
+    isComplete: (s) =>
+      activeCompany(s).workers.some((w) => w.timesTrained > 0 || w.skillLevel > 1) &&
+      !activeCompany(s).timedActions.some((a) => a.kind === 'training'),
   },
   { id: 'outro' },
 ];
@@ -102,7 +114,7 @@ function completeCurrentStep(state: GameState): void {
   const next = TUTORIAL_STEPS[state.tutorial.step];
   if (next.id === 'upgrade' && !state.tutorial.giftGiven) {
     state.tutorial.giftGiven = true;
-    state.money += TUTORIAL_ANGEL_GIFT;
+    activeCountry(state).money += TUTORIAL_ANGEL_GIFT;
   }
 }
 

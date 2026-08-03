@@ -1,5 +1,7 @@
 import type {
   CompanySiteDef,
+  CountryDef,
+  CountryId,
   MapThemeDef,
   MissionDef,
   ProjectDef,
@@ -19,10 +21,73 @@ export const SKILL_OUTPUT_PER_LEVEL = 0.1; // +10% output per skill level above 
 // cost = baseRate * TRAIN_COST_RATE_FACTOR * (1 + TRAIN_COST_LEVEL_RAMP * (skillLevel - 1))
 // Anchoring to baseRate keeps the payback time uniform across tiers
 // (~5 min of the granted extra output at early reward/work ratios).
+// duration = TRAIN_DURATION_SEC * TRAIN_DURATION_GROWTH^timesTrained — the
+// first program stays tutorial-friendly (~2 min), later ones drift into
+// idle/offline territory (see docs/balance.md).
 export const TRAIN_LEVELS = 3;
 export const TRAIN_DURATION_SEC = 120;
+export const TRAIN_DURATION_GROWTH = 1.6;
 export const TRAIN_COST_RATE_FACTOR = 45;
 export const TRAIN_COST_LEVEL_RAMP = 0.15;
+
+// Promotion: at their tier's maxSkill cap a worker can be promoted to the
+// next tier (keeping their skill level). Costs money and time, both scaling
+// with the target tier (see docs/balance.md).
+export const PROMOTE_COST_FACTOR = 0.6; // × target tier hireCost
+export const PROMOTE_DURATION_BASE = 180;
+export const PROMOTE_DURATION_GROWTH = 2; // ^ target tier index (1-based)
+
+// Fast-forward: any timed action can be completed instantly for VsCoin,
+// 1 VsCoin per started 10 minutes of remaining time. The first-ever
+// fast-forward is free (offered during the tutorial's training step).
+export const FASTFORWARD_SEC_PER_VSCOIN = 600;
+
+// Desk upgrades: raise a desk to the next workstation tier in place, for
+// money (cheaper than the buy-new price gap) + time.
+export const DESK_UPGRADE_COST_FACTOR = 0.8; // × (next.baseCost - current.baseCost)
+export const DESK_UPGRADE_DURATION_BASE = 180;
+export const DESK_UPGRADE_DURATION_GROWTH = 2; // ^ target workstation index
+
+// Per-company soft cap: a project's reward stops growing at
+// baseReward × site.projectScale × PROJECT_REWARD_CAP_MULT; work growth
+// freezes with it (plateau, not decline) so a single company stalls and the
+// next company becomes the way forward.
+export const PROJECT_REWARD_CAP_MULT = 50;
+
+// Multi-project slots: slot k+1 unlocks once the building has
+// PROJECT_SLOT_FLOOR_REQ[k-1] floors, for PROJECT_SLOT_COSTS[k-1] × projectScale.
+export const PROJECT_SLOT_FLOOR_REQ = [4, 8];
+export const PROJECT_SLOT_COSTS = [25_000, 250_000];
+
+// Debt: a country's wallet can go below zero when wages are due. Interest
+// compounds inside tick(); past the crisis threshold employees resign one
+// per interval until payroll is sustainable again. Debt is clamped so a
+// long offline gap never becomes unrecoverable. See docs/balance.md.
+export const DEBT_INTEREST_PER_SEC = 0.0002;
+export const DEBT_CAP_SALARY_SEC = 3_600;
+export const DEBT_CAP_MIN = 10_000;
+export const DEBT_CRISIS_SALARY_SEC = 600;
+export const DEBT_CRISIS_MIN = 500;
+export const DEBT_QUIT_INTERVAL_SEC = 60;
+
+// International expansion: further countries are bought with cash from the
+// active country once International Business is unlocked (all city sites
+// owned). Every unlocked country adds a global output bonus — the prestige
+// incentive for starting fresh abroad.
+export const COUNTRY_UNLOCK_BASE = 50_000_000_000_000;
+export const COUNTRY_UNLOCK_GROWTH = 3;
+export const WORLD_OUTPUT_PER_COUNTRY = 0.25;
+export const COUNTRY_STARTING_MONEY = 50;
+export const DEFAULT_COUNTRY: CountryId = 'us';
+
+// Renaming a company always costs cash AND VsCoin, both escalating per
+// rename; the first cash rename is at least the company's purchase price.
+export const RENAME_CASH_MIN = 1_000;
+export const RENAME_COST_GROWTH = 2;
+export const RENAME_VSCOIN_BASE = 2;
+
+// The tutorial's guaranteed first candidate (an affordable intern).
+export const TUTORIAL_FIRST_HIRE_NAME = 'Steve Gates';
 
 // Free simulation-speed toggle (live play only, offline stays wall-clock).
 export const TIME_SCALES = [1, 2, 4];
@@ -115,13 +180,69 @@ export const SPECIALIZATIONS: Specialization[] = [
 ];
 
 export const WORKER_TIERS: WorkerTierDef[] = [
-  { id: 'intern', title: 'Intern', baseRate: 0.5, salary: 0.05, hireCost: 25, emoji: '🎓' },
-  { id: 'junior', title: 'Junior Dev', baseRate: 1, salary: 0.15, hireCost: 100, emoji: '🧑‍💻' },
-  { id: 'mid', title: 'Mid-level Dev', baseRate: 2.5, salary: 0.5, hireCost: 500, emoji: '👨‍💻' },
-  { id: 'senior', title: 'Senior Dev', baseRate: 5, salary: 1.2, hireCost: 2_500, emoji: '🧙' },
-  { id: 'architect', title: 'Architect', baseRate: 20, salary: 6, hireCost: 15_000, emoji: '🏛️' },
-  { id: 'principal', title: 'Principal Engineer', baseRate: 50, salary: 18, hireCost: 80_000, emoji: '🚀' },
+  { id: 'intern', title: 'Intern', baseRate: 0.5, salary: 0.05, hireCost: 25, maxSkill: 10, emoji: '🎓' },
+  { id: 'junior', title: 'Junior Dev', baseRate: 1, salary: 0.15, hireCost: 100, maxSkill: 20, emoji: '🧑‍💻' },
+  { id: 'mid', title: 'Mid-level Dev', baseRate: 2.5, salary: 0.5, hireCost: 500, maxSkill: 35, emoji: '👨‍💻' },
+  { id: 'senior', title: 'Senior Dev', baseRate: 5, salary: 1.2, hireCost: 2_500, maxSkill: 55, emoji: '🧙' },
+  { id: 'architect', title: 'Architect', baseRate: 20, salary: 6, hireCost: 15_000, maxSkill: 75, emoji: '🏛️' },
+  { id: 'principal', title: 'Principal Engineer', baseRate: 50, salary: 18, hireCost: 80_000, maxSkill: 100, emoji: '🚀' },
 ];
+
+/**
+ * Playable countries. Mechanically identical economies (for now — see
+ * docs/balance.md before adding modifiers); each brings its own city map
+ * theme (src/ui/cityMap.ts) and parody-company name pool. Display names
+ * live in i18n (`country.<id>.name`); parody names are proper nouns and
+ * stay untranslated.
+ */
+export const COUNTRIES: CountryDef[] = [
+  {
+    id: 'ch',
+    emoji: '🇨🇭',
+    parodyCompanyNames: ['Nestlay', 'Novartiz', 'Rosche', 'UBX', 'Swotch', 'Lindtz', 'Logitek', 'Victorinix'],
+  },
+  {
+    id: 'us',
+    emoji: '🇺🇸',
+    parodyCompanyNames: ['MicroHard', 'Gogol', 'Appel', 'Amazoom', 'Facelook', 'Netflicks', 'Teslo', 'Orbacle'],
+  },
+  {
+    id: 'ca',
+    emoji: '🇨🇦',
+    parodyCompanyNames: ['Shopifly', 'Blueberry Mobile', 'Bombardeer', 'Lulumelon', 'Tim Hortoons', 'Nortell', 'MapleSoftworks', 'Moose Compute'],
+  },
+  {
+    id: 'it',
+    emoji: '🇮🇹',
+    parodyCompanyNames: ['Lamborghetti', 'Ferrucci Motors', 'Fiatello', 'Olivettino', 'Espressoft', 'Barilotto', 'Moda Prima', 'Vespucci Scooters'],
+  },
+  {
+    id: 'fr',
+    emoji: '🇫🇷',
+    parodyCompanyNames: ['Renoh', 'Pigeot', 'Airbousse', 'Loui Filton', 'Ubisoif', 'Clémentine Télécom', 'Dadone', 'Michelout'],
+  },
+  {
+    id: 'de',
+    emoji: '🇩🇪',
+    parodyCompanyNames: ['Folkswagen', 'BMVau', 'Siemensch', 'ZAP Software', 'Abibas', 'Borsch Tools', 'Sternwagen', 'Waldi Markt'],
+  },
+  {
+    id: 'sa',
+    emoji: '🇸🇦',
+    parodyCompanyNames: ['Aramgo', 'SandBIC', 'Oasis Telecom', 'Almirage', 'Neoom', 'Flynada', 'Desert Rose Digital', 'Falcon Compute'],
+  },
+  {
+    id: 'cn',
+    emoji: '🇨🇳',
+    parodyCompanyNames: ['Alibubba', 'Tensent', 'Baidou', 'Huaway', 'Xiaomeow', 'ByteDanze', 'Lenovah', 'Pandragon'],
+  },
+];
+
+export function countryDefById(id: string): CountryDef {
+  const c = COUNTRIES.find((c) => c.id === id);
+  if (!c) throw new Error(`Unknown country: ${id}`);
+  return c;
+}
 
 export const WORKSTATIONS: WorkstationDef[] = [
   { id: 'basic', name: 'Basic Desk', multiplier: 1, baseCost: 20, costGrowth: 1.18, emoji: '🪑' },
@@ -312,6 +433,12 @@ export const MISSIONS: MissionDef[] = [
   { id: 'desk-8', metric: 'desks', target: 8, reward: 1, emoji: '🪑' },
   { id: 'desk-20', metric: 'desks', target: 20, reward: 3, emoji: '🪑' },
   { id: 'desk-48', metric: 'desks', target: 48, reward: 6, emoji: '🪑' },
+  { id: 'promote-1', metric: 'promotions', target: 1, reward: 2, emoji: '🎖️' },
+  { id: 'promote-5', metric: 'promotions', target: 5, reward: 4, emoji: '🎖️' },
+  { id: 'promote-15', metric: 'promotions', target: 15, reward: 8, emoji: '🎖️' },
+  { id: 'country-2', metric: 'countries', target: 2, reward: 10, emoji: '🌍' },
+  { id: 'country-4', metric: 'countries', target: 4, reward: 20, emoji: '🌍' },
+  { id: 'country-8', metric: 'countries', target: 8, reward: 40, emoji: '🌍' },
 ];
 
 export function missionById(id: string): MissionDef {

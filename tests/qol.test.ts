@@ -7,6 +7,7 @@ import {
 } from '../src/game/data';
 import {
   activeCompany,
+  activeCountry,
   autoSeat,
   buyMarketingCampaign,
   buyWorkstation,
@@ -29,7 +30,8 @@ function seatedWorker(id: number): WorkerState {
     skillLevel: 1,
     experience: 0,
     stationId: null,
-    training: null,
+    timesTrained: 0,
+    promotions: 0,
   };
 }
 
@@ -60,7 +62,7 @@ describe('marketing campaign', () => {
     expect(grossRewardRate(state)).toBe(0);
     expect(marketingCost(state)).toBe(MARKETING_MIN_COST);
 
-    state.money = 1_000_000;
+    activeCountry(state).money = 1_000_000;
     buyWorkstation(state, 'basic');
     activeCompany(state).workers.push(seatedWorker(9001));
     autoSeat(activeCompany(state));
@@ -73,10 +75,10 @@ describe('marketing campaign', () => {
 
   it('deducts the cost and grants an extendable boost', () => {
     const state = createInitialState(NOW);
-    state.money = MARKETING_MIN_COST * 2;
+    activeCountry(state).money = MARKETING_MIN_COST * 2;
 
     expect(buyMarketingCampaign(state)).toBeNull();
-    expect(state.money).toBe(MARKETING_MIN_COST);
+    expect(activeCountry(state).money).toBe(MARKETING_MIN_COST);
     const boost = state.boosts.find((b) => b.source === 'marketing');
     expect(boost).toBeDefined();
     expect(boost!.mult).toBe(MARKETING_MULT);
@@ -84,7 +86,7 @@ describe('marketing campaign', () => {
 
     // Re-buying extends the same boost instead of stacking a second one.
     expect(buyMarketingCampaign(state)).toBeNull();
-    expect(state.money).toBe(0);
+    expect(activeCountry(state).money).toBe(0);
     expect(state.boosts.filter((b) => b.source === 'marketing')).toHaveLength(1);
     expect(boost!.remainingSec).toBe(2 * MARKETING_DURATION_SEC);
 
