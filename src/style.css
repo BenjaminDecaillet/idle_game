@@ -1923,3 +1923,21 @@ button.site-card {
   background: var(--surface);
   color: var(--ink-soft);
 }
+
+/* --- Story journal (Stats tab) ----------------------------------------- */
+
+.journal-beat {
+  border-top: 1px solid var(--ink-faint);
+  padding: 6px 2px;
+}
+
+.journal-beat summary {
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.journal-beat p {
+  margin: 6px 0 2px;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}

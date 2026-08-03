@@ -177,6 +177,12 @@ export const en = {
   'ui.prestigeNeedStory': 'Finish the dream first: ship the AGI from the Orbital HQ.',
   'ui.prestigeNoRep': 'Not enough new earnings for a single Reputation point yet.',
 
+  // --- Story journal (Stats tab) --------------------------------------------
+  'ui.storyJournal': 'Your story',
+  'ui.storyJournalProgress': '{seen} / {total} chapters lived',
+  'ui.storyJournalEmpty':
+    'Your story is just beginning — Gabriel will note every milestone here.',
+
   // --- Beta reset ----------------------------------------------------------
   'ui.betaResetTitle': 'A fresh start (beta)',
   'ui.betaResetText':

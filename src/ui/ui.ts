@@ -134,6 +134,7 @@ import { nextGoalHint } from '../game/goals';
 import type { GoalHint } from '../game/goals';
 import { exportSave, importSave, resetGame, saveGame } from '../game/save';
 import {
+  STORY_BEATS,
   advanceStory,
   currentStoryBeat,
   dismissStoryBeat,
@@ -1727,6 +1728,36 @@ export class UI {
     return `<div class="stack">${shop}${cards}</div>`;
   }
 
+  /**
+   * "Your story" journal: seen beats, re-readable, in arc order. Beats are
+   * durable (story.seen), so this is a pure lookup — no state changes.
+   */
+  private renderStoryJournal(): string {
+    const s = this.state;
+    const seenBeats = STORY_BEATS.filter((b) => s.story.seen.includes(b.id));
+    const body =
+      seenBeats.length === 0
+        ? `<p class="hint">${t('ui.storyJournalEmpty')}</p>`
+        : seenBeats
+            .map(
+              (b) => `
+          <details class="journal-beat">
+            <summary>${lookup(`story.${b.id}.title`)}</summary>
+            <p>${lookup(`story.${b.id}.text`)}</p>
+          </details>`,
+            )
+            .join('');
+    return `
+      <div class="card">
+        <h2 class="card-title">📖 ${t('ui.storyJournal')}</h2>
+        <p class="hint">${t('ui.storyJournalProgress', {
+          seen: seenBeats.length,
+          total: STORY_BEATS.length,
+        })}</p>
+        ${body}
+      </div>`;
+  }
+
   private renderStats(): string {
     const s = this.state;
     const c = activeCompany(s);
@@ -1798,6 +1829,7 @@ export class UI {
               .join('')}
           </table>
         </div>
+        ${this.renderStoryJournal()}
         <div class="card">
           <h2 class="card-title">Settings</h2>
           <div class="settings-row">

@@ -176,6 +176,12 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.prestigeNeedStory': 'Terminez d’abord le rêve : livrez l’IAG depuis le QG orbital.',
   'ui.prestigeNoRep': 'Pas encore assez de nouveaux gains pour un seul point de Réputation.',
 
+  // --- Journal de l’histoire (onglet Stats) ----------------------------------
+  'ui.storyJournal': 'Votre histoire',
+  'ui.storyJournalProgress': '{seen} / {total} chapitres vécus',
+  'ui.storyJournalEmpty':
+    'Votre histoire ne fait que commencer — Gabriel notera ici chaque étape marquante.',
+
   // --- Réinitialisation bêta ------------------------------------------------
   'ui.betaResetTitle': 'Un nouveau départ (bêta)',
   'ui.betaResetText':
