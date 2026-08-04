@@ -47,6 +47,7 @@ import {
   PROJECT_WORK_SCALE_EXP,
   RARE_TRAIT_CHANCE,
   SITE_SPEC_BONUS,
+  petById,
   VAULT_CAP_MIN,
   VAULT_CAP_MINUTES,
   VAULT_OPEN_COST,
@@ -136,6 +137,7 @@ export function createInitialState(now = Date.now(), countryId: CountryId = DEFA
     lastSeen: now,
     playTimeSec: 0,
     ownedWallpapers: ['concrete'],
+    ownedPets: [],
     defaultWallpaperId: 'concrete',
     ownedMapThemes: ['daylight'],
     mapThemeId: 'daylight',
@@ -227,6 +229,7 @@ export function createCompany(
     timedActions: [],
     purchasePrice,
     renameCount: 0,
+    petId: null,
     floorProjects: [],
   };
   company.projects[0].unlocked = true;
@@ -1822,6 +1825,23 @@ export function openVault(state: GameState): string | null {
   if (err) return err;
   activeCountry(state).money += state.vault.amount;
   state.vault.amount = 0;
+  return null;
+}
+
+/** Buy an office pet once with VsCoin — usable in every company forever. */
+export function buyPet(state: GameState, petId: string): string | null {
+  const pet = petById(petId);
+  if (state.ownedPets.includes(pet.id)) return 'error.alreadyOwned';
+  const err = spendVsCoin(state, pet.vsCoinCost, `shop:pet-${pet.id}`);
+  if (err) return err;
+  state.ownedPets.push(pet.id);
+  return null;
+}
+
+/** Let an owned pet roam the active company's building (null = none). */
+export function setCompanyPet(state: GameState, petId: string | null): string | null {
+  if (petId !== null && !state.ownedPets.includes(petId)) return 'error.petNotOwned';
+  activeCompany(state).petId = petId;
   return null;
 }
 

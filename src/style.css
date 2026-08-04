@@ -2019,3 +2019,10 @@ input.music-volume {
 .vault-card {
   border-color: rgba(219, 39, 119, 0.35);
 }
+
+/* Office pet wandering the lobby. */
+.office-pet {
+  font-size: 22px;
+  align-self: flex-end;
+  margin: 0 10px 2px;
+}

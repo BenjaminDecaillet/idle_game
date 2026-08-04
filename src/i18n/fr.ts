@@ -553,4 +553,13 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.vaultHint':
     'Chaque projet livré y dépose {rate} % en bonus. Elle se remplit jusqu’à deux heures de revenus — cassez-la quand vous voulez.',
   'error.vaultEmpty': 'La tirelire est vide — gagnez d’abord quelque chose.',
+
+  // --- Animaux de bureau ----------------------------------------------------
+  'ui.petsTitle': 'Coin des animaux',
+  'ui.petHint': 'Un compagnon sans bonus pour vos étages.',
+  'ui.petAdopt': 'L’installer ici',
+  'ui.petHere': 'Vit ici',
+  'ui.petDismiss': 'Renvoyer l’animal à la maison',
+  'ui.petAdopted': 'Nouveau compagnon de bureau adopté !',
+  'error.petNotOwned': 'Vous ne possédez pas encore cet animal.',
 };

@@ -6,22 +6,18 @@ whole backlog (per-floor projects + cost scaling → Office tab → chiptune
 Angular naming, no AI attribution in git history, checkpoint after every
 slice.
 
-## 1. Current slice — second tier: site specialization
+## 1. Current slice — second tier: office pets
 
-Top tier COMPLETE: A–D5 merged (PRs #17–#24). Current slice on branch
-`feat/site-specialization`: complete, gates green (700 tests / 31
-files, build, smoke). Shipped: favoredSpec per paid site (+50% on
-matching contracts via SITE_SPEC_BONUS in workerRate, stacks with the
-personal spec match), site-sheet Specialty row + starred contract
-cards (decisions.md #32), 4 tests, improvements #9 ticked.
+PRs #17–#25 merged (top tier + site specialization). Current slice on
+branch `feat/office-pets`: complete, gates pending final run. Shipped:
+4 zero-power VsCoin pets (global ownership, per-company petId, staff
+room pet corner, lobby companion), push opt-in #12 formally SKIPPED
+(decisions.md #33 — needs push-service backend).
 
-**Next action:** PR (strip auto-appended session footer) → CI → merge
-→ next: improvements #12 push opt-in (likely SKIP: needs a backend or
-Notification-API scheduling work — assess briefly, record the skip) →
-#14 cosmetic-first premium catalog → polish items (#15 construction
-art via art-skinner, #16 builder visibility, #18 confetti) → tech #21
-balance harness. Sourcery's innerHTML flags remain established false
-positives — merge on the `test` check.
+**Next action:** gate → PR (strip session footer) → CI (`test` check)
+→ merge → polish tier: #16 builder idle visibility, #18 confetti on
+claims, #15 construction art pass (art-skinner), then tech #21 balance
+harness. #19 bespoke city scenes is big art — only if time remains.
 
 ## 2. Slice queue (mission order)
 

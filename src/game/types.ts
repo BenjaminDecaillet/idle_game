@@ -352,6 +352,8 @@ export interface CompanyState {
   purchasePrice: number;
   /** Paid renames so far — rename price escalates with it. */
   renameCount: number;
+  /** Active office pet wandering this building (null = none). */
+  petId: string | null;
   /**
    * Per-floor project assignment (index = floor). null/missing = the
    * company's main activeProjectId. Every floor owns its own slot, so a
@@ -428,6 +430,8 @@ export interface GameState {
   lastSeen: number; // wall-clock ms, for offline progress
   playTimeSec: number;
   ownedWallpapers: string[]; // bought once, usable in every company
+  /** Office pets owned (global, like wallpapers — see PETS in data.ts). */
+  ownedPets: string[];
   defaultWallpaperId: string; // player-level default for companies without one
   ownedMapThemes: string[];
   mapThemeId: string;

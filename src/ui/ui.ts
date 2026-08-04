@@ -8,7 +8,9 @@ import {
   MARKETING_DURATION_SEC,
   MARKETING_MULT,
   MAX_FLOORS,
+  PETS,
   SITE_SPEC_BONUS,
+  petById,
   VAULT_OPEN_COST,
   VAULT_RATE,
   traitById,
@@ -111,7 +113,9 @@ import {
   prestigePreview,
   prestigeReset,
   totalWorkRate,
+  buyPet,
   openVault,
+  setCompanyPet,
   tierSalary,
   traitSalaryMult,
   trainCost,
@@ -1557,8 +1561,48 @@ export class UI {
         </div>
         <p class="hint">${t('ui.staffRoomHint')}</p>
         ${this.renderUpgrades()}
+        ${this.renderPetShop()}
         ${this.renderDecorShop()}
       </div>`;
+  }
+
+  /** Pet corner: zero-power VsCoin companions, picked per company. */
+  private renderPetShop(): string {
+    const s = this.state;
+    const c = activeCompany(s);
+    const cards = PETS.map((pet) => {
+      const owned = s.ownedPets.includes(pet.id);
+      const active = c.petId === pet.id;
+      const affordable = s.vsCoin >= pet.vsCoinCost;
+      const action = owned
+        ? `<button class="btn btn-small" ${active ? 'disabled' : ''}
+                   data-action="set-pet:${pet.id}">
+             ${active ? `✓ ${t('ui.petHere')}` : t('ui.petAdopt')}
+           </button>`
+        : `<button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
+                   data-action="buy-pet:${pet.id}">
+             ${t('ui.buyBtn', { price: `${pet.vsCoinCost}` })} ${icon('vscoin', 14)}
+           </button>`;
+      return `
+      <div class="card">
+        <div class="card-row">
+          <span class="card-emoji">${pet.emoji}</span>
+          <div class="card-main">
+            <h3>${pet.name}</h3>
+            <span class="muted">${owned ? t('ui.decorOwned') : t('ui.petHint')}</span>
+          </div>
+          ${action}
+        </div>
+      </div>`;
+    }).join('');
+    const dismiss =
+      c.petId !== null
+        ? `<button class="btn btn-ghost" data-action="set-pet:none">🏠 ${t('ui.petDismiss')}</button>`
+        : '';
+    return `
+      <div class="section-head"><h2>🐾 ${t('ui.petsTitle')}</h2></div>
+      ${cards}
+      ${dismiss}`;
   }
 
   /** One desk tile: occupied (persona typing), empty desk, or free slot. */
@@ -1743,7 +1787,9 @@ export class UI {
       <div class="building card" style="${officeWallVars(wpId)}">
         <div class="roof-band">${roofDecor(wpId)}</div>
         ${floorBlocks.join('')}
-        <div class="lobby-band">${lobbyDecor(wpId)}</div>
+        <div class="lobby-band">${lobbyDecor(wpId)}${
+          c.petId ? `<span class="office-pet os-anim-bob" title="${petById(c.petId).name}">${petById(c.petId).emoji}</span>` : ''
+        }</div>
       </div>
       ${
         standing
@@ -2366,6 +2412,13 @@ export class UI {
         }
         break;
       }
+      case 'buy-pet':
+        error = buyPet(s, arg);
+        if (!error) this.toast(`🐾 ${t('ui.petAdopted')}`, 'info');
+        break;
+      case 'set-pet':
+        error = setCompanyPet(s, arg === 'none' ? null : arg);
+        break;
       case 'open-vault':
         error = openVault(s);
         if (!error) {
