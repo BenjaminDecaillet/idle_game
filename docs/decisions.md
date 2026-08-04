@@ -258,3 +258,13 @@ be revisited cheaply.
     The optional "which builder is on it" attribution from #16 was
     dropped as cosmetic bookkeeping that the derived model can't answer
     honestly.
+35. **Construction art pass (#15)**: `constructionDecor(seed = 0)` grew
+    into a full cartoon site (scaffold, mini tower crane with hanging
+    beam, inline hard-hat builder persona — persona.ts has no hard-hat
+    variant, so the builder is drawn in the officeScene style — banner,
+    cones), deterministic via the hashSeed pattern. On the map,
+    `constructionWorks()` replaces the FOR SALE sign with a crane
+    silhouette + scaffolding over the plot while a company-build is in
+    flight; detection reads the existing '🏗️ ' label prefix inside
+    cityMap.ts so ui.ts stays untouched, and colors are neutral safety
+    orange/wood so every COUNTRY_THEMES palette works.

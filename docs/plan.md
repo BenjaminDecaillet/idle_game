@@ -50,6 +50,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [x] **Site specialization** (decisions.md 32) — each paid site favors one specialization: +50% on matching contracts, stacking with the worker spec match; surfaced on the map sheet and contract cards
 - [x] **Office pets** (decisions.md 33) — cosmetic-first premium wave: four zero-power VsCoin pets, global ownership, per-company companion in the lobby, staff-room pet corner
 - [x] **Polish: builder chip + claim confetti** (decisions.md 34) — persistent free/total builders HUD chip (red when all busy) and confetti bursts on mission/daily/vault claims
+- [x] **Construction art pass** (decisions.md 35) — cartoon construction scenes on rising floors (crane, scaffold, builder persona) and crane silhouettes on map sites under construction, theme-neutral
 - [ ] **Monetization Phase 0** — analytics (PostHog/Plausible) + privacy policy → see [monetization.md](monetization.md)
 - [x] **Shop/Boost tab** — closed by the workforce/shop update above: Shop + VsCoin tabs over `spendVsCoin`/`grantVsCoin`; the rewarded-ad boost offers still plug in via `grantBoost`/`timeSkip` when Phase 2 starts
 - [ ] **Rewarded ads** — portal SDK (CrazyGames/Poki) or H5 Games Ads + consent banner
