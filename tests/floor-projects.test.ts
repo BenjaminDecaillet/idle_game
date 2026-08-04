@@ -7,14 +7,12 @@ import {
   activeCompany,
   activeCountry,
   assignFloorProject,
-  autoSeat,
   buyFloor,
   buyWorkstation,
   createInitialState,
   floorBuildDurationSec,
   floorProject,
   getProject,
-  setActiveProject,
   simulateOffline,
   tick,
   unlockProject,
@@ -324,11 +322,6 @@ describe('simulateOffline — per-floor project progress', () => {
     });
     c.workers.push(w2);
     w2.stationId = c.workstations[4].id; // floor 1
-
-    // Take snapshots of progress before
-    const landingBefore = getProject(c, 'landing').progress;
-    const apiBefore = getProject(c, 'api').progress;
-    const moneyBefore = country.money;
 
     // Clone state for offline sim
     const offlineState = JSON.parse(JSON.stringify(state));

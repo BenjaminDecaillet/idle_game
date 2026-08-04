@@ -1,20 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   CANDIDATE_REROLL_BASE,
-  CANDIDATE_REROLL_GROWTH,
   COMPANY_COST_SCALE_ESCALATION_EXP,
   COMPANY_SALARY_SCALE_ESCALATION_EXP,
   COMPANY_SITES,
-  DESK_UPGRADE_COST_FACTOR,
-  PROMOTE_COST_FACTOR,
   PROJECT_WORK_SCALE_EXP,
-  TRAIN_COST_LEVEL_RAMP,
-  TRAIN_COST_RATE_FACTOR,
-  WORKER_TIERS,
-  WORKSTATIONS,
   siteById,
   tierById,
-  stationDefById,
 } from '../src/game/data';
 import {
   activeCompany,
@@ -31,7 +23,7 @@ import {
   trainCost,
   upgradeCost,
 } from '../src/game/engine';
-import type { CompanyState, WorkerState } from '../src/game/types';
+import type { WorkerState } from '../src/game/types';
 
 const NOW = 1_700_000_000_000;
 
@@ -276,28 +268,17 @@ describe('Company-tier cost scaling (Phase S)', () => {
         site.cost, // 200k
       );
 
-      // Company 2: purchased at 2.2× list price (440k)
+      // Company 2: same site, purchased at 2.2× list price (440k)
       const company2 = createCompany(
         state,
         country,
-        'paloalto', // different site so we can test same purchase ratio logic
+        site.id,
         'Company 2',
         site.cost * 2.2, // escalation = 2.2
       );
 
-      // For company 2 at paloalto with purchasePrice 2.2 × loft cost:
-      // escalation = 440k / 3M ≈ 0.147 < 1, so escalation = 1
-      // Let's use the same site by directly computing
-      const scale1 = companyCostScale(company1);
-      const scale2 = companyCostScale(company2);
-
-      // The ratio should reflect the escalation power
-      const escalationRatio = 2.2;
-      const expectedRatioExponent = Math.pow(escalationRatio, COMPANY_COST_SCALE_ESCALATION_EXP);
-      const actualRatio = scale2 / scale1;
-
-      // Note: scale2 is at a different site, so we need to be more careful.
-      // Let me use a simpler test: for same site but different prices.
+      const ratio = companyCostScale(company2) / companyCostScale(company1);
+      expect(ratio).toBeCloseTo(Math.pow(2.2, COMPANY_COST_SCALE_ESCALATION_EXP), 10);
     });
 
     it('salary scale is IDENTICAL for two companies at the same site, regardless of purchase price', () => {
@@ -315,7 +296,7 @@ describe('Company-tier cost scaling (Phase S)', () => {
       );
 
       // Company 2: 2× list price (1B) — escalation = 2
-      const company2 = createCompany(
+      createCompany(
         state,
         country,
         'seattle', // use different site to avoid duplicate
@@ -786,11 +767,11 @@ describe('Company-tier cost scaling (Phase S)', () => {
       expect(tierSalary(company, 'mid')).toBeCloseTo(1.1, 1);
     });
 
-    it('orbital company #8 at list price: stationCost(basic) ≈ 20,816', () => {
+    it('orbital company at list price: stationCost(basic) = 10,240', () => {
       // S = 4 × √16384 = 4 × 128 = 512
-      // escalation = 113.4 → ^0.15 ≈ 2.03
-      // cost scale ≈ 1041
-      // desk cost = 20 × 1041 ≈ 20,820
+      // escalation = 1 (list price)
+      // cost scale = 512
+      // desk cost = 20 × 512 = 10,240
       const state = createInitialState(NOW);
       const country = activeCountry(state);
       const site = siteById('orbital');
@@ -803,11 +784,31 @@ describe('Company-tier cost scaling (Phase S)', () => {
       );
 
       const cost = stationCost(company, 'basic');
+      expect(cost).toBe(10_240);
+    });
+
+    it('orbital company #8 with escalation: stationCost(basic) ≈ 20,820', () => {
+      // S = 4 × √16384 = 512
+      // escalation = 113.4 → ^0.15 ≈ 2.03
+      // cost scale ≈ 1041
+      // desk cost = 20 × 1041 ≈ 20,820
+      const state = createInitialState(NOW);
+      const country = activeCountry(state);
+      const site = siteById('orbital');
+      const company = createCompany(
+        state,
+        country,
+        'orbital',
+        'Orbital Company #8',
+        site.cost * 113.4,
+      );
+
+      const cost = stationCost(company, 'basic');
       expect(cost).toBeGreaterThanOrEqual(20_000);
       expect(cost).toBeLessThanOrEqual(21_000);
     });
 
-    it('orbital company #8: tierSalary(mid) ≈ 256 $/s', () => {
+    it('orbital company at list price: tierSalary(mid) = 256 $/s', () => {
       // salary = 0.5 × 1 × 512 = 256
       const state = createInitialState(NOW);
       const country = activeCountry(state);
