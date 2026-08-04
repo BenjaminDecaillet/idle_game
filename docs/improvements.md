@@ -39,10 +39,10 @@ missing and reuses existing plumbing.
    trait, ~2% rare double-trait golden candidates), badges on candidate
    and worker cards (balance.md Phase T, decisions.md #29).
 
-4. **Random events with choices** — "An investor offers $X for 2×
-   salaries for 10 min — accept?" Small decision moments break idle
-   monotony: an event def table, a timed modifier in `tick`, one dialog on
-   the Gabriel surface.
+4. ~~**Random events with choices**~~ — shipped: 4 income-scaled offers
+   with real trade-offs (salary-multiplier boosts), Gabriel-surface
+   dialog with Accept/Pass, wall-clock scheduling (balance.md Phase E,
+   decisions.md #30).
 
 5. ~~**Piggy-bank vault**~~ — shipped: 5% of every payout accrues on top
    into a global, prestige-surviving vault capped at 2 h of income,
