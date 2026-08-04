@@ -753,3 +753,19 @@ gross — guaranteed by Phase S parity), so accepting is never a trap;
 declining costs nothing. The salary lever rides a new optional
 `salaryMult` on Boost (max 5 active boosts caps stacking; same-source
 re-grants extend).
+
+## Phase V — piggy vault
+
+`VAULT_RATE (5%)` of every project payout accrues **on top** into a
+global vault — a bonus pool, deliberately not a skim: taxing payouts
+would silently distort income, mission pacing and every earlier phase's
+math. Cap = `VAULT_CAP_MINUTES (120)` of gross income (floor
+`VAULT_CAP_MIN` 10k), clamped once per tick; at 5% of income the vault
+fills from empty in ~40 h of play — a natural multi-session cycle.
+Opening costs `VAULT_OPEN_COST (5)` VsCoin flat: at full it pays 120 min
+of income for 5 coins, sitting between the Series A (15 min / 10) and
+Series B (40 min / 20) funding rounds in value — deliberately the best
+cash-per-coin deal in the game, because the pool is earned, and the real
+monetization hook is the habit (later: ad-gated or IAP "golden hammer"
+opening per docs/monetization.md). Global like VsCoin, so it survives
+prestige — a small cushion for the fresh garage.

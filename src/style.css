@@ -2009,3 +2009,13 @@ input.music-volume {
   gap: 10px;
   justify-content: center;
 }
+
+/* Piggy vault. */
+.badge.badge-vault {
+  background: rgba(244, 114, 182, 0.16);
+  border: 1.5px solid rgba(219, 39, 119, 0.4);
+}
+
+.vault-card {
+  border-color: rgba(219, 39, 119, 0.35);
+}

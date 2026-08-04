@@ -542,4 +542,13 @@ export const en = {
   'event.conference-keynote.title': 'A keynote slot opens up',
   'event.conference-keynote.text':
     'Pay {cash} for the slot and the demo blows minds: ×{mult} output for {duration}.',
+
+  // --- Piggy vault ----------------------------------------------------------
+  'ui.vaultTitle': 'Piggy vault',
+  'ui.vaultFull': 'FULL',
+  'ui.vaultOpen': 'Crack it open',
+  'ui.vaultOpened': 'Vault cracked — enjoy the windfall!',
+  'ui.vaultHint':
+    'Every project payout drops an extra {rate}% in here. It fills up to two hours of income — crack it whenever you like.',
+  'error.vaultEmpty': 'The vault is empty — earn something first.',
 } as const;

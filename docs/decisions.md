@@ -219,3 +219,13 @@ be revisited cheaply.
     (an offer never covers a queued beat). Events don't fire offline by
     design — they're live decision moments, and offline sim must stay
     a pure function of elapsed time.
+31. **Piggy vault (D5)**: global `state.vault` (survives prestige like
+    VsCoin — the cushion makes the post-IPO garage restart friendlier),
+    fed 5% ON TOP of every payout in the tick payout loop and clamped
+    once per tick to an income-scaled cap; opened for a flat 5 VsCoin
+    into the ACTIVE country's wallet (sink 'vault:open'). Surfaced as a
+    HUD piggy chip (60 fps, hidden when empty, tap → Shop) and a Shop
+    card with a fill bar. Offline accrual is free — the hook lives in
+    the shared payout path. No welcome-back callout yet (would need a
+    pre-sim snapshot through loadGame; candidate for the sound/polish
+    passes).

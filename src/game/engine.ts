@@ -46,6 +46,10 @@ import {
   PROJECT_REWARD_CAP_MULT,
   PROJECT_WORK_SCALE_EXP,
   RARE_TRAIT_CHANCE,
+  VAULT_CAP_MIN,
+  VAULT_CAP_MINUTES,
+  VAULT_OPEN_COST,
+  VAULT_RATE,
   TRAIT_CHANCE,
   TRAITS,
   traitById,
@@ -150,6 +154,7 @@ export function createInitialState(now = Date.now(), countryId: CountryId = DEFA
     vsCoinLedger: [],
     missionsClaimed: [],
     daily: { day: -1, contracts: [], baselines: {}, claimed: [] },
+    vault: { amount: 0 },
     globalUpgrades: {},
     fastForwardsUsed: 0,
     freeFastForwards: 0,
@@ -1292,6 +1297,12 @@ export function tick(state: GameState, dt: number): TickEvents {
     state.boosts = state.boosts.filter((b) => b.remainingSec > 0);
   }
 
+  // Clamp the piggy vault to its income-scaled cap (once per tick — the
+  // payout loop accrues uncapped).
+  if (state.vault.amount > 0) {
+    state.vault.amount = Math.min(state.vault.amount, vaultCap(state));
+  }
+
   return events;
 }
 
@@ -1396,6 +1407,9 @@ function tickCountry(
       while (project.progress >= project.currentWork && guard < 10_000) {
         project.progress -= project.currentWork;
         country.money += project.currentReward;
+        // Piggy vault: a bonus share accrues on top of the payout (clamped
+        // once per tick — see VAULT_CAP_MINUTES).
+        state.vault.amount += project.currentReward * VAULT_RATE;
         country.totalEarned += project.currentReward;
         country.projectsCompleted += 1;
         state.totalEarned += project.currentReward;
@@ -1788,6 +1802,21 @@ export function grantBoost(
     if (state.boosts.length >= 5) return 'error.tooManyBoosts';
     state.boosts.push({ mult, salaryMult, remainingSec: durationSec, source });
   }
+  return null;
+}
+
+/** The vault's cap: VAULT_CAP_MINUTES of gross income, floored. */
+export function vaultCap(state: GameState): number {
+  return Math.max(VAULT_CAP_MIN, Math.round(grossRewardRate(state) * 60 * VAULT_CAP_MINUTES));
+}
+
+/** Crack the vault open: VsCoin out, the pool into the active wallet. */
+export function openVault(state: GameState): string | null {
+  if (state.vault.amount <= 0) return 'error.vaultEmpty';
+  const err = spendVsCoin(state, VAULT_OPEN_COST, 'vault:open');
+  if (err) return err;
+  activeCountry(state).money += state.vault.amount;
+  state.vault.amount = 0;
   return null;
 }
 

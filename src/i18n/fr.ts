@@ -543,4 +543,13 @@ export const fr: Record<keyof typeof en, string> = {
   'event.conference-keynote.title': 'Un créneau de keynote se libère',
   'event.conference-keynote.text':
     'Payez {cash} pour le créneau et la démo fait sensation : production ×{mult} pendant {duration}.',
+
+  // --- Tirelire -------------------------------------------------------------
+  'ui.vaultTitle': 'Tirelire',
+  'ui.vaultFull': 'PLEINE',
+  'ui.vaultOpen': 'Casser la tirelire',
+  'ui.vaultOpened': 'Tirelire cassée — profitez du pactole !',
+  'ui.vaultHint':
+    'Chaque projet livré y dépose {rate} % en bonus. Elle se remplit jusqu’à deux heures de revenus — cassez-la quand vous voulez.',
+  'error.vaultEmpty': 'La tirelire est vide — gagnez d’abord quelque chose.',
 };
