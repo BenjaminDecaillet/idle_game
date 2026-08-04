@@ -268,3 +268,11 @@ be revisited cheaply.
     flight; detection reads the existing '🏗️ ' label prefix inside
     cityMap.ts so ui.ts stays untouched, and colors are neutral safety
     orange/wood so every COUNTRY_THEMES palette works.
+36. **Balance harness (#21)**: implemented as a vitest file, not a
+    standalone script — the greedy bot doubles as always-on CI pacing
+    guards (anchored on its measured curve with ~2× slack, see
+    balance.md Phase H) and an opt-in table printer (npm run
+    balance:sim). The bot intentionally skips training/promotions:
+    keeping it simple keeps it stable and cheap (~1 s for 4
+    simulated days), and the guards' job is regression detection, not
+    optimal play.

@@ -769,3 +769,30 @@ cash-per-coin deal in the game, because the pool is earned, and the real
 monetization hook is the habit (later: ad-gated or IAP "golden hammer"
 opening per docs/monetization.md). Global like VsCoin, so it survives
 prestige — a small cushion for the fresh garage.
+
+## Phase H — balance simulation harness
+
+`tests/balance-harness.test.ts`: a greedy bot that plays
+through `tick()` only — best affordable desk, strongest affordable
+candidate (first hire at face value, later ones with a 1.5× cash
+cushion), coffee habit, project unlocks at 3× wallet, floors at 2×,
+next site at 1.5×. It deliberately skips training/promotions (builder
+flows), so it runs well behind the human-assumption targets: measured
+curve as of Phase H — second company ≈ 10.3 h, $1M ≈ 9.3 h, fourth
+company ≈ 60 h, $1B ≈ 69 h over 4 simulated days.
+
+Two uses:
+- **Always-on CI guards** anchored on that measured curve with ~2×
+  slack (second company and $1M inside a simulated day; four companies
+  inside four days; ends cash-positive). They catch a data.ts change
+  that wrecks the curve — they do not enforce the aspirational pacing.
+- **Tuning tables**: `npm run balance:sim` prints the full
+  time-to-milestone table (~1 s), turning curve tuning into the
+  30-second check improvements #21 asked for.
+
+Note: candidate refills roll through Math.random, so milestone times
+vary a little run to run — the ~2× guard slack absorbs that; treat the
+table as a curve reading, not an exact number.
+
+When a deliberate rebalance shifts the curve, rerun the table and move
+the guard anchors in the same commit.
