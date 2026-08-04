@@ -276,3 +276,13 @@ be revisited cheaply.
     keeping it simple keeps it stable and cheap (~1 s for 4
     simulated days), and the guards' job is regression detection, not
     optimal play.
+37. **Bespoke city scenes, first wave (#19)**: a `backdrop` hook on
+    CountryTheme lets a country replace the generic backdrop stack while
+    every interactive layer (plots, plaques, signs, construction works,
+    roads with their animated cars) keeps its exact geometry. Shipped
+    bespoke: Switzerland (lakeside promenade, paddle steamer, chalets),
+    Saudi Arabia (desert highway, dunes, heat-haze sun, adobe houses),
+    China (Bund/Pudong waterfront, junk boat, lantern railing). The
+    remaining five countries deliberately stay on the parameterized
+    palette renderer — bespoke scenes for them are a pure content
+    follow-up using the same hook.

@@ -88,10 +88,11 @@ missing and reuses existing plumbing.
     vault claims burst confetti at the button position on top of their
     chimes (decisions.md #34).
 
-19. **Bespoke per-country city scenes** — v8 ships one parameterized
-    renderer (`cityMap.ts` `COUNTRY_THEMES`); fully bespoke scenes per
-    country (Swiss lakeside, Riyadh desert highway, Shanghai waterfront)
-    are pure data+draw with no engine impact. Big effort, art-only.
+19. ~~**Bespoke per-country city scenes**~~ — first wave shipped: Swiss
+    lakeside, Saudi desert highway and Shanghai waterfront via a
+    `backdrop` theme hook, interactive geometry untouched (decisions.md
+    #37). The other five countries can follow with the same hook —
+    pure content work.
 
 ## Tech
 
