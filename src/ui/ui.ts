@@ -38,6 +38,7 @@ import {
   activeCountry,
   allCompanies,
   assignFloorProject,
+  atHeadcountCap,
   atSkillCap,
   builderCost,
   buyCompany,
@@ -1229,11 +1230,13 @@ export class UI {
   private renderHireSheet(): string {
     const s = this.state;
     const c = activeCompany(s);
+    const cap = deskCapacity(c);
+    const atCap = atHeadcountCap(c);
     const candidates = c.candidates
       .map((cand, i) => {
         const tier = tierById(cand.tierId);
         const price = hireCost(c, cand.tierId);
-        const affordable = walletMoney(s) >= price;
+        const affordable = !atCap && walletMoney(s) >= price;
         const rare = cand.traits.length >= 2;
         const salary = tierSalary(c, cand.tierId) * traitSalaryMult(cand.traits);
         return `
@@ -1252,14 +1255,23 @@ export class UI {
         </div>`;
       })
       .join('');
+    // The cap is the wall players hit — say it before they click, and point
+    // at the quality-over-quantity routes (fire / train / promote).
+    const capBanner = atCap
+      ? `<div class="warning-banner">🚫 ${t('ui.hireCapBanner', { cap })}</div>`
+      : '';
     return `
       <div class="section-head">
         <h2>🤝 ${t('ui.candidates')}</h2>
+        <span class="muted ${c.workers.length > cap ? 'over-capacity' : ''}">
+          👥 ${t('ui.staffCount', { count: c.workers.length, cap })}
+        </span>
         <button class="btn btn-ghost" data-action="reroll"
                 ${walletMoney(s) >= c.candidateRerollCost ? '' : 'disabled'}>
           ${icon('dice', 16)} ${t('ui.newBatch')} ${formatMoney(c.candidateRerollCost)}
         </button>
       </div>
+      ${capBanner}
       ${candidates}
       <button class="btn btn-ghost" data-action="close-sheet">${t('ui.close')}</button>`;
   }
@@ -1789,8 +1801,14 @@ export class UI {
       </div>
       <div class="section-head">
         <span class="muted">${t('ui.desksUsed', { used: c.workstations.length, total: deskCapacity(c) })} ·
-          ${c.floors}/${MAX_FLOORS} 🏢</span>
+          ${c.floors}/${MAX_FLOORS} 🏢 ·
+          <span class="${c.workers.length > deskCapacity(c) ? 'over-capacity' : ''}">👥 ${t('ui.staffCount', { count: c.workers.length, cap: deskCapacity(c) })}</span></span>
       </div>
+      ${
+        c.workers.length > deskCapacity(c)
+          ? `<div class="warning-banner">⚠️ ${t('ui.overCapacity', { count: c.workers.length, cap: deskCapacity(c) })}</div>`
+          : ''
+      }
       ${builderBar}
       <div class="floor-actions">${floorBtn}</div>
       <div class="building card" style="${officeWallVars(wpId)}">

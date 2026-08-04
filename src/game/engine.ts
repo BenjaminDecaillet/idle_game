@@ -564,6 +564,16 @@ export function deskCapacity(company: CompanyState): number {
   return company.floors * FLOOR_CAPACITY;
 }
 
+/**
+ * Headcount is hard-capped by desk slots (filled or empty): one employee
+ * per slot the building offers, growing as floors complete. Over-capacity
+ * states (e.g. a save predating the cap) are tolerated — nobody is fired,
+ * hiring just stays blocked until room frees up.
+ */
+export function atHeadcountCap(company: CompanyState): boolean {
+  return company.workers.length >= deskCapacity(company);
+}
+
 /** The floor a workstation sits on (by purchase order). */
 export function stationFloor(company: CompanyState, stationInstanceId: number): number {
   const index = company.workstations.findIndex((w) => w.id === stationInstanceId);
@@ -1479,6 +1489,7 @@ export function hireWorker(state: GameState, candidateIndex: number): string | n
   const company = activeCompany(state);
   const candidate = company.candidates[candidateIndex];
   if (!candidate) return 'error.candidateNotFound';
+  if (atHeadcountCap(company)) return 'error.officeAtCapacity';
   const cost = hireCost(company, candidate.tierId);
   if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
