@@ -59,6 +59,11 @@ export interface CompanySiteDef {
    * more lucrative contracts instead of re-doing the garage ones.
    */
   projectScale: number;
+  /**
+   * Site specialty: contracts of this specialization earn SITE_SPEC_BONUS
+   * here, making founding a build choice (undefined = generalist site).
+   */
+  favoredSpec?: Specialization;
   emoji: string;
   blurb: string;
 }

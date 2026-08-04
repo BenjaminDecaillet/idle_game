@@ -397,6 +397,7 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.statFloors': 'Étages',
   'ui.statPrice': 'Prix',
   'ui.contractScale': 'Échelle des contrats',
+  'ui.siteSpecialty': 'Spécialité',
   'ui.foundCompanyBtn': 'Fonder une société — {price}',
   'ui.unlockBtn': 'Débloquer {price}',
   'ui.noDesk': 'Sans bureau — inactif !',

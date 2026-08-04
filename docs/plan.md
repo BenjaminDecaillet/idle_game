@@ -47,6 +47,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [x] **Daily contracts** (balance.md Phase D, decisions.md 27) — 3 deterministic delta-progress contracts per UTC day from a data.ts pool (desks entry eligibility-filtered at roll), day computed in main.ts, additive `state.daily` (no reset), claims via `grantVsCoin('daily:<id>')`, board + badge on the VsCoin tab
 - [x] **Full i18n sweep** (decisions.md 28) — every ui.ts/main.ts chrome string and tab label through t() (tab bar rebuilds on language change), all ~44 engine error returns migrated to `error.*` ids with tests asserting ids; FR audited; DE unblocked
 - [x] **Piggy vault** (balance.md Phase V, decisions.md 31) — 5% of payouts accrue on top into a global, prestige-surviving vault (cap: 2 h of income), opened for 5 VsCoin; HUD chip + Shop card; future ad/IAP opening hook
+- [x] **Site specialization** (decisions.md 32) — each paid site favors one specialization: +50% on matching contracts, stacking with the worker spec match; surfaced on the map sheet and contract cards
 - [ ] **Monetization Phase 0** — analytics (PostHog/Plausible) + privacy policy → see [monetization.md](monetization.md)
 - [x] **Shop/Boost tab** — closed by the workforce/shop update above: Shop + VsCoin tabs over `spendVsCoin`/`grantVsCoin`; the rewarded-ad boost offers still plug in via `grantBoost`/`timeSkip` when Phase 2 starts
 - [ ] **Rewarded ads** — portal SDK (CrazyGames/Poki) or H5 Games Ads + consent banner
