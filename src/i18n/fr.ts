@@ -160,7 +160,7 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.candidates': 'Candidats',
   'ui.newBatch': 'Nouvelle fournée',
   'ui.hire': 'Embaucher',
-  'ui.yourTeam': 'Votre équipe ({count})',
+  'ui.offFloor': 'Hors plateau ({count})',
   'ui.floorEmployees': 'Employés de cet étage',
   'ui.floorProjectTitle': 'Projet de l’étage',
   'ui.contracts': 'Contrats',

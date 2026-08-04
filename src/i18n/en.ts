@@ -160,7 +160,7 @@ export const en = {
   'ui.candidates': 'Candidates',
   'ui.newBatch': 'New batch',
   'ui.hire': 'Hire',
-  'ui.yourTeam': 'Your team ({count})',
+  'ui.offFloor': 'Off the floor ({count})',
   'ui.floorEmployees': 'Employees on this floor',
   'ui.floorProjectTitle': 'Floor project',
   'ui.contracts': 'Contracts',

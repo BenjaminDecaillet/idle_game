@@ -1656,7 +1656,7 @@ export class UI {
     const c = activeCompany(this.state);
     const benched = c.workers.filter((w) => w.stationId === null);
     const benchedCards = benched.length
-      ? `<div class="section-head"><h2>${t('ui.yourTeam', { count: c.workers.length })}</h2></div>
+      ? `<div class="section-head"><h2>${t('ui.offFloor', { count: benched.length })}</h2></div>
          ${benched.map((w) => this.renderWorkerCard(w)).join('')}`
       : '';
     return `
