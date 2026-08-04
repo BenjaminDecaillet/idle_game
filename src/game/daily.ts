@@ -105,9 +105,9 @@ export function claimableDailyContracts(state: GameState): DailyContract[] {
 
 export function claimDailyContract(state: GameState, id: string): string | null {
   const contract = state.daily.contracts.find((c) => c.id === id);
-  if (!contract) return 'No such contract';
-  if (dailyClaimed(state, id)) return 'Already claimed';
-  if (!dailyCompleted(state, contract)) return 'Contract not finished yet';
+  if (!contract) return 'error.noSuchContract';
+  if (dailyClaimed(state, id)) return 'error.alreadyClaimed';
+  if (!dailyCompleted(state, contract)) return 'error.contractUnfinished';
   state.daily.claimed.push(id);
   return grantVsCoin(state, contract.reward, `daily:${id}`);
 }

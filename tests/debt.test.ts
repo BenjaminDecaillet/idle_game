@@ -526,7 +526,7 @@ describe('Debt: inDebt and inDebtCrisis helpers', () => {
 
     // Try to buy a workstation
     const error = buyWorkstation(state, 'basic');
-    expect(error).toBe('Not enough money');
+    expect(error).toBe('error.notEnoughMoney');
     expect(company.workstations.length).toBe(0);
   });
 });

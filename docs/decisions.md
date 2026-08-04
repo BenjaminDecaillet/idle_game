@@ -187,3 +187,12 @@ be revisited cheaply.
     day and pool retunes never break an in-flight board. Claims go
     through grantVsCoin with source `daily:<id>`; the board renders atop
     the VsCoin tab and feeds its badge.
+28. **i18n sweep scope (D2)**: every ui.ts/main.ts chrome string, the tab
+    labels (skeleton rebuilds on language change) and all ~44 engine
+    error returns moved to keys ('error.*' ids in src/game — the toast
+    boundary translates via lookup(), whose raw-string fallback made the
+    migration safe to do in one pass). Deliberately NOT translated: SVG
+    signage inside art builders ("SHIP IT", "OPEN", "FOR SALE",
+    "SAT-VIEW") — it is diegetic set dressing like real-world English
+    signage, and per art-svg conventions the art stays deterministic
+    and language-free. "Lv"/"MAX"/"×" figure as universal notation.

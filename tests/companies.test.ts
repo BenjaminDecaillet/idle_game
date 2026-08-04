@@ -60,7 +60,7 @@ describe('buyCompany', () => {
     expect(loftSite.cost).toBe(200_000);
 
     const err = buyCompany(state, 'loft');
-    expect(err).toBe('Not enough money');
+    expect(err).toBe('error.notEnoughMoney');
     expect(activeCountry(state).companies).toHaveLength(1); // unchanged
   });
 
@@ -90,7 +90,7 @@ describe('buyCompany', () => {
     const state = createInitialState(NOW);
     expect(activeCountry(state).companies[0].siteId).toBe('garage');
     const err = buyCompany(state, 'garage');
-    expect(err).toBe('Site already occupied');
+    expect(err).toBe('error.siteOccupied');
     expect(activeCountry(state).companies).toHaveLength(1);
   });
 
@@ -130,7 +130,7 @@ describe('setActiveCompany', () => {
   it('returns an error for an unknown company id', () => {
     const state = createInitialState(NOW);
     const err = setActiveCompany(state, 99999);
-    expect(err).toBe('Company not found');
+    expect(err).toBe('error.companyNotFound');
     expect(activeCountry(state).activeCompanyId).toBe(activeCountry(state).companies[0].id); // unchanged
   });
 });
@@ -278,7 +278,7 @@ describe('renameCompany', () => {
     const originalName = c.name;
 
     const err = renameCompany(state, '   ');
-    expect(err).toBe('Name cannot be empty');
+    expect(err).toBe('error.emptyName');
     expect(c.name).toBe(originalName); // unchanged
   });
 });

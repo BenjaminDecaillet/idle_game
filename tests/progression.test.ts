@@ -117,7 +117,7 @@ describe('company cost curve', () => {
     buyCompany(state, 'loft');
     completeBuild(state, 'loft');
     activeCountry(state).money = siteById('paloalto').cost; // list price, but scaled is higher
-    expect(buyCompany(state, 'paloalto')).toBe('Not enough money');
+    expect(buyCompany(state, 'paloalto')).toBe('error.notEnoughMoney');
   });
 
   it('each purchase in site order costs several times the previous one', () => {

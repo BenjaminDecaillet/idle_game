@@ -40,12 +40,12 @@ describe('wallpapers', () => {
     const state = createInitialState(NOW);
     const def = WALLPAPERS.find((w) => w.cost > 0)!;
     activeCountry(state).money = def.cost - 1;
-    expect(buyWallpaper(state, def.id)).toBe('Not enough money');
+    expect(buyWallpaper(state, def.id)).toBe('error.notEnoughMoney');
     activeCountry(state).money = def.cost;
     expect(buyWallpaper(state, def.id)).toBeNull();
     expect(activeCountry(state).money).toBe(0);
     expect(state.ownedWallpapers).toContain(def.id);
-    expect(buyWallpaper(state, def.id)).toBe('Already owned');
+    expect(buyWallpaper(state, def.id)).toBe('error.alreadyOwned');
   });
 
   it('per-company apply and player default are independent', () => {
@@ -75,8 +75,8 @@ describe('wallpapers', () => {
   it('cannot apply or default an unowned wallpaper', () => {
     const state = createInitialState(NOW);
     const def = WALLPAPERS.find((w) => w.cost > 0)!;
-    expect(setCompanyWallpaper(state, def.id)).toBe('Wallpaper not owned');
-    expect(setDefaultWallpaper(state, def.id)).toBe('Wallpaper not owned');
+    expect(setCompanyWallpaper(state, def.id)).toBe('error.wallpaperNotOwned');
+    expect(setDefaultWallpaper(state, def.id)).toBe('error.wallpaperNotOwned');
   });
 });
 
@@ -85,7 +85,7 @@ describe('map themes', () => {
     const state = createInitialState(NOW);
     expect(state.mapThemeId).toBe('daylight');
     const def = MAP_THEMES.find((t) => t.cost > 0)!;
-    expect(setMapTheme(state, def.id)).toBe('Map theme not owned');
+    expect(setMapTheme(state, def.id)).toBe('error.mapThemeNotOwned');
     activeCountry(state).money = def.cost;
     expect(buyMapTheme(state, def.id)).toBeNull();
     expect(activeCountry(state).money).toBe(0);

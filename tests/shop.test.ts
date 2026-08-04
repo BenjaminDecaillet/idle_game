@@ -107,7 +107,7 @@ describe('A) Builder purchase ladder', () => {
     expect(country.money).toBe(500); // 3000 - 2500
 
     country.money -= 500; // go broke
-    expect(hireBuilder(state)).toBe('Not enough money');
+    expect(hireBuilder(state)).toBe('error.notEnoughMoney');
     expect(country.builders.count).toBe(2); // no increment
   });
 
@@ -144,7 +144,7 @@ describe('A) Builder purchase ladder', () => {
     hireBuilder(state);
     // Do NOT grant VsCoin
 
-    expect(hireBuilder(state)).toBe('Not enough VsCoin');
+    expect(hireBuilder(state)).toBe('error.notEnoughVsCoin');
     expect(country.builders.count).toBe(3); // no increment
   });
 
@@ -227,7 +227,7 @@ describe('B) Shop cash packs', () => {
     const initialMoney = country.money; // 50
     grantVsCoin(state, 2, 'test');
 
-    expect(buyShopPack(state, 'seed')).toBe('Not enough VsCoin');
+    expect(buyShopPack(state, 'seed')).toBe('error.notEnoughVsCoin');
     expect(country.money).toBe(initialMoney); // wallet unchanged
   });
 

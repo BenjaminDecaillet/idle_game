@@ -193,12 +193,14 @@ type Tab = 'map' | 'office' | 'shop' | 'vscoin' | 'stats';
 type OfficeLevel = 'companies' | 'building' | 'floor' | 'staff';
 
 // `icon` overrides the tab-bar icon when a tab has no icon of its own name.
-const TABS: { id: Tab; label: string; icon?: IconName }[] = [
-  { id: 'map', label: 'Map' },
-  { id: 'office', label: 'Office' },
-  { id: 'shop', label: 'Shop', icon: 'coin' },
-  { id: 'vscoin', label: 'VsCoin', icon: 'vscoin' },
-  { id: 'stats', label: 'Stats' },
+// Labels resolve through i18n at build time (ui.tab.<id>); the tab bar is
+// rebuilt on language change (see 'set-language').
+const TABS: { id: Tab; icon?: IconName }[] = [
+  { id: 'map' },
+  { id: 'office' },
+  { id: 'shop', icon: 'coin' },
+  { id: 'vscoin', icon: 'vscoin' },
+  { id: 'stats' },
 ];
 
 export class UI {
@@ -259,14 +261,14 @@ export class UI {
     this.root.innerHTML = `
       <header class="hud">
         <div class="hud-row">
-          <button class="company" data-action="rename-company" title="Rename company">
+          <button class="company" data-action="rename-company" title="${t('ui.renameCompanyTitle')}">
             ${icon('office', 16)} <span id="company-name"></span>
           </button>
           <div class="hud-badges">
-            <span class="badge badge-boost" id="hud-boost" hidden title="Active boost">
+            <span class="badge badge-boost" id="hud-boost" hidden title="${t('ui.activeBoostTitle')}">
               ${icon('boost', 13)}<span id="hud-boost-text"></span>
             </span>
-            <span class="badge badge-income" id="hud-income" title="Estimated net income"></span>
+            <span class="badge badge-income" id="hud-income" title="${t('ui.netIncomeTitle')}"></span>
             <button class="badge badge-vscoin" id="hud-vscoin" data-action="tab:vscoin" title="VsCoin">
               ${icon('vscoin', 13)}<span id="hud-vscoin-text">0</span>
             </button>
@@ -304,9 +306,9 @@ export class UI {
       <main id="tab-content"></main>
       <nav class="tabbar">
         ${TABS.map(
-          (t) => `
-          <button class="tab-btn" data-action="tab:${t.id}" id="tab-btn-${t.id}">
-            <span class="tab-icon">${icon(t.icon ?? (t.id as IconName), 24)}</span><span>${t.label}</span>
+          (tab) => `
+          <button class="tab-btn" data-action="tab:${tab.id}" id="tab-btn-${tab.id}">
+            <span class="tab-icon">${icon(tab.icon ?? (tab.id as IconName), 24)}</span><span>${t(`ui.tab.${tab.id}`)}</span>
           </button>`,
         ).join('')}
       </nav>
@@ -874,14 +876,13 @@ export class UI {
     return `
       <div class="stack map-screen">
         <div class="section-head"><h2>${lookup(`country.${country.id}.name`)}</h2>
-          <span class="muted">${country.companies.length}/${COMPANY_SITES.length} sites owned</span>
+          <span class="muted">${t('ui.sitesOwned', { owned: country.companies.length, total: COMPANY_SITES.length })}</span>
         </div>
         ${cityMapSvg(s.mapThemeId, sites, country.id)}
         ${this.renderWorld()}
-        <div class="section-head"><h2>Map style</h2></div>
+        <div class="section-head"><h2>${t('ui.mapStyle')}</h2></div>
         <div class="settings-row">${themes}</div>
-        <p class="hint">💡 Tap a building to found or manage a company there. Every company
-        works and earns at the same time — even while you're away.</p>
+        <p class="hint">💡 ${t('ui.mapHint')}</p>
       </div>`;
   }
 
@@ -954,25 +955,25 @@ export class UI {
       return `
         <div class="sheet-head">
           <h2>${company.name}</h2>
-          ${active ? '<span class="active-tag">MANAGING</span>' : ''}
+          ${active ? `<span class="active-tag">${t('ui.managing')}</span>` : ''}
         </div>
         <p class="sheet-blurb">${site.name} — ${site.blurb}</p>
         <div class="sheet-stats">
-          <div class="sheet-stat"><span>Income</span>
+          <div class="sheet-stat"><span>${t('ui.statIncome')}</span>
             <strong class="${income < 0 ? 'negative' : ''}">${income >= 0 ? '▲' : '▼'} ${formatMoney(income)}/s</strong></div>
-          <div class="sheet-stat"><span>Site bonus</span><strong>×${site.outputBonus} output</strong></div>
-          <div class="sheet-stat"><span>Team</span><strong>${company.workers.length} people · ${seats} desks</strong></div>
-          <div class="sheet-stat"><span>Salaries</span><strong>${formatMoney(companySalaries(company))}/s</strong></div>
-          <div class="sheet-stat"><span>Output</span><strong>${formatRate(companyWorkRate(s, company))}</strong></div>
-          <div class="sheet-stat"><span>Floors</span><strong>${company.floors}/${MAX_FLOORS}</strong></div>
+          <div class="sheet-stat"><span>${t('ui.statSiteBonus')}</span><strong>×${site.outputBonus}</strong></div>
+          <div class="sheet-stat"><span>${t('ui.statTeam')}</span><strong>${t('ui.teamStat', { people: company.workers.length, desks: seats })}</strong></div>
+          <div class="sheet-stat"><span>${t('ui.statSalaries')}</span><strong>${formatMoney(companySalaries(company))}/s</strong></div>
+          <div class="sheet-stat"><span>${t('ui.statOutput')}</span><strong>${formatRate(companyWorkRate(s, company))}</strong></div>
+          <div class="sheet-stat"><span>${t('ui.statFloors')}</span><strong>${company.floors}/${MAX_FLOORS}</strong></div>
         </div>
         <div class="sheet-actions">
           ${
             active
               ? `<button class="btn" data-action="rename-company">${icon('pencil', 15)} Rename</button>
-                 <button class="btn btn-primary" disabled>✓ Managing</button>`
+                 <button class="btn btn-primary" disabled>✓ ${t('ui.managingBtn')}</button>`
               : `<button class="btn btn-primary" data-action="switch-company:${company.id}">
-                   Manage this company</button>`
+                   ${t('ui.manageCompany')}</button>`
           }
         </div>`;
     }
@@ -1001,14 +1002,14 @@ export class UI {
       <div class="sheet-head"><h2>${site.name}</h2></div>
       <p class="sheet-blurb">${site.blurb}</p>
       <div class="sheet-stats">
-        <div class="sheet-stat"><span>Price</span><strong>${formatMoney(price)}</strong></div>
-        <div class="sheet-stat"><span>Site bonus</span><strong>×${site.outputBonus} output</strong></div>
-        <div class="sheet-stat"><span>Contract scale</span><strong>×${formatNumber(site.projectScale)} rewards</strong></div>
+        <div class="sheet-stat"><span>${t('ui.statPrice')}</span><strong>${formatMoney(price)}</strong></div>
+        <div class="sheet-stat"><span>${t('ui.statSiteBonus')}</span><strong>×${site.outputBonus}</strong></div>
+        <div class="sheet-stat"><span>${t('ui.contractScale')}</span><strong>×${formatNumber(site.projectScale)} rewards</strong></div>
       </div>
       <div class="sheet-actions">
         <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                 data-action="found-company:${site.id}">
-          🏗️ Found a company — ${formatMoney(price)}
+          🏗️ ${t('ui.foundCompanyBtn', { price: formatMoney(price) })}
         </button>
       </div>`;
   }
@@ -1087,7 +1088,7 @@ export class UI {
             </div>
             <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                     data-action="unlock-project:${def.id}">
-              Unlock ${formatMoney(unlockPrice)}
+              ${t('ui.unlockBtn', { price: formatMoney(unlockPrice) })}
             </button>
           </div>
         </div>`;
@@ -1164,7 +1165,7 @@ export class UI {
     const station = c.workstations.find((st) => st.id === w.stationId);
     const deskLabel = station
       ? `${stationDefById(station.defId).emoji} ${stationDefById(station.defId).name}`
-      : '⚠️ No desk — idle!';
+      : `⚠️ ${t('ui.noDesk')}`;
     const expPct = Math.min(100, (w.experience / expToNextLevel(w.skillLevel)) * 100);
     const cost = trainCost(c, w);
     const action = c.timedActions.find(
@@ -1183,7 +1184,7 @@ export class UI {
       ? `<div class="progress mini training" title="${action.kind}">
            <div class="progress-fill" style="width:${actionPct}%"></div>
          </div>`
-      : `<div class="progress mini exp" title="Experience to next level">
+      : `<div class="progress mini exp" title="${t('ui.expTitle')}">
            <div class="progress-fill" style="width:${expPct}%"></div>
          </div>`;
     const ffCost = action ? fastForwardCost(s, action) : 0;
@@ -1208,7 +1209,7 @@ export class UI {
           : `<button class="btn btn-small" ${walletMoney(s) >= cost ? '' : 'disabled'}
                      data-action="train:${w.id}"
                      title="+${trainLevels(w)} levels, ${formatDuration(trainDurationSec(c, w))} off the floor">
-               ${icon('train', 15)} Train ${formatMoney(cost)}
+               ${icon('train', 15)} ${t('ui.trainBtn', { price: formatMoney(cost) })}
              </button>`;
     return `
       <div class="card worker-card ${station || action ? '' : 'benched'} ${action ? 'training' : ''}">
@@ -1230,7 +1231,7 @@ export class UI {
         <div class="card-actions">
           ${actionBtn}
           ${ffBtn}
-          <button class="btn btn-small btn-danger" data-action="fire:${w.id}">Fire</button>
+          <button class="btn btn-small btn-danger" data-action="fire:${w.id}">${t('ui.fireBtn')}</button>
         </div>
       </div>`;
   }
@@ -1470,9 +1471,9 @@ export class UI {
   ): string {
     if (st === null) {
       return `
-        <div class="desk-tile free" title="Free slot — buy a workstation">
+        <div class="desk-tile free" title="${t('ui.freeSlotTitle')}">
           <span class="free-slot">＋</span>
-          <span class="desk-name muted">free slot</span>
+          <span class="desk-name muted">${t('ui.freeSlot')}</span>
         </div>`;
     }
     const def = stationDefById(st.defId);
@@ -1488,9 +1489,9 @@ export class UI {
         </button>`;
     }
     return `
-        <div class="desk-tile empty" title="${def.name} — empty">
+        <div class="desk-tile empty" title="${def.name} — ${t('ui.emptyDesk')}">
           ${emptyDeskSvg(def.id)}
-          <span class="desk-name muted">empty</span>
+          <span class="desk-name muted">${t('ui.emptyDesk')}</span>
           <span class="desk-info">×${def.multiplier}</span>
         </div>`;
   }
@@ -1570,14 +1571,14 @@ export class UI {
            </div>
          </div>`
       : atMax
-        ? `<span class="muted">🏁 Max height reached</span>`
+        ? `<span class="muted">🏁 ${t('ui.maxHeight')}</span>`
         : floorGiftAvailable(s)
           ? `<button class="btn btn-primary" data-action="claim-floor-gift">
                🎁 ${t('ui.floorGift')}
              </button>`
           : `<button class="btn ${walletMoney(s) >= nextCost ? 'btn-primary' : ''}"
                  ${walletMoney(s) >= nextCost ? '' : 'disabled'} data-action="buy-floor">
-           ${icon('floor-up', 16)} Add floor ${formatMoney(nextCost)}
+           ${icon('floor-up', 16)} ${t('ui.addFloorBtn', { price: formatMoney(nextCost) })}
          </button>`;
 
     const country = activeCountry(s);
@@ -1649,18 +1650,17 @@ export class UI {
       </div>
       ${
         standing
-          ? `<div class="warning-banner">⚠️ Waiting for a desk (producing nothing):</div>
+          ? `<div class="warning-banner">⚠️ ${t('ui.waitingDesk')}</div>
              <div class="stand-row card">${standing}</div>`
           : ''
       }
       ${
         inTraining
-          ? `<div class="section-head"><h2>🎓 Away at training</h2></div>
+          ? `<div class="section-head"><h2>🎓 ${t('ui.awayTraining')}</h2></div>
              <div class="stand-row card">${inTraining}</div>`
           : ''
       }
-      <p class="hint">💡 Tap your people to hear from them. Seating is automatic:
-      strongest workers get the best desks. Each floor adds ${FLOOR_CAPACITY} desk slots.</p>`;
+      <p class="hint">💡 ${t('ui.officeHint', { slots: FLOOR_CAPACITY })}</p>`;
   }
 
   private renderOfficeShop(): string {
@@ -1698,14 +1698,14 @@ export class UI {
           </div>
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                   data-action="buy-station:${def.id}">
-            Buy ${formatMoney(cost)}
+            ${t('ui.buyBtn', { price: formatMoney(cost) })}
           </button>
         </div>
       </div>`;
     }).join('');
     return `
-      <div class="section-head"><h2>Buy workstations</h2>
-        ${full ? '<span class="muted">🈵 Office full — add a floor</span>' : ''}
+      <div class="section-head"><h2>${t('ui.buyWorkstations')}</h2>
+        ${full ? `<span class="muted">🈵 ${t('ui.officeFullBadge')}</span>` : ''}
       </div>
       ${shop}`;
   }
@@ -1791,16 +1791,16 @@ export class UI {
         ? `
           <button class="btn btn-small" ${isApplied ? 'disabled' : ''}
                   data-action="apply-wallpaper:${def.id}">
-            ${isApplied ? '✓ Applied' : 'Apply here'}
+            ${isApplied ? `✓ ${t('ui.applied')}` : t('ui.applyHere')}
           </button>
           <button class="btn btn-small btn-ghost" ${isDefault ? 'disabled' : ''}
                   data-action="default-wallpaper:${def.id}">
-            ${isDefault ? '✓ Default' : 'Set default'}
+            ${isDefault ? `✓ ${t('ui.isDefault')}` : t('ui.setDefault')}
           </button>`
         : `
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                   data-action="buy-wallpaper:${def.id}">
-            Buy ${priceLabel}
+            ${t('ui.buyBtn', { price: priceLabel })}
           </button>`;
       return `
       <div class="card decor-card ${isApplied ? 'applied' : ''}">
@@ -1808,21 +1808,21 @@ export class UI {
           <span class="decor-swatch" style="${officeWallVars(def.id)}">${def.emoji}</span>
           <div class="card-main">
             <h3>${def.name}</h3>
-            <span class="muted">${owned ? 'Owned — free to apply anywhere' : 'Unlocks for every company'}</span>
+            <span class="muted">${owned ? t('ui.decorOwned') : t('ui.decorUnlocks')}</span>
           </div>
           <div class="card-actions">${actions}</div>
         </div>
       </div>`;
     }).join('');
     return `
-      <div class="section-head"><h2>Wallpapers & decor</h2>
-        <span class="muted">this building follows ${c.wallpaperId === null ? 'your default' : 'its own pick'}</span>
+      <div class="section-head"><h2>${t('ui.decorTitle')}</h2>
+        <span class="muted">${c.wallpaperId === null ? t('ui.decorFollowsDefault') : t('ui.decorFollowsOwn')}</span>
       </div>
       ${cards}
       ${
         c.wallpaperId !== null
           ? `<button class="btn btn-ghost" data-action="apply-wallpaper:default">
-               ↩️ Follow player default instead</button>`
+               ↩️ ${t('ui.followDefault')}</button>`
           : ''
       }`;
   }
@@ -1837,14 +1837,12 @@ export class UI {
         <div class="card-row">
           <span class="card-emoji">${upgradeArt('marketing', 38)}</span>
           <div class="card-main">
-            <h3>Marketing Campaign</h3>
-            <span class="muted">×${MARKETING_MULT} output for
-              ${formatDuration(MARKETING_DURATION_SEC)}, all companies.
-              Buying again extends it.</span>
+            <h3>${t('ui.marketingName')}</h3>
+            <span class="muted">${t('ui.marketingDesc', { mult: MARKETING_MULT, duration: formatDuration(MARKETING_DURATION_SEC) })}</span>
           </div>
           <button class="btn ${mkAffordable ? 'btn-primary' : ''}" ${mkAffordable ? '' : 'disabled'}
                   data-action="buy-marketing">
-            Launch ${formatMoney(mkCost)}
+            ${t('ui.launchBtn', { price: formatMoney(mkCost) })}
           </button>
         </div>
       </div>`;
@@ -1860,7 +1858,7 @@ export class UI {
             <h3>${def.name}</h3>
             <span class="muted">${def.description}</span>
           </div>
-          <span class="lock-hint">${icon('lock', 16)} ${required} companies</span>
+          <span class="lock-hint">${icon('lock', 16)} ${t('ui.companiesReq', { count: required })}</span>
         </div>
       </div>`;
       }
@@ -1883,7 +1881,7 @@ export class UI {
           </div>
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                   data-action="buy-upgrade:${def.id}">
-            ${maxed ? 'MAX' : `Buy ${priceLabel}`}
+            ${maxed ? 'MAX' : t('ui.buyBtn', { price: priceLabel })}
           </button>
         </div>
       </div>`;
@@ -2028,15 +2026,15 @@ export class UI {
     const employees = companies.reduce((sum, co) => sum + co.workers.length, 0);
     const desks = companies.reduce((sum, co) => sum + co.workstations.length, 0);
     const rows: [string, string, string][] = [
-      [icon('coin', 16), 'Total earned', formatMoney(s.totalEarned)],
-      [icon('check', 16), 'Projects completed', formatNumber(s.projectsCompleted)],
-      [icon('office', 16), 'Companies', String(companies.length)],
-      [icon('team', 16), 'Employees', String(employees)],
-      [icon('star', 16), 'Workstations', String(desks)],
-      [icon('energy', 16), 'Team output (here)', formatRate(totalWorkRate(s))],
-      [icon('salary', 16), 'Salaries (all)', `${formatMoney(totalSalaries(s))}/s`],
-      [icon('clock', 16), 'Time played', formatDuration(s.playTimeSec)],
-      [icon('boost', 16), 'Founded', new Date(s.startedAt).toLocaleDateString()],
+      [icon('coin', 16), t('ui.stat.totalEarned'), formatMoney(s.totalEarned)],
+      [icon('check', 16), t('ui.stat.projects'), formatNumber(s.projectsCompleted)],
+      [icon('office', 16), t('ui.stat.companies'), String(companies.length)],
+      [icon('team', 16), t('ui.stat.employees'), String(employees)],
+      [icon('star', 16), t('ui.stat.workstations'), String(desks)],
+      [icon('energy', 16), t('ui.stat.output'), formatRate(totalWorkRate(s))],
+      [icon('salary', 16), t('ui.stat.salaries'), `${formatMoney(totalSalaries(s))}/s`],
+      [icon('clock', 16), t('ui.stat.timePlayed'), formatDuration(s.playTimeSec)],
+      [icon('boost', 16), t('ui.stat.founded'), new Date(s.startedAt).toLocaleDateString()],
     ];
     const founder = `
       <div class="card founder-card">
@@ -2094,16 +2092,16 @@ export class UI {
         </div>
         ${this.renderStoryJournal()}
         <div class="card">
-          <h2 class="card-title">Settings</h2>
+          <h2 class="card-title">${t('ui.settingsTitle')}</h2>
           <div class="settings-row">
             <button class="btn" data-action="toggle-sound">
-              ${s.settings.sound ? `${icon('sound-on', 16)} Sound on` : `${icon('sound-off', 16)} Sound off`}
+              ${s.settings.sound ? `${icon('sound-on', 16)} ${t('ui.soundOn')}` : `${icon('sound-off', 16)} ${t('ui.soundOff')}`}
             </button>
             <button class="btn" data-action="toggle-particles">
-              ${icon('sparkles', 16)} Effects ${s.settings.particles ? 'on' : 'off'}
+              ${icon('sparkles', 16)} ${s.settings.particles ? t('ui.effectsOn') : t('ui.effectsOff')}
             </button>
-            <button class="btn" data-action="cycle-speed" title="Live simulation speed">
-              ${icon('speed', 16)} Speed ×${s.settings.timeScale}
+            <button class="btn" data-action="cycle-speed" title="${t('ui.speedTitle')}">
+              ${icon('speed', 16)} ${t('ui.speedBtn', { scale: s.settings.timeScale })}
             </button>
           </div>
           <div class="settings-row">
@@ -2129,12 +2127,11 @@ export class UI {
               .join('')}
           </div>
           <div class="settings-row">
-            <button class="btn" data-action="export-save">${icon('save-export', 16)} Export save</button>
-            <button class="btn" data-action="import-save">${icon('save-import', 16)} Import save</button>
-            <button class="btn btn-danger" data-action="reset-game">${icon('trash', 16)} Reset game</button>
+            <button class="btn" data-action="export-save">${icon('save-export', 16)} ${t('ui.exportSave')}</button>
+            <button class="btn" data-action="import-save">${icon('save-import', 16)} ${t('ui.importSave')}</button>
+            <button class="btn btn-danger" data-action="reset-game">${icon('trash', 16)} ${t('ui.resetGame')}</button>
           </div>
-          <p class="hint">Progress is saved automatically every 10 seconds and when you close the
-          app. Your team keeps working while you're away (up to 24h).</p>
+          <p class="hint">${t('ui.autosaveHint')}</p>
           <p class="hint">${t('ui.build')} ${__BUILD_SHA__} · ${__BUILD_DATE__}</p>
         </div>
       </div>`;
@@ -2188,11 +2185,11 @@ export class UI {
         break;
       case 'unlock-project':
         error = unlockProject(s, arg);
-        if (!error) this.toast('🎉 Project unlocked!', 'info');
+        if (!error) this.toast(`🎉 ${t('ui.projectUnlocked')}`, 'info');
         break;
       case 'hire':
         error = hireWorker(s, Number(arg));
-        if (!error) this.toast('🤝 Welcome aboard!', 'info');
+        if (!error) this.toast(`🤝 ${t('ui.welcomeAboard')}`, 'info');
         this.officeDirty = true;
         this.refreshHireSheet();
         break;
@@ -2227,7 +2224,7 @@ export class UI {
         break;
       case 'train':
         error = trainWorker(s, Number(arg));
-        if (!error) this.toast('🎓 Off to the workshop!', 'info');
+        if (!error) this.toast(`🎓 ${t('ui.offToWorkshop')}`, 'info');
         break;
       case 'promote':
         error = promoteWorker(s, Number(arg));
@@ -2239,7 +2236,7 @@ export class UI {
         break;
       case 'fire': {
         const worker = activeCompany(s).workers.find((w) => w.id === Number(arg));
-        if (worker && confirm(`Fire ${worker.name}? There is no severance package.`)) {
+        if (worker && confirm(t('ui.fireConfirm', { name: worker.name }))) {
           error = fireWorker(s, Number(arg));
         }
         break;
@@ -2286,7 +2283,7 @@ export class UI {
         break;
       case 'buy-wallpaper':
         error = buyWallpaper(s, arg);
-        if (!error) this.toast('🎨 Wallpaper unlocked!', 'info');
+        if (!error) this.toast(`🎨 ${t('ui.wallpaperUnlocked')}`, 'info');
         break;
       case 'apply-wallpaper':
         error = setCompanyWallpaper(s, arg === 'default' ? null : arg);
@@ -2296,7 +2293,7 @@ export class UI {
         break;
       case 'buy-map-theme':
         error = buyMapTheme(s, arg);
-        if (!error) this.toast('🗺️ New map style!', 'info');
+        if (!error) this.toast(`🗺️ ${t('ui.newMapStyle')}`, 'info');
         break;
       case 'set-map-theme':
         error = setMapTheme(s, arg);
@@ -2364,7 +2361,7 @@ export class UI {
         break;
       case 'buy-marketing':
         error = buyMarketingCampaign(s);
-        if (!error) this.toast('📣 Campaign live — sales are calling!', 'info');
+        if (!error) this.toast(`📣 ${t('ui.campaignLive')}`, 'info');
         break;
       case 'cycle-speed': {
         const idx = TIME_SCALES.indexOf(s.settings.timeScale);
@@ -2388,20 +2385,20 @@ export class UI {
       case 'export-save': {
         const code = exportSave(s);
         navigator.clipboard?.writeText(code).catch(() => {});
-        prompt('Your save code (copied to clipboard):', code);
+        prompt(t('ui.saveCodeCopied'), code);
         structural = false;
         break;
       }
       case 'import-save': {
-        const code = prompt('Paste your save code:');
+        const code = prompt(t('ui.pasteSaveCode'));
         if (code) {
           try {
             const next = importSave(code);
             this.state = next;
             this.onStateReplaced(next);
-            this.toast('✅ Save imported', 'info');
+            this.toast(`✅ ${t('ui.saveImported')}`, 'info');
           } catch {
-            error = 'Invalid save code';
+            error = t('ui.invalidSaveCode');
           }
         }
         break;
@@ -2495,6 +2492,10 @@ export class UI {
         error = setLanguage(s, arg);
         if (!error) {
           setCurrentLang(resolveLang(s.settings.language, navigator.language));
+          // The skeleton holds translated chrome (tab labels, HUD titles) —
+          // rebuild it, then let rebuildTab repaint the active tab.
+          this.buildSkeleton();
+          this.officeDirty = true;
           this.coachStep = ''; // force the coach card to re-render translated
           this.updateNarrative();
         }

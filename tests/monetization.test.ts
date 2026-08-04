@@ -56,10 +56,10 @@ describe('boosts (monetization groundwork)', () => {
 
   it('rejects invalid boosts and caps the number of concurrent sources', () => {
     const state = createInitialState(NOW);
-    expect(grantBoost(state, 1, 60, 'x')).toBe('Invalid boost');
-    expect(grantBoost(state, 2, 0, 'x')).toBe('Invalid boost');
+    expect(grantBoost(state, 1, 60, 'x')).toBe('error.invalidBoost');
+    expect(grantBoost(state, 2, 0, 'x')).toBe('error.invalidBoost');
     for (let i = 0; i < 5; i++) expect(grantBoost(state, 2, 60, `s${i}`)).toBeNull();
-    expect(grantBoost(state, 2, 60, 'one-too-many')).toBe('Too many active boosts');
+    expect(grantBoost(state, 2, 60, 'one-too-many')).toBe('error.tooManyBoosts');
   });
 
   it('boosted ticks generate proportionally more work, then the boost expires', () => {

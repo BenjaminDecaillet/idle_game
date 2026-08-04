@@ -262,14 +262,14 @@ describe('hireWorker', () => {
     const country = activeCountry(state);
     country.money = 0;
     const err = hireWorker(state, 0);
-    expect(err).toBe('Not enough money');
+    expect(err).toBe('error.notEnoughMoney');
     expect(activeCompany(state).workers).toHaveLength(0);
   });
 
   it('returns an error for an invalid candidate index', () => {
     const state = createInitialState(NOW);
     const err = hireWorker(state, 99);
-    expect(err).toBe('Candidate not found');
+    expect(err).toBe('error.candidateNotFound');
   });
 });
 
@@ -298,7 +298,7 @@ describe('buyWorkstation', () => {
     const country = activeCountry(state);
     country.money = 0;
     const err = buyWorkstation(state, 'basic');
-    expect(err).toBe('Not enough money');
+    expect(err).toBe('error.notEnoughMoney');
     expect(activeCompany(state).workstations).toHaveLength(0);
   });
 });
@@ -322,7 +322,7 @@ describe('buyUpgrade', () => {
     country.money = 10_000_000;
     c.upgrades['agile'] = 12; // maxLevel for agile
     const err = buyUpgrade(state, 'agile');
-    expect(err).toBe('Already at max level');
+    expect(err).toBe('error.maxLevel');
     expect(c.upgrades['agile']).toBe(12);
   });
 
@@ -344,7 +344,7 @@ describe('unlockProject / setActiveProject error paths', () => {
   it('unlockProject refuses an already-unlocked project', () => {
     const state = createInitialState(NOW);
     const err = unlockProject(state, 'landing');
-    expect(err).toBe('Already unlocked');
+    expect(err).toBe('error.alreadyUnlocked');
   });
 
   it('unlockProject refuses when broke', () => {
@@ -353,7 +353,7 @@ describe('unlockProject / setActiveProject error paths', () => {
     const country = activeCountry(state);
     country.money = 0;
     const err = unlockProject(state, 'todo');
-    expect(err).toBe('Not enough money');
+    expect(err).toBe('error.notEnoughMoney');
     expect(getProject(c, 'todo').unlocked).toBe(false);
   });
 
@@ -373,7 +373,7 @@ describe('unlockProject / setActiveProject error paths', () => {
     const state = createInitialState(NOW);
     const c = activeCompany(state);
     const err = setActiveProject(state, 'todo');
-    expect(err).toBe('Project is locked');
+    expect(err).toBe('error.projectLocked');
     expect(c.activeProjectId).toBe('landing');
   });
 
@@ -439,7 +439,7 @@ describe('trainWorker (timed program)', () => {
     c.workers.push(worker);
     country.money = 100_000;
     expect(trainWorker(state, worker.id)).toBeNull();
-    expect(trainWorker(state, worker.id)).toBe('Already busy');
+    expect(trainWorker(state, worker.id)).toBe('error.workerBusy');
   });
 
   it('training pays for itself in bounded time (balance guard)', () => {
@@ -465,13 +465,13 @@ describe('trainWorker (timed program)', () => {
     c.workers.push(worker);
     country.money = 0;
     const err = trainWorker(state, worker.id);
-    expect(err).toBe('Not enough money');
+    expect(err).toBe('error.notEnoughMoney');
     expect(worker.skillLevel).toBe(5);
   });
 
   it('returns an error for an unknown worker id', () => {
     const state = createInitialState(NOW);
-    expect(trainWorker(state, 12345)).toBe('Worker not found');
+    expect(trainWorker(state, 12345)).toBe('error.workerNotFound');
   });
 
   it('does not exceed the level-100 cap enforced by tick()', () => {
@@ -482,7 +482,7 @@ describe('trainWorker (timed program)', () => {
     c.workers.push(worker);
     country.money = trainCost(c, worker);
 
-    expect(trainWorker(state, worker.id)).toBe('Already at max skill level');
+    expect(trainWorker(state, worker.id)).toBe('error.maxSkill');
     expect(worker.skillLevel).toBe(100);
   });
 });
@@ -505,7 +505,7 @@ describe('rerollCandidates', () => {
 
     country.money = 0;
     err = rerollCandidates(state);
-    expect(err).toBe('Not enough money');
+    expect(err).toBe('error.notEnoughMoney');
   });
 });
 
@@ -533,7 +533,7 @@ describe('fireWorker', () => {
 
   it('returns an error for an unknown worker id', () => {
     const state = createInitialState(NOW);
-    expect(fireWorker(state, 12345)).toBe('Worker not found');
+    expect(fireWorker(state, 12345)).toBe('error.workerNotFound');
   });
 });
 

@@ -125,7 +125,7 @@ export function currentStoryBeat(state: GameState): string | null {
 
 /** Player dismissed the current story dialog. */
 export function dismissStoryBeat(state: GameState): string | null {
-  if (state.story.queue.length === 0) return 'No story to dismiss';
+  if (state.story.queue.length === 0) return 'error.noStory';
   state.story.queue.shift();
   return null;
 }

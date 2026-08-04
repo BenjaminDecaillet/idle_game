@@ -80,8 +80,8 @@ export function claimableMissions(state: GameState): MissionDef[] {
 /** Collect a completed mission's VsCoin reward. */
 export function claimMission(state: GameState, id: string): string | null {
   const def = missionById(id);
-  if (missionClaimed(state, id)) return 'Mission already claimed';
-  if (!missionCompleted(state, def)) return 'Mission not completed yet';
+  if (missionClaimed(state, id)) return 'error.missionClaimed';
+  if (!missionCompleted(state, def)) return 'error.missionIncomplete';
   state.missionsClaimed.push(id);
   grantVsCoin(state, def.reward, `mission:${id}`);
   return null;

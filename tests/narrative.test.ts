@@ -118,7 +118,7 @@ describe('tutorial', () => {
     expect(activeCompany(state).name).toBe('My Startup');
     // Once anything happened, the choice is locked.
     activeCompany(state).workers.push(makeWorker(1));
-    expect(setStartingCountry(state, 'de')).toBe('The journey has already begun');
+    expect(setStartingCountry(state, 'de')).toBe('error.journeyBegun');
   });
 
   it('walks through all steps, paying the angel gift exactly once', () => {
@@ -132,7 +132,7 @@ describe('tutorial', () => {
     expect(advanceTutorial(state)).toBeNull(); // name-company
     expect(currentTutorialStep(state)?.id).toBe('hire');
     // Auto-steps refuse manual advancing until the deed is done.
-    expect(advanceTutorial(state)).toBe('Step not finished yet');
+    expect(advanceTutorial(state)).toBe('error.stepUnfinished');
     country.companies[0].workers.push(makeWorker(500));
     expect(refreshTutorial(state)).toBe(true);
     expect(currentTutorialStep(state)?.id).toBe('desk');
@@ -156,19 +156,19 @@ describe('tutorial', () => {
     expect(advanceTutorial(state)).toBeNull();
     expect(state.tutorial.done).toBe(true);
     expect(currentTutorialStep(state)).toBeNull();
-    expect(advanceTutorial(state)).toBe('Tutorial is already over');
+    expect(advanceTutorial(state)).toBe('error.tutorialOver');
   });
 
   it('is skippable and stays done', () => {
     const state = createInitialState(NOW);
     expect(skipTutorial(state)).toBeNull();
     expect(state.tutorial.done).toBe(true);
-    expect(skipTutorial(state)).toBe('Tutorial is already over');
+    expect(skipTutorial(state)).toBe('error.tutorialOver');
   });
 
   it('rejects empty player names', () => {
     const state = createInitialState(NOW);
-    expect(setPlayerName(state, '   ')).toBe('Name cannot be empty');
+    expect(setPlayerName(state, '   ')).toBe('error.emptyName');
     expect(state.player.name).toBe('Founder');
   });
 
@@ -254,7 +254,7 @@ describe('story', () => {
     expect(dismissStoryBeat(state)).toBeNull();
     expect(currentStoryBeat(state)).toBe('first-hire');
     dismissStoryBeat(state);
-    expect(dismissStoryBeat(state)).toBe('No story to dismiss');
+    expect(dismissStoryBeat(state)).toBe('error.noStory');
   });
 
   it('backfill marks reached beats as seen without queueing', () => {
@@ -293,7 +293,7 @@ describe('narrative fields through save round trips', () => {
 
   it('rejects bad languages via the action', () => {
     const state = createInitialState(NOW);
-    expect(setLanguage(state, 'de')).toBe('Unknown language');
+    expect(setLanguage(state, 'de')).toBe('error.unknownLanguage');
     expect(setLanguage(state, 'fr')).toBeNull();
     expect(state.settings.language).toBe('fr');
   });

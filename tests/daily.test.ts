@@ -290,7 +290,7 @@ describe('daily contracts', () => {
       const contract = state.daily.contracts[0]!;
 
       const result = claimDailyContract(state, contract.id);
-      expect(result).toBe('Contract not finished yet');
+      expect(result).toBe('error.contractUnfinished');
       expect(state.vsCoin).toBe(0);
     });
 
@@ -306,7 +306,7 @@ describe('daily contracts', () => {
 
       // Try to claim again
       const result = claimDailyContract(state, contract.id);
-      expect(result).toBe('Already claimed');
+      expect(result).toBe('error.alreadyClaimed');
     });
 
     it('refuses unknown contract ids', () => {
@@ -314,7 +314,7 @@ describe('daily contracts', () => {
       ensureDaily(state, 0);
 
       const result = claimDailyContract(state, 'does-not-exist');
-      expect(result).toBe('No such contract');
+      expect(result).toBe('error.noSuchContract');
     });
   });
 
