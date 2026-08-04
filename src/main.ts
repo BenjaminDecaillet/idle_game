@@ -18,6 +18,10 @@ setCurrentLang(resolveLang(state.settings.language, navigator.language));
 const fx = new Fx(fxCanvas);
 fx.soundEnabled = state.settings.sound;
 fx.enabled = state.settings.particles;
+// Music arms here but only audibly starts once a user gesture resumes the
+// AudioContext (autoplay policy) — the first click does it.
+fx.setMusicVolume(state.settings.musicVolume);
+fx.setMusic(state.settings.music);
 
 const ui = new UI(root, state, fx, (next) => {
   state = next;

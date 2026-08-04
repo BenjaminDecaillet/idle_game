@@ -1970,3 +1970,10 @@ button.site-card {
   width: 100%;
   text-align: left;
 }
+
+/* Music volume slider (Settings). */
+input.music-volume {
+  flex: 1;
+  min-width: 90px;
+  accent-color: var(--accent, #7c5cff);
+}

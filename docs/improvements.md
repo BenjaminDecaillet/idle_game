@@ -80,9 +80,10 @@ missing and reuses existing plumbing.
     (HUD chip or Office header is count-only today); optional cosmetic
     "which builder is on it" attribution (engine keeps occupancy derived).
 
-17. **Story recap → sound design pass** — `fx.ts` has a tiny synth; story
-    beats, mission claims and VsCoin grants deserve distinct chimes
-    (angelic arpeggio for Gabriel). Cheap dopamine, no assets.
+17. ~~**Story recap → sound design pass**~~ — shipped with the chiptune
+    slice: distinct chimes for story beats (angelic arpeggio), mission
+    claims (fanfare) and VsCoin pack claims (sparkle blips), all ducking
+    the new theme loop (decisions.md #26).
 
 18. **Confetti/FX on mission claim & tutorial completion** — Route claims
     through `fx.payoutBurst`-style particles at the button position so

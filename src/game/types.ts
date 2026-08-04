@@ -228,6 +228,10 @@ export interface ProjectState {
 export interface Settings {
   sound: boolean;
   particles: boolean;
+  /** Chiptune theme loop — off by default; audio starts on a user gesture. */
+  music: boolean;
+  /** Music volume 0..1 (independent of sound effects). */
+  musicVolume: number;
   /** Free simulation speed toggle for the live loop: 1, 2 or 4. */
   timeScale: number;
   /** UI language: explicit choice or browser auto-detection. */

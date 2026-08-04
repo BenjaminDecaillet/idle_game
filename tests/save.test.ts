@@ -163,6 +163,31 @@ describe('beta reset (pre-v8 saves are discarded)', () => {
 });
 
 describe('migrate (same-version hygiene)', () => {
+  it('fills music settings defaults into saves written before they existed', () => {
+    const state = createInitialState(NOW);
+    const oldSave = JSON.parse(JSON.stringify(state)) as GameState;
+    delete (oldSave.settings as Partial<GameState['settings']>).music;
+    delete (oldSave.settings as Partial<GameState['settings']>).musicVolume;
+
+    const migrated = migrate(oldSave, NOW);
+    expect(migrated.settings.music).toBe(false);
+    expect(migrated.settings.musicVolume).toBe(0.5);
+  });
+
+  it('repairs corrupt music settings values', () => {
+    const state = createInitialState(NOW);
+    const oldSave = JSON.parse(JSON.stringify(state)) as GameState;
+    (oldSave.settings as unknown as Record<string, unknown>).music = 'yes';
+    (oldSave.settings as unknown as Record<string, unknown>).musicVolume = 42;
+
+    const migrated = migrate(oldSave, NOW);
+    expect(migrated.settings.music).toBe(false);
+    expect(migrated.settings.musicVolume).toBe(1);
+
+    (oldSave.settings as unknown as Record<string, unknown>).musicVolume = Number.NaN;
+    expect(migrate(oldSave, NOW).settings.musicVolume).toBe(0.5);
+  });
+
   it('adds project entries for defs missing from a save', () => {
     const state = createInitialState(NOW);
     const missingDef = PROJECTS[PROJECTS.length - 1];
