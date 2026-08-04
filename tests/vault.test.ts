@@ -25,7 +25,7 @@ import type { GameState, WorkerState } from '../src/game/types';
 
 const NOW = 1_700_000_000_000;
 
-function makeWorkerState(overrides: Partial<WorkerState> = {}) {
+function makeWorkerState(overrides: Partial<WorkerState> = {}): WorkerState {
   return {
     id: 9999,
     name: 'Test Worker',
