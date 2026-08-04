@@ -28,11 +28,11 @@ missing and reuses existing plumbing.
    decisions.md #27), rendered atop the VsCoin tab with badge + chime,
    ~2.5–3.5 VsCoin/day realized.
 
-2. **Migrate the remaining UI strings into the i18n layer** — Foundation
-   proven; sweep `ui.ts` tab labels (needs a `buildSkeleton()` rebuild
-   hook on language change), section titles, toasts and hardcoded engine
-   error strings (map error codes → i18n keys at the toast boundary).
-   Prereq for DE.
+2. ~~**Migrate the remaining UI strings into the i18n layer**~~ — shipped:
+   full ui.ts/main.ts chrome sweep (~90 keys incl. tab labels with a
+   skeleton rebuild on language change) + all engine errors as
+   'error.*' ids (decisions.md #28). SVG signage deliberately stays
+   English (diegetic set dressing). DE is now unblocked.
 
 3. **Worker traits & rare candidates** — Deterministic trait roll at
    candidate creation (night owl, coffee addict…) with a badge on the

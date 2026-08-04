@@ -6,19 +6,19 @@ whole backlog (per-floor projects + cost scaling → Office tab → chiptune
 Angular naming, no AI attribution in git history, checkpoint after every
 slice.
 
-## 1. Current slice — D1: daily contracts
+## 1. Current slice — D2: full i18n sweep
 
-A, B, C merged (PRs #17, #18, #19). D1 on branch `feat/daily-contracts`:
-complete, gates green (585 tests / 27 files, build, smoke). Shipped:
-src/game/daily.ts (deterministic day-seeded board, delta baselines,
-desks eligibility filter), VsCoin-tab board + badge, balance.md Phase D,
-decisions.md #27, add-mission skill extended, improvements #1 ticked.
+A, B, C, D1 merged (PRs #17–#20). D2 on branch `feat/i18n-sweep`:
+implementation complete, gates green (586 tests / 27 files, build,
+smoke). Shipped: ~90 new ui.* keys covering all ui.ts/main.ts chrome
+(tab labels rebuild the skeleton on language change), all 39 engine
+error returns → 'error.*' ids with tests asserting ids, FR audit in
+flight (i18n-writer), decisions.md #28, improvements #2 ticked.
 
-**Next action:** PR (strip the auto-appended session footer from the PR
-body right after creating it) → CI → merge → D2: the i18n sweep
-(improvements #2 — migrate remaining hardcoded UI strings; run now that
-the slice-B tab set is final; needs a buildSkeleton rebuild hook on
-language change).
+**Next action:** land the FR audit → gate → PR (strip auto-appended
+session footer from the body right after creation; Sourcery's innerHTML
+"security" flags are established false positives — merge on the `test`
+check) → merge → D3: worker traits & rare candidates (improvements #3).
 
 ## 2. Slice queue (mission order)
 
