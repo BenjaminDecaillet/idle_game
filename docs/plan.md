@@ -22,6 +22,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 
 ## Roadmap / TODOs (in suggested order)
 
+- [x] **Bulk desk buying** — ×1/×10/Max quantity toggle on the workstation shop; closed-form-equivalent aggregate pricing (`stationCostN`, per-step rounding identical to sequential buys), `maxAffordableStations` bounded by wallet and free slots, all-or-nothing `buyWorkstations`; quantity is UI-local (not saved)
 - [ ] **Playtest & balance tuning** — adjust `data.ts` values after real play sessions
 - [x] **Monetization groundwork** — timed boosts (`grantBoost`), `timeSkip`, HUD boost badge, save migration (v2), dev console API (`isv.boost/skip`)
 - [x] **Personas & interactivity** — procedural SVG characters (deterministic per worker), animated office floor (typing at desks, standing when desk-less), tap-to-poke speech bubbles, golden briefcase tap bonus (2× 60s via `grantBoost` 'event'), money pop on payouts

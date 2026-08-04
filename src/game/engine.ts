@@ -1514,15 +1514,48 @@ export function fireWorker(state: GameState, workerId: number): string | null {
 }
 
 export function buyWorkstation(state: GameState, defId: string): string | null {
+  return buyWorkstations(state, defId, 1);
+}
+
+/**
+ * Total cost of the next n workstations of a def. Summed buy-by-buy (each
+ * step rounds like stationCost) so bulk price === n sequential purchases.
+ */
+export function stationCostN(company: CompanyState, defId: string, n: number): number {
+  const def = stationDefById(defId);
+  const owned = company.workstations.filter((w) => w.defId === defId).length;
+  const scale = companyCostScale(company);
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    total += Math.round(def.baseCost * Math.pow(def.costGrowth, owned + i) * scale);
+  }
+  return total;
+}
+
+/** How many desks of a def the wallet and remaining slots allow right now. */
+export function maxAffordableStations(state: GameState, defId: string): number {
   const country = activeCountry(state);
   const company = activeCompany(state);
-  if (company.workstations.length >= deskCapacity(company)) {
+  const room = Math.max(0, deskCapacity(company) - company.workstations.length);
+  let n = 0;
+  while (n < room && country.money >= stationCostN(company, defId, n + 1)) n++;
+  return n;
+}
+
+/** Buy n workstations of a def at once — all-or-nothing, no partial buys. */
+export function buyWorkstations(state: GameState, defId: string, n: number): string | null {
+  const country = activeCountry(state);
+  const company = activeCompany(state);
+  if (n < 1) return 'error.officeFull';
+  if (company.workstations.length + n > deskCapacity(company)) {
     return 'error.officeFull';
   }
-  const cost = stationCost(company, defId);
+  const cost = stationCostN(company, defId, n);
   if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
-  company.workstations.push({ id: state.nextEntityId++, defId });
+  for (let i = 0; i < n; i++) {
+    company.workstations.push({ id: state.nextEntityId++, defId });
+  }
   autoSeat(company);
   return null;
 }

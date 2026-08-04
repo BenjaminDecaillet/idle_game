@@ -1485,6 +1485,11 @@ button.site-card {
   justify-content: flex-end;
 }
 
+.qty-toggle {
+  display: inline-flex;
+  gap: 4px;
+}
+
 /* --- Training ------------------------------------------------------------- */
 
 .progress.training .progress-fill {
