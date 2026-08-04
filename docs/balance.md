@@ -549,3 +549,160 @@ Engine surface (mechanical): `companyCostScale(company)` and
 the `candidateRerollCost` initializer. Watch metric: if late companies
 still snowball too fast, raise `COMPANY_COST_SCALE_ESCALATION_EXP` toward
 0.25 (payback #8 → ~34 min) — one knob, salaries stay safe by design.
+
+## Phase D — daily contracts
+
+Every UTC day, `DAILY_CONTRACTS_PER_DAY (3)` contracts are rolled
+deterministically (seed = UTC day number) from a 6-entry pool. Each tracks
+**delta** progress from a day-start baseline snapshot of the mission
+metrics: `progress = max(0, metricValue − baseline[metric])`. Two rules the
+balance depends on:
+
+- **Eligibility filter at roll**: an entry can declare itself ineligible
+  against the day-start snapshot (only `daily-desks` needs it, see below);
+  the seeded roll then draws from the eligible subset — still fully
+  deterministic per (player state, day).
+- **The earn target is snapshotted at roll**:
+  `target = max(DAILY_EARN_FLOOR, grossRewardRate(state) × 60 × DAILY_EARN_MINUTES)`
+  — evaluated once at the day boundary, so intraday growth only ever makes
+  it easier.
+
+Claims go through `grantVsCoin(state, reward, 'daily:<id>')`. As shipped
+(decisions.md #27): `state.daily` is an additive, defaultable field — same-
+version hygiene in `migrate()`, no `SAVE_VERSION` bump — and the day
+rollover happens at the UI boundary (`ensureDaily(state, day)` from
+main.ts, the offline-doubler pattern) rather than inside `tick()`: a board
+from an offline day was never claimable live, so simulating its rollover
+would only discard it earlier. Progress itself derives purely from durable
+counters, so offline gains still count toward today's board.
+
+### Pool (validated targets & rewards)
+
+| contract | metric | daily Δ target | reward | early (day-2 garage) | mid (tower era) | late (orbital) |
+|---|---|---|---|---|---|---|
+| 📦 Ship | projectsCompleted | 15 | 1 | ~15–30 min (api/payments cadence 15 s–3 min) | passive: ~1/few min across 3–5 companies | passive: 15–40/day (8 companies × 2–3 slots) |
+| 💰 Earn | totalEarned | `gross × 1800`, floor 500 | 2 | 30 $/s → 54k, ~30–40 min active (or idle) | 5k $/s → 9M, same shape | 100k $/s → 180M, same shape |
+| 🤝 Hire | workers | 2 | 1 | 2 interns ≈ $50–250, minutes | seconds of empire income (or ~10–25 min of the hiring company's net at-tier) | seconds |
+| 🖥️ Furnish | desks | 3 | 1 | ~$60–160 (+ $2.4k floor 2 if full), ≤ 10 min | 3 basics in newest company ≈ 2.7k–20k, seconds | filtered out when capacity < 3 |
+| ⚙️ Upgrade | upgradeLevels | 4 | 1 | coffee 200/480/1,152/2,765 ≈ 3–8 min of income | newest company's cheap ladder ≈ seconds–minutes | same via newest company; worst case ~30–75 min (see below) |
+| 🎖️ Promote | promotions | 1 | 2 | often organic (first intern near cap 10) | organic (training pushes workers to caps) | guaranteed fallback ≈ 16 min (see below) |
+
+### Reachability math (the Phase S parity argument)
+
+Capital costs scale with `companyCostScale = S × escalation^0.15` while
+per-company income scales with `S` alone, so "2 hires" or "3 desks" costs a
+**constant number of minutes of that company's income × escalation^0.15**,
+and the escalation drift is bounded: 2.2^0.15 per extra company → 1.00× at
+company #2, 1.43× at #5, 2.03× at #8. The Phase S payback table (11.6 →
+23.5 min for desk+hire across the whole ladder) is exactly this invariant —
+so hire/desk dailies stay session-scale at every tier. In practice they are
+far cheaper than that mid/late, because the metrics are **global**: the
+player buys in whichever company is cheapest (garage interns are $25
+forever), and empire income dwarfs any one company's.
+
+- **projectsCompleted 15 vs the soft cap**: `PROJECT_REWARD_CAP_MULT (50)`
+  freezes *both* reward and work growth at the plateau, so completion
+  cadence never keeps degrading — it stalls at
+  `baseWork × workGrowth^~41 / teamRate`. At the garage plateau (~450
+  work/s): landing ≈ 10 s, payments ≈ 12 min, ci ≈ 40 min, search ≈ 3 h per
+  completion. Crucially, $/work roughly *equalizes* at cap (landing 0.17,
+  ci 0.19, search 0.14 $/work), so farming completions on a cheap project
+  costs almost no income — 15/day is sane at every scale and mildly rewards
+  the interesting "run a fast side project" choice. Only a literal day-1
+  player (0.5–2 work/s) needs 30–45 min; dailies are a day-2+ system.
+- **Earn 30 min of gross**: self-scaling by construction; with marketing
+  (2×) or the VsCoin boost (3×) it compresses to ~10–15 min of active play,
+  and idle income across the 24 h day completes it passively — the
+  deliberate login-reward component of the pool (hence reward 2, and hence
+  not more than 2).
+- **Upgrade 4 levels**: the steepest entry, because per-track growth
+  (2.4–3×/level) outruns income *within one company*. Cheapest-4-levels
+  across all tracks/companies stays minutes-scale whenever any company has
+  a young ladder; the worst realistic case (no recent company, cheap levels
+  exhausted) is ~30–75 min of income. That is why the target is 4, not 5 —
+  5 would tip the worst case past a session.
+- **Promote 1 — the fallback bound**: verified no trap. A worker promotes
+  only at `maxSkill`, which can be days away for high-tier workers (training
+  durations ramp 1.6^timesTrained per worker), *but* hiring needs no free
+  desk (checked `hireWorker`) and the intern chain is always open: hire
+  intern ($25 × cheapest company's scale) → 3 trainings (120 + 192 + 307 s,
+  exactly skill 1→10) → promote to junior (360 s, $60) ≈ **16.3 min of one
+  builder + ~$185** at garage prices. Reward 2 ≈ fast-forward parity for
+  that 16 min, so skipping it with VsCoin is value-neutral, never printing.
+  Requires 1 free builder — a deliberate soft synergy with the builder sink.
+  Keep the entry; no pairing needed.
+
+### Daily VsCoin budget vs. the mission economy and sinks
+
+Pool rewards {1, 2, 1, 1, 1, 2}, mean 8/6; 3 draws/day → **expected 4.0/day
+at full clear**, realized ~2.5–3.5 (earn is near-automatic; ship/hire/
+upgrade need intent; desks is sometimes filtered; promote is sometimes
+16 min of friction) → **~18–25/week**.
+
+- Ground truth from `MISSIONS`: 32 missions totalling **187** VsCoin
+  lifetime (117 excluding the 70-coin world-tour chain), front-loaded at
+  ~8–10/day-equivalent in the first weeks. Dailies add ≤4/day on top —
+  <35% of early income, so the mission chains stay the headline source;
+  dailies become the *primary* income only after missions dry up (~7–9
+  weeks), which is the design goal: retention income feeding the
+  open-ended sinks.
+- Sink check ("meaningful trickle, no trivialization"): builder #4 (8) ≈ 3
+  days of dailies, #5 (15) ≈ 5–6 days — "save toward a builder within a
+  week" ✓. Full Aura (2+4+8+16 = 30) ≈ 10–12 days ✓. Diamond wallpaper
+  (8) ≈ 3 days — impulse range, fine for a cosmetic ✓. Boost (3): dailies
+  sustain ~1 boost/day — an intended, bounded engagement loop (1 h, ×3).
+  The per-country builder tail (22/39/70/126) and the 40–75-coin cash packs
+  stay multi-week saves ✓.
+
+Do **not** raise any pool reward above 2: a 3+ daily would fully fund a
+daily boost habit plus a builder/week, collapsing the "pick one identity"
+budget from the Phase W sanity check.
+
+### Traps & mitigations
+
+- **`desks` is capacity-trappable** (the one real trap): `deskCapacity =
+  floors × 4`, `MAX_FLOORS 8`; a full empire (or one where the only
+  headroom needs a 2.5–5 h floor build) can't add 3 desks in a day.
+  Eligibility filter at roll: `Σ deskCapacity − Σ workstations ≥ 3` on the
+  day-start snapshot, else the entry is excluded from that day's draw.
+- **`workers` is a level metric, not cumulative**: debt-crisis quits or
+  firing regress the delta (progress floors at 0). Acceptable — re-hiring
+  interns is cheap, and it stops hire/refire cycling from being entirely
+  free. Post-claim firing is unpreventable but bounded at 1 VsCoin/day.
+- **Earn-target cheese**: `grossRewardRate` counts only assigned projects
+  (same anchor caveat as shop packs), so unassigning everything before UTC
+  midnight forces the 500 floor. Unlike shop packs the upside is a *fixed*
+  2 VsCoin once/day, so accept it. Watch metric: if telemetry shows
+  midnight unassign spikes, re-anchor the target to yesterday's realized
+  earnings ÷ 48 (the baseline snapshot already marks the day boundary), 
+  which makes sandbagging strictly unprofitable.
+- **`promotions` / `upgradeLevels`**: no hard trap (fallbacks above); both
+  merely degrade to ~16–75 min in worst cases, within a day.
+
+### Constants to land (src/game/data.ts)
+
+```ts
+// Daily contracts (docs/balance.md, Phase D): every UTC day,
+// DAILY_CONTRACTS_PER_DAY contracts are rolled deterministically
+// (seed = UTC day number) from DAILY_CONTRACT_POOL, restricted to entries
+// eligible against the day-start baseline snapshot (only 'daily-desks'
+// filters: empire free desk capacity ≥ target). Progress is the delta
+// from the snapshot, floored at 0. The earn target is derived at roll:
+// max(DAILY_EARN_FLOOR, grossRewardRate × 60 × DAILY_EARN_MINUTES).
+export const DAILY_CONTRACTS_PER_DAY = 3;
+export const DAILY_EARN_MINUTES = 30;
+export const DAILY_EARN_FLOOR = 500;
+export const DAILY_CONTRACT_POOL: DailyContractDef[] = [
+  { id: 'daily-ship', metric: 'projectsCompleted', target: 15, reward: 1, emoji: '📦' },
+  { id: 'daily-earn', metric: 'totalEarned', target: 0, reward: 2, emoji: '💰' }, // target derived at roll
+  { id: 'daily-hire', metric: 'workers', target: 2, reward: 1, emoji: '🧑‍💻' },
+  { id: 'daily-desks', metric: 'desks', target: 3, reward: 1, emoji: '🪑' }, // roll-filtered on capacity
+  { id: 'daily-upgrade', metric: 'upgradeLevels', target: 4, reward: 1, emoji: '⚙️' },
+  { id: 'daily-promote', metric: 'promotions', target: 1, reward: 2, emoji: '🎖️' },
+];
+```
+
+Watch metrics: if 30-day-retained players hoard >100 VsCoin, drop the earn
+reward to 1 (expected/day 4.0 → 3.5) before touching targets; if daily
+completion of `daily-ship` is <50% among day-2–7 players, lower its target
+to 12 — one knob per symptom.

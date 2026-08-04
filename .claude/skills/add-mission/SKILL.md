@@ -41,3 +41,14 @@ Edit `MISSIONS` in `src/game/data.ts` only:
 
 Claims flow through `claimMission()` → `grantVsCoin(state, n, 'mission:<id>')`
 (ledger audited). Run `npm test` + `npm run build`.
+
+## Daily contracts (src/game/daily.ts)
+
+A second consumer of the mission metrics: 3 delta-progress contracts per
+UTC day, rolled deterministically from the day number out of
+`DAILY_CONTRACT_POOL` (data.ts), progress = metricValue − day-start
+baseline (`state.daily.baselines`). New metrics added for regular
+missions become available to the daily pool too — add a pool entry with
+a sane one-day delta target. The day number is computed in main.ts and
+passed in (`ensureDaily(state, day)`); daily.ts never reads the clock.
+Claims grant VsCoin with source `daily:<id>`.

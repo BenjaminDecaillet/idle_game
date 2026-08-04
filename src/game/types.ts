@@ -151,6 +151,32 @@ export interface MissionDef {
   emoji: string;
 }
 
+/** One rolled daily contract (a delta-progress mission for a single day). */
+export interface DailyContract {
+  id: string;
+  metric: MissionMetric;
+  /** Delta target relative to the day-start baseline. */
+  target: number;
+  reward: number;
+  emoji: string;
+}
+
+/**
+ * Daily contracts board: regenerated when the UTC day number changes (the
+ * day is computed in the UI layer — src/game/** never reads the clock).
+ * Progress = metricValue − baselines[metric], so contracts measure what the
+ * player did today, not lifetime totals.
+ */
+export interface DailyState {
+  /** UTC day number (floor(ms / 86_400_000)) the board was rolled for. */
+  day: number;
+  contracts: DailyContract[];
+  /** Metric snapshot at roll time (delta baseline). */
+  baselines: Record<string, number>;
+  /** Contract ids already claimed today. */
+  claimed: string[];
+}
+
 /**
  * One VsCoin grant or spend. `source` tags where it came from/went
  * ('mission:<id>', 'story:<id>', 'shop:<sku>', later 'iap:<sku>') so a
@@ -407,6 +433,8 @@ export interface GameState {
   vsCoinLedger: VsCoinLedgerEntry[];
   /** Mission ids whose reward has been collected. */
   missionsClaimed: string[];
+  /** Daily contracts board (see DailyState). */
+  daily: DailyState;
   /**
    * Levels of VsCoin-bought upgrades. Premium upgrades are global: one
    * purchase applies in every company of every country (cash upgrades stay

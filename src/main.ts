@@ -2,6 +2,7 @@ import './style.css';
 import { registerSW } from 'virtual:pwa-register';
 import { BETA_FORCE_REFRESH } from './game/data';
 import { activeCompany, grantBoost, tick, timeSkip } from './game/engine';
+import { ensureDaily } from './game/daily';
 import { loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
 import { resolveLang, setCurrentLang, t } from './i18n';
@@ -48,6 +49,10 @@ function loop(now: number): void {
   // The free speed toggle scales live play only — offline stays wall-clock.
   const dt = Math.min((now - last) / 1000, 2) * state.settings.timeScale;
   last = now;
+
+  // Roll the daily-contracts board when the UTC day flips (cheap no-op
+  // otherwise) — the day number is computed here, never inside src/game.
+  ensureDaily(state, Math.floor(Date.now() / 86_400_000));
 
   const events = tick(state, dt);
   const shownCompanyId = activeCompany(state).id;

@@ -145,6 +145,7 @@ export function createInitialState(now = Date.now(), countryId: CountryId = DEFA
     vsCoin: 0,
     vsCoinLedger: [],
     missionsClaimed: [],
+    daily: { day: -1, contracts: [], baselines: {}, claimed: [] },
     globalUpgrades: {},
     fastForwardsUsed: 0,
     freeFastForwards: 0,

@@ -124,6 +124,9 @@ export const fr: Record<keyof typeof en, string> = {
 
   // --- Missions UX ----------------------------------------------------------
   'ui.missionComplete': 'Mission accomplie — réclamez vos VsCoin !',
+  'ui.dailyTitle': 'Contrats du jour',
+  'ui.dailyHint':
+    'Trois nouveaux contrats chaque jour — seuls les progrès du jour comptent. Revenez demain pour un nouveau tableau !',
 
   // --- Puce d’objectif (prochaine action conseillée sous le HUD) --------------
   // Les chaînes goal.* s’insèrent au milieu de goalNext/goalSave : elles

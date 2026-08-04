@@ -6,27 +6,31 @@ whole backlog (per-floor projects + cost scaling → Office tab → chiptune
 Angular naming, no AI attribution in git history, checkpoint after every
 slice.
 
-## 1. Current slice — C: chiptune + chimes
+## 1. Current slice — D1: daily contracts
 
-A merged (PR #17), B merged (PR #18 — note: Sourcery's check stays red
-there on declined innerHTML false positives; the real `test` check was
-green, rationale on the PR thread). Slice C on branch
-`feat/audio-chiptune`: implementation complete, gates green (553 tests
-/ 26 files, build, smoke). Shipped: "Garage Dreams" loop + music
-settings (off by default) + story/mission/VsCoin chimes (decisions.md
-#26), new `audio-chiptune` skill, improvements #17 ticked.
+A, B, C merged (PRs #17, #18, #19). D1 on branch `feat/daily-contracts`:
+complete, gates green (585 tests / 27 files, build, smoke). Shipped:
+src/game/daily.ts (deterministic day-seeded board, delta baselines,
+desks eligibility filter), VsCoin-tab board + badge, balance.md Phase D,
+decisions.md #27, add-mission skill extended, improvements #1 ticked.
 
-**Next action:** commit checkpoint → PR → strip the auto-appended
-session footer from the PR body (platform adds it server-side; the
-mission forbids it) → CI → merge → slice D1 (daily contracts).
+**Next action:** PR (strip the auto-appended session footer from the PR
+body right after creating it) → CI → merge → D2: the i18n sweep
+(improvements #2 — migrate remaining hardcoded UI strings; run now that
+the slice-B tab set is final; needs a buildSkeleton rebuild hook on
+language change).
 
 ## 2. Slice queue (mission order)
 
 1. ~~A: per-floor projects + cost scaling + beta shop~~ → PR #17 merged
 2. ~~B: one Office tab~~ → PR #18 merged
-3. C: chiptune + chimes → this branch, PR next
-4. D+: improvements.md top tier (daily contracts → i18n sweep → traits
-   → random events → vault), then second tier / polish / tech.
+3. ~~C: chiptune + chimes~~ → PR #19 merged
+4. ~~D1: daily contracts~~ → this branch, PR next
+5. D2+: improvements.md — i18n sweep → worker traits → random events →
+   vault, then second tier (specialization, push opt-in, cosmetics),
+   polish (construction art, builder visibility, confetti, city
+   scenes), tech (balance harness). Skip only external-account items
+   (analytics/ads/IAP/Capacitor — see monetization.md).
 
 ## 3. Standing decisions to remember
 
