@@ -835,7 +835,7 @@ export function trainWorker(state: GameState, workerId: number): string | null {
   if (!worker) return 'error.workerNotFound';
   if (workerBusy(company, workerId)) return 'error.workerBusy';
   if (atSkillCap(worker)) {
-    return nextTier(worker) ? 'At skill cap — promote instead' : 'Already at max skill level';
+    return nextTier(worker) ? 'error.promoteInstead' : 'error.maxSkill';
   }
   if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = trainCost(company, worker);

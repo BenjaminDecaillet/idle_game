@@ -482,7 +482,7 @@ describe('trainWorker (timed program)', () => {
     c.workers.push(worker);
     country.money = trainCost(c, worker);
 
-    expect(trainWorker(state, worker.id)).toBe('Already at max skill level');
+    expect(trainWorker(state, worker.id)).toBe('error.maxSkill');
     expect(worker.skillLevel).toBe(100);
   });
 });
