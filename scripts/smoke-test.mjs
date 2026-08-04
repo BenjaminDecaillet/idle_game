@@ -47,6 +47,25 @@ await page
 await page.waitForTimeout(700);
 if (!(await page.$('[data-select^="floor-project:"]')))
   failures.push('floor view: project select missing');
+
+// Regression: the 2 Hz innerHTML refresh must not tear down a form control
+// the player is using — replacing the node closes an open <select> popup.
+// Focus the floor-project select, mark its node, sit through three refresh
+// ticks, and require the very same node to survive with focus intact.
+const selectSurvives = await page.evaluate(async () => {
+  const sel = document.querySelector('[data-select^="floor-project:"]');
+  if (!sel) return false;
+  sel.focus();
+  sel.__smokeMarker = true;
+  await new Promise((r) => setTimeout(r, 1600));
+  const again = document.querySelector('[data-select^="floor-project:"]');
+  return again === sel && again.__smokeMarker === true && document.activeElement === sel;
+});
+if (!selectSurvives)
+  failures.push('floor view: project select torn down while focused (2 Hz re-render)');
+// Release focus so the periodic refresh resumes for the rest of the run.
+await page.evaluate(() => document.activeElement?.blur());
+await page.waitForTimeout(700);
 await page.click('[data-action="open-hire"]').catch(() => failures.push('cannot open hire popup'));
 await page.waitForTimeout(700);
 if (!(await page.$('[data-action^="hire:"]'))) failures.push('hire popup: no candidate cards');
