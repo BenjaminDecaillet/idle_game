@@ -145,3 +145,23 @@ be revisited cheaply.
     no dead "coming soon" buttons during beta. When the flag flips for
     real monetization the same cards become paid SKUs (`iap:<sku>`
     sources); the "coming soon" branch remains only for that off state.
+23. **Office-first tab layout (slice B)**: tabs are Map, Office, Shop,
+    VsCoin, Stats. Missions folded into the top of the VsCoin tab (they
+    are the VsCoin faucet; the SKU packs below are the top-up) rather
+    than Stats, and the HUD VsCoin badge + claimable-dot moved with
+    them. The Office tab is a drill-down: company list (auto-skipped
+    while the country has one company) → building → one floor or the
+    staff room. The default tab is Office.
+24. **Floor display = engine mapping**: the building view used to sort
+    desks best-first for display while the engine maps desk→floor by
+    purchase index (`stationFloor`). With floors as management units
+    that mismatch would lie about which project a desk feeds, so the
+    display now uses purchase order — what you see on a floor is what
+    works its project.
+25. **Staff room & contracts placement**: the staff room (a pseudo-floor
+    atop the building, entered like any floor) holds every upgrade,
+    marketing and the wallpaper/decor shop. The company-scoped contract
+    portfolio (unlock + main-project selection) stays in the building
+    view; each floor's view holds only its own project slot. Hiring is
+    a bottom-sheet popup (candidate cards + reroll) reachable from the
+    building header and every floor view.

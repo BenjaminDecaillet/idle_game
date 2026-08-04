@@ -143,12 +143,31 @@ export const en = {
   'ui.softCap': 'CAP',
   'ui.softCapHint':
     'This contract has hit its ceiling here — a bigger company can go further.',
-  'ui.projectSlots': 'Floor projects',
   'ui.projectSlotsHint':
     'Every floor has its own project slot — give each floor its own contract, or keep everyone on the main one.',
   'ui.mainProject': 'Main project',
   'ui.groundFloor': 'Ground floor',
   'ui.floorN': 'Floor {floor}',
+
+  // --- Office tab: companies → building → floor drill-down -----------------
+  'ui.officeCompanies': 'Your companies',
+  'ui.officeAllCompanies': '‹ All companies',
+  'ui.officeBackToBuilding': '‹ Building',
+  'ui.staffRoom': 'Staff room',
+  'ui.staffRoomHint': 'Upgrades and perks for the whole company live here — grab a coffee.',
+  'ui.manageFloor': 'Manage',
+  'ui.hireEmployees': 'Hire',
+  'ui.candidates': 'Candidates',
+  'ui.newBatch': 'New batch',
+  'ui.hire': 'Hire',
+  'ui.yourTeam': 'Your team ({count})',
+  'ui.floorEmployees': 'Employees on this floor',
+  'ui.floorProjectTitle': 'Floor project',
+  'ui.contracts': 'Contracts',
+  'ui.noFloorWorkers': 'Nobody works on this floor yet.',
+  'ui.close': 'Close',
+  'ui.desksUsed': '{used}/{total} desks used',
+  'ui.foundOnMap': 'Found new companies from the Map tab.',
   'ui.renameCostConfirm': 'Renaming costs {cash} + {coins} VsCoin. Proceed?',
 
   'ui.companyFounded': '{name} founded!',

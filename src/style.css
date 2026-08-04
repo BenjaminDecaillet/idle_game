@@ -1941,3 +1941,32 @@ button.site-card {
   color: var(--ink-soft);
   font-size: 0.9rem;
 }
+
+/* Office drill-down (companies → building → floor / staff room). */
+.floor-manage {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  z-index: 3;
+  padding: 2px 8px;
+  font-size: 0.62rem;
+}
+
+.floor-block.staff-room .floor-wall {
+  height: 44px;
+  background: linear-gradient(180deg, rgba(255, 214, 130, 0.5), rgba(255, 178, 82, 0.35)),
+    var(--wall-bg, #dfe7f2);
+}
+
+.building.floor-zoom .office-grid {
+  min-height: 132px;
+}
+
+.building.floor-zoom .floor-wall {
+  height: 76px;
+}
+
+.company-card {
+  width: 100%;
+  text-align: left;
+}

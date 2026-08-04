@@ -69,7 +69,7 @@ export function nextGoalHint(state: GameState): GoalHint | null {
   // A hire while a desk sits empty and a candidate is on the board.
   if (company.candidates.length > 0 && desks > company.workers.length) {
     const cost = Math.min(...company.candidates.map((c) => hireCost(company, c.tierId)));
-    steps.push({ kind: 'hire', cost, tab: 'team' });
+    steps.push({ kind: 'hire', cost, tab: 'office' });
   }
 
   // The cheapest locked project of this company.
@@ -81,7 +81,7 @@ export function nextGoalHint(state: GameState): GoalHint | null {
       projectStep = {
         kind: 'unlock-project',
         cost,
-        tab: 'projects',
+        tab: 'office',
         targetName: projectDefById(p.defId).name,
       };
     }
@@ -96,7 +96,7 @@ export function nextGoalHint(state: GameState): GoalHint | null {
     if (country.companies.length < upgradeCompanyRequirement(def.id)) continue;
     const cost = upgradeCost(company, def.id);
     if (!upgradeStep || cost < upgradeStep.cost) {
-      upgradeStep = { kind: 'upgrade', cost, tab: 'upgrades', targetName: def.name };
+      upgradeStep = { kind: 'upgrade', cost, tab: 'office', targetName: def.name };
     }
   }
   if (upgradeStep) steps.push(upgradeStep);

@@ -142,12 +142,32 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.softCap': 'PLAFOND',
   'ui.softCapHint':
     'Ce contrat a atteint son plafond ici — une société plus grande ira plus loin.',
-  'ui.projectSlots': 'Projets par étage',
   'ui.projectSlotsHint':
     'Chaque étage a son propre créneau de projet — donnez à chaque étage son contrat, ou gardez tout le monde sur le principal.',
   'ui.mainProject': 'Projet principal',
   'ui.groundFloor': 'Rez-de-chaussée',
   'ui.floorN': 'Étage {floor}',
+
+  // --- Onglet Bureau : sociétés → bâtiment → étage --------------------------
+  'ui.officeCompanies': 'Vos sociétés',
+  'ui.officeAllCompanies': '‹ Toutes les sociétés',
+  'ui.officeBackToBuilding': '‹ Bâtiment',
+  'ui.staffRoom': 'Salle de pause',
+  'ui.staffRoomHint':
+    'Les améliorations et avantages de toute la société vivent ici — prenez un café.',
+  'ui.manageFloor': 'Gérer',
+  'ui.hireEmployees': 'Recruter',
+  'ui.candidates': 'Candidats',
+  'ui.newBatch': 'Nouvelle fournée',
+  'ui.hire': 'Embaucher',
+  'ui.yourTeam': 'Votre équipe ({count})',
+  'ui.floorEmployees': 'Employés de cet étage',
+  'ui.floorProjectTitle': 'Projet de l’étage',
+  'ui.contracts': 'Contrats',
+  'ui.noFloorWorkers': 'Personne ne travaille encore à cet étage.',
+  'ui.close': 'Fermer',
+  'ui.desksUsed': '{used}/{total} bureaux occupés',
+  'ui.foundOnMap': 'Fondez de nouvelles sociétés depuis l’onglet Carte.',
   'ui.renameCostConfirm': 'Renommer coûte {cash} + {coins} VsCoin. Continuer ?',
 
   'ui.companyFounded': '{name} est fondée !',

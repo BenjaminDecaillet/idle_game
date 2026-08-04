@@ -24,10 +24,34 @@ if (!money) failures.push('HUD money missing');
 if (!hero) failures.push('hero project name missing');
 
 // Every tab must be present (catches "engine green but a tab render throws").
-const TABS = ['map', 'projects', 'team', 'office', 'upgrades', 'shop', 'vscoin', 'missions', 'stats'];
+const TABS = ['map', 'office', 'shop', 'vscoin', 'stats'];
 for (const tab of TABS) {
   if (!(await page.$(`[data-action="tab:${tab}"]`))) failures.push(`tab button missing: ${tab}`);
 }
+
+// The Office drill-down must render: staff room, floor view and the hire
+// popup are separate render paths that a green engine can't vouch for.
+await page.click('[data-action="tab:office"]').catch(() => failures.push('cannot open office tab'));
+await page.waitForTimeout(700);
+if (!(await page.$('[data-action="open-hire"]'))) failures.push('office: hire button missing');
+await page.click('[data-action="office-staff"]').catch(() => failures.push('cannot open staff room'));
+await page.waitForTimeout(700);
+if (!(await page.$('[data-action^="buy-upgrade:"]'))) failures.push('staff room: no upgrade cards');
+await page
+  .click('[data-action="office-building"]')
+  .catch(() => failures.push('cannot leave staff room'));
+await page.waitForTimeout(700);
+await page
+  .click('[data-action="office-floor:0"]')
+  .catch(() => failures.push('cannot open floor view'));
+await page.waitForTimeout(700);
+if (!(await page.$('[data-select^="floor-project:"]')))
+  failures.push('floor view: project select missing');
+await page.click('[data-action="open-hire"]').catch(() => failures.push('cannot open hire popup'));
+await page.waitForTimeout(700);
+if (!(await page.$('[data-action^="hire:"]'))) failures.push('hire popup: no candidate cards');
+await page.click('button.btn[data-action="close-sheet"]').catch(() => failures.push('cannot close hire popup'));
+await page.waitForTimeout(300);
 
 // The Stats tab must render (it hosts settings + the build stamp).
 await page.click('[data-action="tab:stats"]').catch(() => failures.push('cannot open stats tab'));
