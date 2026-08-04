@@ -130,7 +130,7 @@ describe('setActiveCompany', () => {
   it('returns an error for an unknown company id', () => {
     const state = createInitialState(NOW);
     const err = setActiveCompany(state, 99999);
-    expect(err).toBe('Company not found');
+    expect(err).toBe('error.companyNotFound');
     expect(activeCountry(state).activeCompanyId).toBe(activeCountry(state).companies[0].id); // unchanged
   });
 });
@@ -278,7 +278,7 @@ describe('renameCompany', () => {
     const originalName = c.name;
 
     const err = renameCompany(state, '   ');
-    expect(err).toBe('Name cannot be empty');
+    expect(err).toBe('error.emptyName');
     expect(c.name).toBe(originalName); // unchanged
   });
 });

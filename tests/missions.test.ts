@@ -140,13 +140,13 @@ describe('mission claims', () => {
     expect(claimMission(state, 'ship-10')).toBeNull();
     expect(state.vsCoin).toBe(def.reward);
     expect(state.vsCoinLedger[0]).toEqual({ amount: def.reward, source: 'mission:ship-10' });
-    expect(claimMission(state, 'ship-10')).toBe('Mission already claimed');
+    expect(claimMission(state, 'ship-10')).toBe('error.missionClaimed');
     expect(visibleMissions(state).map((m) => m.id)).not.toContain('ship-10');
   });
 
   it('refuses unfinished missions and unknown ids', () => {
     const state = createInitialState(NOW);
-    expect(claimMission(state, 'ship-10')).toBe('Mission not completed yet');
+    expect(claimMission(state, 'ship-10')).toBe('error.missionIncomplete');
     expect(() => claimMission(state, 'nope')).toThrow();
   });
 
@@ -197,7 +197,7 @@ describe('vsCoin sinks', () => {
     expect(buyWallpaper(state, 'diamond')).toBeNull();
     expect(state.ownedWallpapers).toContain('diamond');
     expect(state.vsCoin).toBe(0);
-    expect(buyWallpaper(state, 'diamond')).toBe('Already owned');
+    expect(buyWallpaper(state, 'diamond')).toBe('error.alreadyOwned');
   });
 });
 

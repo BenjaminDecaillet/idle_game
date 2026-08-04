@@ -132,7 +132,7 @@ describe('tutorial', () => {
     expect(advanceTutorial(state)).toBeNull(); // name-company
     expect(currentTutorialStep(state)?.id).toBe('hire');
     // Auto-steps refuse manual advancing until the deed is done.
-    expect(advanceTutorial(state)).toBe('Step not finished yet');
+    expect(advanceTutorial(state)).toBe('error.stepUnfinished');
     country.companies[0].workers.push(makeWorker(500));
     expect(refreshTutorial(state)).toBe(true);
     expect(currentTutorialStep(state)?.id).toBe('desk');
@@ -156,19 +156,19 @@ describe('tutorial', () => {
     expect(advanceTutorial(state)).toBeNull();
     expect(state.tutorial.done).toBe(true);
     expect(currentTutorialStep(state)).toBeNull();
-    expect(advanceTutorial(state)).toBe('Tutorial is already over');
+    expect(advanceTutorial(state)).toBe('error.tutorialOver');
   });
 
   it('is skippable and stays done', () => {
     const state = createInitialState(NOW);
     expect(skipTutorial(state)).toBeNull();
     expect(state.tutorial.done).toBe(true);
-    expect(skipTutorial(state)).toBe('Tutorial is already over');
+    expect(skipTutorial(state)).toBe('error.tutorialOver');
   });
 
   it('rejects empty player names', () => {
     const state = createInitialState(NOW);
-    expect(setPlayerName(state, '   ')).toBe('Name cannot be empty');
+    expect(setPlayerName(state, '   ')).toBe('error.emptyName');
     expect(state.player.name).toBe('Founder');
   });
 
@@ -254,7 +254,7 @@ describe('story', () => {
     expect(dismissStoryBeat(state)).toBeNull();
     expect(currentStoryBeat(state)).toBe('first-hire');
     dismissStoryBeat(state);
-    expect(dismissStoryBeat(state)).toBe('No story to dismiss');
+    expect(dismissStoryBeat(state)).toBe('error.noStory');
   });
 
   it('backfill marks reached beats as seen without queueing', () => {

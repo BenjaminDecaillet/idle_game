@@ -322,7 +322,7 @@ describe('buyUpgrade', () => {
     country.money = 10_000_000;
     c.upgrades['agile'] = 12; // maxLevel for agile
     const err = buyUpgrade(state, 'agile');
-    expect(err).toBe('Already at max level');
+    expect(err).toBe('error.maxLevel');
     expect(c.upgrades['agile']).toBe(12);
   });
 
@@ -344,7 +344,7 @@ describe('unlockProject / setActiveProject error paths', () => {
   it('unlockProject refuses an already-unlocked project', () => {
     const state = createInitialState(NOW);
     const err = unlockProject(state, 'landing');
-    expect(err).toBe('Already unlocked');
+    expect(err).toBe('error.alreadyUnlocked');
   });
 
   it('unlockProject refuses when broke', () => {
