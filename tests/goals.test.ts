@@ -43,6 +43,7 @@ function makeWorker(
     stationId: overrides.stationId ?? null,
     timesTrained: overrides.timesTrained ?? 0,
     promotions: overrides.promotions ?? 0,
+    traits: [],
   };
 }
 

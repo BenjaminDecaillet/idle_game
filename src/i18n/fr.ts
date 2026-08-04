@@ -510,4 +510,19 @@ export const fr: Record<keyof typeof en, string> = {
   'error.noSuchContract': 'Contrat introuvable',
   'error.alreadyClaimed': 'Déjà réclamé',
   'error.contractUnfinished': 'Contrat pas encore rempli',
+
+  // --- Traits des employés --------------------------------------------------
+  'ui.rareBadge': 'RARE',
+  'trait.night-owl.name': 'Oiseau de nuit',
+  'trait.night-owl.desc': 'Livre pendant que la ville dort : +15 % de production.',
+  'trait.coffee-addict.name': 'Accro au café',
+  'trait.coffee-addict.desc': 'Carbure à l’espresso : +25 % de production, +10 % de salaire.',
+  'trait.quick-study.name': 'Esprit vif',
+  'trait.quick-study.desc': 'Apprend vite : +50 % d’expérience.',
+  'trait.frugal.name': 'Économe',
+  'trait.frugal.desc': 'Négocie modestement : −15 % de salaire.',
+  'trait.perfectionist.name': 'Perfectionniste',
+  'trait.perfectionist.desc': 'Peaufine tout : +10 % de production, −15 % d’expérience.',
+  'trait.rockstar.name': 'Rockstar',
+  'trait.rockstar.desc': 'Une légende en devenir : +40 % de production, +25 % de salaire.',
 };

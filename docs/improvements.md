@@ -34,10 +34,10 @@ missing and reuses existing plumbing.
    'error.*' ids (decisions.md #28). SVG signage deliberately stays
    English (diegetic set dressing). DE is now unblocked.
 
-3. **Worker traits & rare candidates** — Deterministic trait roll at
-   candidate creation (night owl, coffee addict…) with a badge on the
-   persona; creates hiring excitement now that candidates have visible
-   faces. Engine-pure via the injectable `rand`.
+3. ~~**Worker traits & rare candidates**~~ — shipped: 6 traits with
+   output/salary/XP multipliers rolled at candidate creation (35% one
+   trait, ~2% rare double-trait golden candidates), badges on candidate
+   and worker cards (balance.md Phase T, decisions.md #29).
 
 4. **Random events with choices** — "An investor offers $X for 2×
    salaries for 10 min — accept?" Small decision moments break idle

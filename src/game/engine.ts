@@ -45,6 +45,10 @@ import {
   MOONSHOT_OUTPUT_PER_LEVEL,
   PROJECT_REWARD_CAP_MULT,
   PROJECT_WORK_SCALE_EXP,
+  RARE_TRAIT_CHANCE,
+  TRAIT_CHANCE,
+  TRAITS,
+  traitById,
   OFFLINE_DOUBLER_COOLDOWN_SEC,
   PROJECTS,
   PRESTIGE_MIN_LIFETIME,
@@ -453,6 +457,36 @@ export function stationMultiplier(company: CompanyState, stationInstanceId: numb
   return 1 + (base - 1) * chairBonus;
 }
 
+/** Product of a trait multiplier across a worker's traits (1 = none). */
+function traitMult(traits: string[], key: 'output' | 'salary' | 'xp'): number {
+  let m = 1;
+  for (const id of traits) m *= traitById(id)[key];
+  return m;
+}
+
+export const traitOutputMult = (traits: string[]): number => traitMult(traits, 'output');
+export const traitSalaryMult = (traits: string[]): number => traitMult(traits, 'salary');
+export const traitXpMult = (traits: string[]): number => traitMult(traits, 'xp');
+
+/** Weighted trait roll at candidate creation (deterministic via rand). */
+export function rollTraits(rand: () => number): string[] {
+  if (rand() >= TRAIT_CHANCE) return [];
+  const draw = (exclude: string[]): string => {
+    const pool = TRAITS.filter((t) => !exclude.includes(t.id));
+    const total = pool.reduce((sum, t) => sum + t.weight, 0);
+    let r = rand() * total;
+    for (const t of pool) {
+      r -= t.weight;
+      if (r <= 0) return t.id;
+    }
+    return pool[pool.length - 1].id;
+  };
+  const traits = [draw([])];
+  // A second trait makes the candidate "rare" (golden card in the UI).
+  if (rand() < RARE_TRAIT_CHANCE) traits.push(draw(traits));
+  return traits;
+}
+
 export function salaryMultiplier(company: CompanyState): number {
   return Math.max(0.4, 1 - 0.06 * (company.upgrades['hr'] ?? 0));
 }
@@ -501,6 +535,11 @@ export function companySalaryScale(
 /** Salary in $/sec a worker of this tier costs in this company. */
 export function tierSalary(company: CompanyState, tierId: string): number {
   return tierById(tierId).salary * salaryMultiplier(company) * companySalaryScale(company);
+}
+
+/** One worker's actual salary (tier salary × their traits). */
+export function workerSalary(company: CompanyState, worker: WorkerState): number {
+  return tierSalary(company, worker.tierId) * traitSalaryMult(worker.traits);
 }
 
 export function expMultiplier(company: CompanyState): number {
@@ -586,7 +625,8 @@ export function workerRate(
     skillMultiplier(worker) *
     stationMultiplier(company, worker.stationId) *
     globalOutputMultiplier(state, company) *
-    specBonus
+    specBonus *
+    traitOutputMult(worker.traits)
   );
 }
 
@@ -619,7 +659,7 @@ export function totalWorkRate(state: GameState): number {
 /** One company's salaries in $/sec. */
 export function companySalaries(company: CompanyState): number {
   let sum = 0;
-  for (const w of company.workers) sum += tierSalary(company, w.tierId);
+  for (const w of company.workers) sum += workerSalary(company, w);
   return sum;
 }
 
@@ -1321,7 +1361,7 @@ function tickCountry(
       if (worker.stationId === null) continue;
       const cap = tierById(worker.tierId).maxSkill;
       if (worker.skillLevel >= cap) continue;
-      worker.experience += expGain;
+      worker.experience += expGain * traitXpMult(worker.traits);
       let need = expToNextLevel(worker.skillLevel);
       while (worker.experience >= need && worker.skillLevel < cap) {
         worker.experience -= need;
@@ -1429,6 +1469,7 @@ export function hireWorker(state: GameState, candidateIndex: number): string | n
     stationId: null,
     timesTrained: 0,
     promotions: 0,
+    traits: candidate.traits,
   });
   company.candidates.splice(candidateIndex, 1);
   if (company.candidates.length === 0) company.candidates = rollCandidates(state);
@@ -2012,6 +2053,7 @@ export function rollCandidates(
       name: `${pick(FIRST_NAMES, rand)} ${pick(LAST_NAMES, rand)}`,
       tierId: tier.id,
       specialization: pick(SPECIALIZATIONS, rand),
+      traits: rollTraits(rand),
     });
   }
   if (!state.tutorial.done && allCompanies(state).every((c) => c.workers.length === 0)) {
@@ -2019,6 +2061,7 @@ export function rollCandidates(
       name: TUTORIAL_FIRST_HIRE_NAME,
       tierId: 'intern',
       specialization: pick(SPECIALIZATIONS, rand),
+      traits: [],
     };
   }
   return out;

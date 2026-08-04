@@ -509,4 +509,19 @@ export const en = {
   'error.noSuchContract': 'No such contract',
   'error.alreadyClaimed': 'Already claimed',
   'error.contractUnfinished': 'Contract not finished yet',
+
+  // --- Worker traits --------------------------------------------------------
+  'ui.rareBadge': 'RARE',
+  'trait.night-owl.name': 'Night owl',
+  'trait.night-owl.desc': 'Ships while the city sleeps: +15% output.',
+  'trait.coffee-addict.name': 'Coffee addict',
+  'trait.coffee-addict.desc': 'Runs on espresso: +25% output, +10% salary.',
+  'trait.quick-study.name': 'Quick study',
+  'trait.quick-study.desc': 'Learns fast: +50% experience gain.',
+  'trait.frugal.name': 'Frugal',
+  'trait.frugal.desc': 'Negotiates modestly: −15% salary.',
+  'trait.perfectionist.name': 'Perfectionist',
+  'trait.perfectionist.desc': 'Polishes everything: +10% output, −15% experience gain.',
+  'trait.rockstar.name': 'Rockstar',
+  'trait.rockstar.desc': 'A legend in the making: +40% output, +25% salary.',
 } as const;

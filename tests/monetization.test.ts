@@ -29,6 +29,7 @@ function stateWithTeam(): GameState {
     stationId: null,
     timesTrained: 0,
     promotions: 0,
+    traits: [],
   });
   buyWorkstation(state, 'basic');
   return state;

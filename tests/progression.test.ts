@@ -53,6 +53,7 @@ function makeWorker(id: number, overrides: Partial<WorkerState> = {}): WorkerSta
     stationId: null,
     timesTrained: 0,
     promotions: 0,
+    traits: [],
     ...overrides,
   };
 }

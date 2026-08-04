@@ -11,6 +11,7 @@ import {
   OFFLINE_CAP_HOURS,
   PROJECTS,
   TIME_SCALES,
+  TRAITS,
   UPGRADES,
   WALLPAPERS,
   siteById,
@@ -290,6 +291,7 @@ function migrateCountry(saved: CountryState, template: CountryState): CountrySta
   };
   const companyTemplate = template.companies[0];
   const knownSites = new Set(COMPANY_SITES.map((s) => s.id));
+  const knownTraits = new Set(TRAITS.map((t) => t.id));
   country.companies = country.companies.map((c) => {
     const company: CompanyState = {
       ...companyTemplate,
@@ -299,11 +301,18 @@ function migrateCountry(saved: CountryState, template: CountryState): CountrySta
       floorProjects: Array.isArray(c.floorProjects) ? c.floorProjects : [],
     };
     if (!knownSites.has(company.siteId)) company.siteId = 'garage';
+    // Candidates and workers may predate traits — default and drop unknown.
+    company.candidates = (company.candidates ?? []).map((cand) => ({
+      ...cand,
+      traits: Array.isArray(cand.traits) ? cand.traits.filter((id) => knownTraits.has(id)) : [],
+    }));
     // Fill in worker fields added after the save was written.
     company.workers = (company.workers ?? []).map((w) => ({
       ...w,
       timesTrained: typeof w.timesTrained === 'number' ? w.timesTrained : 0,
       promotions: typeof w.promotions === 'number' ? w.promotions : 0,
+      // Drop unknown trait ids so removed content can't linger in saves.
+      traits: Array.isArray(w.traits) ? w.traits.filter((id) => knownTraits.has(id)) : [],
     }));
     // Saves that own more desks than their floors hold get enough floors
     // for their desks, free of charge (clamped to MAX_FLOORS otherwise).

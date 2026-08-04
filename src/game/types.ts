@@ -235,6 +235,8 @@ export interface WorkerState {
   timesTrained: number;
   /** Completed promotions (lifetime, feeds the promotions mission metric). */
   promotions: number;
+  /** Trait ids inherited from the hired candidate (see TRAITS in data.ts). */
+  traits: string[];
 }
 
 export interface WorkstationState {
@@ -462,6 +464,8 @@ export interface Candidate {
   name: string;
   tierId: string;
   specialization: Specialization;
+  /** Trait ids rolled at creation (see TRAITS in data.ts); 2 = rare. */
+  traits: string[];
 }
 
 /** Events emitted by a tick, consumed by the UI for effects. */

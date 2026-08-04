@@ -333,6 +333,7 @@ describe('floor-build — timed construction', () => {
       stationId: null,
       timesTrained: 0,
       promotions: 0,
+      traits: [],
     };
     c.workers.push(worker);
 
