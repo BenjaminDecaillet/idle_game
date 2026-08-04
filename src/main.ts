@@ -68,7 +68,7 @@ function loop(now: number): void {
   for (const done of events.trainingsDone) {
     ui.officeNeedsRebuild();
     if (done.companyId === shownCompanyId) {
-      ui.toast(`🎓 Training complete — now Lv ${done.newLevel}!`, 'info');
+      ui.toast(`🎓 ${t('ui.trainingComplete', { level: done.newLevel })}`, 'info');
     }
   }
   for (const done of events.promotionsDone) {
@@ -171,7 +171,7 @@ function spawnBriefcase(): void {
   el.id = 'briefcase';
   el.className = 'briefcase';
   el.textContent = '💼';
-  el.title = 'An investor left something…';
+  el.title = t('ui.investorLeft');
   el.style.left = `${8 + Math.random() * 76}vw`;
   el.style.top = `${18 + Math.random() * 45}vh`;
   el.addEventListener('click', () => {
@@ -179,7 +179,7 @@ function spawnBriefcase(): void {
     el.remove();
     grantBoost(state, 2, 60, 'event');
     fx.burst(r.left + r.width / 2, r.top + r.height / 2);
-    ui.toast('💼 Investor tip! 2× income for 60s', 'info');
+    ui.toast(`💼 ${t('ui.investorTip')}`, 'info');
     scheduleBriefcase();
   });
   document.body.appendChild(el);
