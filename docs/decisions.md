@@ -175,3 +175,15 @@ be revisited cheaply.
     Kept inside the existing Fx class (shared AudioContext, one gesture
     story) rather than a separate module; conventions in the new
     audio-chiptune skill.
+27. **Daily contracts (D1)**: a rotating board of 3 delta-progress
+    contracts per UTC day, rolled deterministically from the day number
+    (mulberry32 seed) out of a fixed pool in data.ts, targets measured
+    against a day-start baseline snapshot of the mission metrics
+    (`state.daily` — additive field, no save bump). The day number is
+    computed in main.ts (floor(now/86 400 000)); src/game/daily.ts never
+    reads the clock, matching the offline-doubler pattern. Contracts are
+    stored once rolled (not re-derived) so the totalEarned target —
+    DAILY_EARN_MINUTES of gross income at roll time — stays stable all
+    day and pool retunes never break an in-flight board. Claims go
+    through grantVsCoin with source `daily:<id>`; the board renders atop
+    the VsCoin tab and feeds its badge.

@@ -125,6 +125,9 @@ export const en = {
 
   // --- Missions UX ----------------------------------------------------------
   'ui.missionComplete': 'Mission complete — claim your VsCoin!',
+  'ui.dailyTitle': 'Today’s contracts',
+  'ui.dailyHint':
+    'Three fresh contracts every day — only progress made today counts. Come back tomorrow for a new board!',
 
   // --- Goal chip (next-best action under the HUD) -----------------------------
   // goal.* strings are spliced into goalNext/goalSave mid-sentence: keep them

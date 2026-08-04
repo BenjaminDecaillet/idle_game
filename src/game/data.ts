@@ -4,6 +4,7 @@ import type {
   CountryId,
   MapThemeDef,
   MissionDef,
+  MissionMetric,
   ProjectDef,
   ShopCashPackDef,
   Specialization,
@@ -443,6 +444,28 @@ export const UPGRADES: UpgradeDef[] = [
  * metric; the UI shows the first unclaimed mission of each chain. Progress
  * is always derived from durable state counters — no extra bookkeeping.
  */
+// Daily contracts: 3 delta-progress missions rolled per UTC day from this
+// pool, seeded by the day number (docs/balance.md Phase D). totalEarned's
+// target is dynamic — DAILY_EARN_MINUTES of gross income at roll time.
+export const DAILY_CONTRACTS_PER_DAY = 3;
+export const DAILY_EARN_MINUTES = 30;
+export const DAILY_EARN_FLOOR = 500;
+export interface DailyContractPoolEntry {
+  metric: MissionMetric;
+  /** Fixed delta target; 0 = dynamic (totalEarned uses DAILY_EARN_MINUTES). */
+  target: number;
+  reward: number;
+  emoji: string;
+}
+export const DAILY_CONTRACT_POOL: DailyContractPoolEntry[] = [
+  { metric: 'projectsCompleted', target: 15, reward: 1, emoji: '📦' },
+  { metric: 'totalEarned', target: 0, reward: 2, emoji: '💰' },
+  { metric: 'workers', target: 2, reward: 1, emoji: '🤝' },
+  { metric: 'desks', target: 3, reward: 1, emoji: '🖥️' },
+  { metric: 'upgradeLevels', target: 4, reward: 1, emoji: '⚙️' },
+  { metric: 'promotions', target: 1, reward: 2, emoji: '🎖️' },
+];
+
 export const MISSIONS: MissionDef[] = [
   { id: 'ship-10', metric: 'projectsCompleted', target: 10, reward: 1, emoji: '📦' },
   { id: 'ship-100', metric: 'projectsCompleted', target: 100, reward: 2, emoji: '📦' },

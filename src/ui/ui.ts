@@ -124,6 +124,13 @@ import {
   visibleMissions,
 } from '../game/missions';
 import {
+  claimableDailyContracts,
+  claimDailyContract,
+  dailyClaimed,
+  dailyCompleted,
+  dailyProgress,
+} from '../game/daily';
+import {
   cyclePlayerLook,
   officeStage,
   PLAYER_LOOK_FIELDS,
@@ -333,7 +340,10 @@ export class UI {
     const claimable = claimableMissions(s);
     document
       .getElementById('tab-btn-vscoin')
-      ?.classList.toggle('has-badge', claimable.length > 0);
+      ?.classList.toggle(
+        'has-badge',
+        claimable.length > 0 || claimableDailyContracts(s).length > 0,
+      );
     if (this.knownCompleted === null) {
       this.knownCompleted = new Set(claimable.map((m) => m.id));
     } else {
@@ -724,7 +734,7 @@ export class UI {
         content.innerHTML = this.renderShop();
         break;
       case 'vscoin':
-        content.innerHTML = `<div class="stack">${this.renderMissions()}${this.renderVsCoinShop()}</div>`;
+        content.innerHTML = `<div class="stack">${this.renderDailyContracts()}${this.renderMissions()}${this.renderVsCoinShop()}</div>`;
         break;
       case 'stats':
         content.innerHTML = this.renderStats();
@@ -1881,6 +1891,50 @@ export class UI {
     return `<div class="stack">${marketing}${cards}</div>`;
   }
 
+  /** Today's contracts: the rotating daily board (VsCoin tab, above missions). */
+  private renderDailyContracts(): string {
+    const s = this.state;
+    if (s.daily.contracts.length === 0) return '';
+    const cards = s.daily.contracts
+      .map((c) => {
+        const progress = dailyProgress(s, c);
+        const done = dailyCompleted(s, c);
+        const claimed = dailyClaimed(s, c.id);
+        const pct = Math.min(100, (progress / c.target) * 100);
+        const money = c.metric === 'totalEarned';
+        const label = t(`mission.${c.metric}`, {
+          target: money ? formatMoney(c.target) : formatNumber(c.target),
+        });
+        const progressText = money
+          ? `${formatMoney(progress)} / ${formatMoney(c.target)}`
+          : `${formatNumber(progress)} / ${formatNumber(c.target)}`;
+        const action = claimed
+          ? `<span class="muted">✓ ${t('ui.claimed')}</span>`
+          : done
+            ? `<button class="btn btn-primary" data-action="claim-daily:${c.id}">
+                 ${icon('vscoin', 15)} +${c.reward} ${t('ui.claim')}
+               </button>`
+            : `<span class="mission-reward">${icon('vscoin', 15)} +${c.reward}</span>`;
+        return `
+        <div class="card mission-card ${done ? 'mission-done' : ''}">
+          <div class="card-row">
+            <span class="card-emoji">${c.emoji}</span>
+            <div class="card-main">
+              <h3>${label}</h3>
+              <span class="muted">${progressText}</span>
+            </div>
+            ${action}
+          </div>
+          <div class="progress mini"><div class="progress-fill" style="width:${pct}%"></div></div>
+        </div>`;
+      })
+      .join('');
+    return `
+      <div class="section-head"><h2>📅 ${t('ui.dailyTitle')}</h2></div>
+      <p class="hint">${t('ui.dailyHint')}</p>
+      ${cards}`;
+  }
+
   private renderMissions(): string {
     const s = this.state;
     const cards = visibleMissions(s)
@@ -2265,6 +2319,13 @@ export class UI {
         error = claimMission(s, arg);
         if (!error) {
           this.toast(`💎 ${t('ui.claimed')}`, 'info');
+          this.fx.claimChime();
+        }
+        break;
+      case 'claim-daily':
+        error = claimDailyContract(s, arg);
+        if (!error) {
+          this.toast(`📅 ${t('ui.claimed')}`, 'info');
           this.fx.claimChime();
         }
         break;
