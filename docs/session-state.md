@@ -43,21 +43,18 @@ Contract: `.claude/skills/session-handoff/SKILL.md`.
 - Definition of done: npm test + npm run build green, EN+FR complete,
   plan.md updated, pushed, PR open.
 
+6. **feat/welcome-back-report — DONE, PR #37 open** (commits 1309f54 +
+   81e20fe). simulateOfflineReport aggregates tick events; modal
+   itemizes; hardcoded modal strings migrated to i18n; 5 tests;
+   Playwright-verified with screenshot.
+
 ## Next concrete action
 
-Remaining picks, each on its own branch off origin/master:
-(a) feat/welcome-back-report — add simulateOfflineReport(state,
-elapsed, cap) in engine.ts aggregating tick() event counts per chunk
-(projectsCompleted, trainingsDone, promotionsDone, deskUpgradesDone,
-floorsBuilt, companiesBuilt, quits, levelUps) + earnings; keep
-simulateOffline delegating (signature unchanged). loadGame returns the
-report in LoadResult; ui.welcomeBack(offlineSec, report) itemizes
-non-zero lines. IMPORTANT: welcomeBack currently has hardcoded EN
-strings ("Welcome back!", "While you were away...", "Back to work") —
-migrate to i18n as part of this. Tests: report counts after a seeded
-offline window.
-(b) feat/payback-time — display-only payback seconds on desk purchase
-buttons (cost / marginal work-rate→income gain is complex; simpler
-honest metric: cost / current company income per sec = time to recoup
-at current income; decide with balance-designer if unclear). Keep pure
-derived helpers in src/game, no progression math duplication.
+feat/payback-time (last survey pick): a balance-designer agent was
+dispatched to decide the display metric (formula in terms of existing
+engine helpers + edge rules; it appends to docs/balance.md). If its
+result is lost, re-dispatch with: "decide the payback-time display
+metric for desk purchase cards using workerRate/autoSeat ordering/
+project reward-work ratio, cover no-unseated-worker / soft-cap / debt
+edge cases". Then implement: pure helper in src/game, muted line on
+workstation cards, i18n EN+FR, tests, screenshot, PR.
