@@ -74,10 +74,10 @@ describe('vsCoin ledger API', () => {
 
   it('rejects invalid amounts and overdrafts', () => {
     const state = createInitialState(NOW);
-    expect(grantVsCoin(state, 0, 'x')).toBe('Invalid amount');
-    expect(grantVsCoin(state, -3, 'x')).toBe('Invalid amount');
-    expect(grantVsCoin(state, Number.NaN, 'x')).toBe('Invalid amount');
-    expect(spendVsCoin(state, 1, 'x')).toBe('Not enough VsCoin');
+    expect(grantVsCoin(state, 0, 'x')).toBe('error.invalidAmount');
+    expect(grantVsCoin(state, -3, 'x')).toBe('error.invalidAmount');
+    expect(grantVsCoin(state, Number.NaN, 'x')).toBe('error.invalidAmount');
+    expect(spendVsCoin(state, 1, 'x')).toBe('error.notEnoughVsCoin');
     expect(state.vsCoin).toBe(0);
     expect(state.vsCoinLedger).toEqual([]);
   });
@@ -161,7 +161,7 @@ describe('mission claims', () => {
 describe('vsCoin sinks', () => {
   it('sells the premium boost', () => {
     const state = createInitialState(NOW);
-    expect(buyVsCoinBoost(state)).toBe('Not enough VsCoin');
+    expect(buyVsCoinBoost(state)).toBe('error.notEnoughVsCoin');
     grantVsCoin(state, 10, 'test');
     expect(buyVsCoinBoost(state)).toBeNull();
     expect(state.vsCoin).toBe(10 - VSCOIN_BOOST_COST);
@@ -178,7 +178,7 @@ describe('vsCoin sinks', () => {
     const country = activeCountry(state);
     expect(upgradeVsCoinCost(state, 'aura')).toBe(2);
     expect(upgradeVsCoinCost(state, 'coffee')).toBeNull();
-    expect(buyUpgrade(state, 'aura')).toBe('Not enough VsCoin');
+    expect(buyUpgrade(state, 'aura')).toBe('error.notEnoughVsCoin');
     grantVsCoin(state, 6, 'test');
     const moneyBefore = country.money;
     expect(buyUpgrade(state, 'aura')).toBeNull();
@@ -192,7 +192,7 @@ describe('vsCoin sinks', () => {
 
   it('sells the diamond wallpaper for VsCoin', () => {
     const state = createInitialState(NOW);
-    expect(buyWallpaper(state, 'diamond')).toBe('Not enough VsCoin');
+    expect(buyWallpaper(state, 'diamond')).toBe('error.notEnoughVsCoin');
     grantVsCoin(state, 8, 'test');
     expect(buyWallpaper(state, 'diamond')).toBeNull();
     expect(state.ownedWallpapers).toContain('diamond');

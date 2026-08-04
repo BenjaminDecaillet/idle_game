@@ -118,7 +118,7 @@ describe('tutorial', () => {
     expect(activeCompany(state).name).toBe('My Startup');
     // Once anything happened, the choice is locked.
     activeCompany(state).workers.push(makeWorker(1));
-    expect(setStartingCountry(state, 'de')).toBe('The journey has already begun');
+    expect(setStartingCountry(state, 'de')).toBe('error.journeyBegun');
   });
 
   it('walks through all steps, paying the angel gift exactly once', () => {
@@ -293,7 +293,7 @@ describe('narrative fields through save round trips', () => {
 
   it('rejects bad languages via the action', () => {
     const state = createInitialState(NOW);
-    expect(setLanguage(state, 'de')).toBe('Unknown language');
+    expect(setLanguage(state, 'de')).toBe('error.unknownLanguage');
     expect(setLanguage(state, 'fr')).toBeNull();
     expect(state.settings.language).toBe('fr');
   });

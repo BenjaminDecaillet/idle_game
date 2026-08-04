@@ -254,7 +254,7 @@ describe('Promotion: action creation and completion', () => {
     country.money = 1000;
 
     const err = promoteWorker(state, worker.id);
-    expect(err).toBe('Not at the skill cap yet');
+    expect(err).toBe('error.notAtCap');
     expect(worker.tierId).toBe('intern');
     expect(c.timedActions).toHaveLength(0);
   });
@@ -268,7 +268,7 @@ describe('Promotion: action creation and completion', () => {
     country.money = 0;
 
     const err = promoteWorker(state, worker.id);
-    expect(err).toBe('Not enough money');
+    expect(err).toBe('error.notEnoughMoney');
     expect(worker.tierId).toBe('intern');
     expect(c.timedActions).toHaveLength(0);
   });
@@ -378,7 +378,7 @@ describe('Promotion: action creation and completion', () => {
 
     // Now try to promote (should fail because they're busy training)
     const err = promoteWorker(state, worker.id);
-    expect(err).toBe('Already busy');
+    expect(err).toBe('error.workerBusy');
     expect(worker.tierId).toBe('junior'); // unchanged
   });
 });

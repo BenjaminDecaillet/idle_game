@@ -67,7 +67,7 @@ describe('buyWorkstation — desk capacity limits', () => {
 
     // Next workstation should fail with office space error
     const err = buyWorkstation(state, 'basic');
-    expect(err).toBe('No office space left — unlock a new floor');
+    expect(err).toBe('error.officeFull');
     expect(c.workstations).toHaveLength(FLOOR_CAPACITY); // unchanged
   });
 
@@ -127,7 +127,7 @@ describe('buyFloor', () => {
     activeCountry(state).money = 0;
 
     const err = buyFloor(state);
-    expect(err).toBe('Not enough money');
+    expect(err).toBe('error.notEnoughMoney');
     expect(c.floors).toBe(1); // unchanged
   });
 
@@ -147,7 +147,7 @@ describe('buyFloor', () => {
 
     // Try to buy one more
     const err = buyFloor(state);
-    expect(err).toBe('Building is already at max height');
+    expect(err).toBe('error.maxHeight');
     expect(c.floors).toBe(MAX_FLOORS); // unchanged
   });
 });

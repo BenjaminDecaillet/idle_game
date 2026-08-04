@@ -60,7 +60,7 @@ describe('buyCompany', () => {
     expect(loftSite.cost).toBe(200_000);
 
     const err = buyCompany(state, 'loft');
-    expect(err).toBe('Not enough money');
+    expect(err).toBe('error.notEnoughMoney');
     expect(activeCountry(state).companies).toHaveLength(1); // unchanged
   });
 
@@ -90,7 +90,7 @@ describe('buyCompany', () => {
     const state = createInitialState(NOW);
     expect(activeCountry(state).companies[0].siteId).toBe('garage');
     const err = buyCompany(state, 'garage');
-    expect(err).toBe('Site already occupied');
+    expect(err).toBe('error.siteOccupied');
     expect(activeCountry(state).companies).toHaveLength(1);
   });
 

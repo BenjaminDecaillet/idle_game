@@ -99,7 +99,7 @@ describe('upgradeDesk — basic validation', () => {
     const country = activeCountry(state);
     country.money = 10_000;
     const err = upgradeDesk(state, 9999);
-    expect(err).toBe('Desk not found');
+    expect(err).toBe('error.deskNotFound');
   });
 
   it('refuses when the desk is already the best (corner)', () => {
@@ -110,7 +110,7 @@ describe('upgradeDesk — basic validation', () => {
     // Create a corner desk
     c.workstations.push({ id: state.nextEntityId++, defId: 'corner' });
     const err = upgradeDesk(state, c.workstations[0].id);
-    expect(err).toBe('Already the best desk');
+    expect(err).toBe('error.bestDesk');
   });
 
   it('refuses when broke', () => {
@@ -123,7 +123,7 @@ describe('upgradeDesk — basic validation', () => {
     // Now set money to 0 to refuse the upgrade
     country.money = 0;
     const err = upgradeDesk(state, c.workstations[0].id);
-    expect(err).toBe('Not enough money');
+    expect(err).toBe('error.notEnoughMoney');
   });
 
   it('refuses when a second upgrade is already running on the same desk', () => {
@@ -141,7 +141,7 @@ describe('upgradeDesk — basic validation', () => {
 
     // Second upgrade on same desk is rejected
     const err2 = upgradeDesk(state, deskId);
-    expect(err2).toBe('Already being upgraded');
+    expect(err2).toBe('error.deskUpgrading');
   });
 });
 
@@ -443,7 +443,7 @@ describe('desk upgrade lifecycle — comprehensive flow', () => {
 
     // Now it's at the best, can't upgrade further
     const errMsg = upgradeDesk(state, deskId);
-    expect(errMsg).toBe('Already the best desk');
+    expect(errMsg).toBe('error.bestDesk');
   });
 });
 

@@ -97,8 +97,8 @@ export function refreshTutorial(state: GameState): boolean {
 /** Player pressed Next on a manual step. */
 export function advanceTutorial(state: GameState): string | null {
   const step = currentTutorialStep(state);
-  if (!step) return 'Tutorial is already over';
-  if (step.isComplete && !step.isComplete(state)) return 'Step not finished yet';
+  if (!step) return 'error.tutorialOver';
+  if (step.isComplete && !step.isComplete(state)) return 'error.stepUnfinished';
   completeCurrentStep(state);
   return null;
 }
@@ -120,7 +120,7 @@ function completeCurrentStep(state: GameState): void {
 
 /** Skip the whole tutorial (still counts as done forever). */
 export function skipTutorial(state: GameState): string | null {
-  if (state.tutorial.done) return 'Tutorial is already over';
+  if (state.tutorial.done) return 'error.tutorialOver';
   state.tutorial.done = true;
   state.tutorial.step = TUTORIAL_STEPS.length;
   return null;
@@ -129,7 +129,7 @@ export function skipTutorial(state: GameState): string | null {
 /** Name the player avatar (from the tutorial, editable later). */
 export function setPlayerName(state: GameState, name: string): string | null {
   const trimmed = name.trim().slice(0, 20);
-  if (!trimmed) return 'Name cannot be empty';
+  if (!trimmed) return 'error.emptyName';
   state.player.name = trimmed;
   return null;
 }

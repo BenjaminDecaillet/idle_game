@@ -100,7 +100,7 @@ describe('setStartingCountry', () => {
     const state = createInitialState(NOW);
     state.tutorial.done = true;
     const result = setStartingCountry(state, 'ch');
-    expect(result).toBe('The journey has already begun');
+    expect(result).toBe('error.journeyBegun');
     expect(state.activeCountryId).toBe('us');
   });
 
@@ -108,14 +108,14 @@ describe('setStartingCountry', () => {
     const state = createInitialState(NOW);
     state.totalEarned = 1; // global earned counter
     const result = setStartingCountry(state, 'ch');
-    expect(result).toBe('The journey has already begun');
+    expect(result).toBe('error.journeyBegun');
   });
 
   it('returns error after completing a project', () => {
     const state = createInitialState(NOW);
     state.projectsCompleted = 1;
     const result = setStartingCountry(state, 'ch');
-    expect(result).toBe('The journey has already begun');
+    expect(result).toBe('error.journeyBegun');
   });
 
   it('returns error after hiring a worker', () => {
@@ -123,7 +123,7 @@ describe('setStartingCountry', () => {
     const company = activeCompany(state);
     company.workers.push(makeWorker({ id: state.nextEntityId++ }));
     const result = setStartingCountry(state, 'ch');
-    expect(result).toBe('The journey has already begun');
+    expect(result).toBe('error.journeyBegun');
   });
 
   it('is a no-op success when setting to the same country', () => {
@@ -162,13 +162,13 @@ describe('unlockCountry', () => {
   it('returns error if world not unlocked', () => {
     const state = createInitialState(NOW);
     const result = unlockCountry(state, 'ch');
-    expect(result).toBe('Own every company in your city first');
+    expect(result).toBe('error.ownCityFirst');
   });
 
   it('returns error if country already unlocked', () => {
     const state = createInitialState(NOW, 'us');
     const result = unlockCountry(state, 'us');
-    expect(result).toBe('Country already unlocked');
+    expect(result).toBe('error.countryUnlocked');
   });
 
   it('returns error if insufficient money in active country', () => {
@@ -185,7 +185,7 @@ describe('unlockCountry', () => {
     // Set money to less than unlock cost
     country.money = countryUnlockCost(state) - 1;
     const result = unlockCountry(state, 'ch');
-    expect(result).toBe('Not enough money');
+    expect(result).toBe('error.notEnoughMoney');
   });
 
   it('unlocks new country, costs money from active country, creates fresh garage', () => {
@@ -293,7 +293,7 @@ describe('setActiveCountry', () => {
   it('returns error for non-existent country', () => {
     const state = createInitialState(NOW);
     const result = setActiveCountry(state, 'ch');
-    expect(result).toBe('Country not unlocked');
+    expect(result).toBe('error.countryLocked');
   });
 });
 

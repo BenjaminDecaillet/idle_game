@@ -100,26 +100,26 @@ describe('assignFloorProject — validation', () => {
 
     // Negative floor
     const err1 = assignFloorProject(state, -1, 'landing');
-    expect(err1).toBe('No such floor');
+    expect(err1).toBe('error.noSuchFloor');
 
     // Floor index at or beyond count
     const err2 = assignFloorProject(state, 1, 'landing');
-    expect(err2).toBe('No such floor');
+    expect(err2).toBe('error.noSuchFloor');
 
     const err3 = assignFloorProject(state, 100, 'landing');
-    expect(err3).toBe('No such floor');
+    expect(err3).toBe('error.noSuchFloor');
   });
 
   it('rejects non-integer floor index', () => {
     const state = createInitialState(NOW);
     const err = assignFloorProject(state, 0.5, 'landing');
-    expect(err).toBe('No such floor');
+    expect(err).toBe('error.noSuchFloor');
   });
 
   it('rejects unknown project id', () => {
     const state = createInitialState(NOW);
     const err = assignFloorProject(state, 0, 'nonexistent-project');
-    expect(err).toBe('No such project');
+    expect(err).toBe('error.noSuchProject');
   });
 
   it('rejects locked project', () => {
@@ -133,7 +133,7 @@ describe('assignFloorProject — validation', () => {
     expect(todoProject.unlocked).toBe(false);
 
     const err = assignFloorProject(state, 0, 'todo');
-    expect(err).toBe('Project is locked');
+    expect(err).toBe('error.projectLocked');
   });
 
   it('accepts null projectId to reset floor to activeProjectId', () => {

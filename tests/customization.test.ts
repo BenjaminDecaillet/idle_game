@@ -40,7 +40,7 @@ describe('wallpapers', () => {
     const state = createInitialState(NOW);
     const def = WALLPAPERS.find((w) => w.cost > 0)!;
     activeCountry(state).money = def.cost - 1;
-    expect(buyWallpaper(state, def.id)).toBe('Not enough money');
+    expect(buyWallpaper(state, def.id)).toBe('error.notEnoughMoney');
     activeCountry(state).money = def.cost;
     expect(buyWallpaper(state, def.id)).toBeNull();
     expect(activeCountry(state).money).toBe(0);

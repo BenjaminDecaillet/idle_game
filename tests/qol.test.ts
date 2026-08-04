@@ -42,7 +42,7 @@ describe('time scale toggle', () => {
     expect(state.settings.timeScale).toBe(2);
     expect(setTimeScale(state, 4)).toBeNull();
     expect(setTimeScale(state, 1)).toBeNull();
-    expect(setTimeScale(state, 3)).toBe('Invalid speed');
+    expect(setTimeScale(state, 3)).toBe('error.invalidSpeed');
     expect(state.settings.timeScale).toBe(1);
   });
 
@@ -90,6 +90,6 @@ describe('marketing campaign', () => {
     expect(state.boosts.filter((b) => b.source === 'marketing')).toHaveLength(1);
     expect(boost!.remainingSec).toBe(2 * MARKETING_DURATION_SEC);
 
-    expect(buyMarketingCampaign(state)).toBe('Not enough money');
+    expect(buyMarketingCampaign(state)).toBe('error.notEnoughMoney');
   });
 });

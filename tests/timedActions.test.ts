@@ -452,7 +452,7 @@ describe('fastForwardAction', () => {
     const actionId = actionBefore.id;
 
     const err = fastForwardAction(state, actionId);
-    expect(err).toBe('Not enough VsCoin');
+    expect(err).toBe('error.notEnoughVsCoin');
     expect(c.timedActions.length).toBe(1); // action still there
     expect(c.timedActions[0].id).toBe(actionId);
     expect(c.timedActions[0].remainingSec).toBe(actionBefore.remainingSec); // unchanged
@@ -488,7 +488,7 @@ describe('fastForwardAction', () => {
   it('unknown action id returns "Nothing to fast-forward"', () => {
     const state = createInitialState(NOW);
     const err = fastForwardAction(state, 99999);
-    expect(err).toBe('Nothing to fast-forward');
+    expect(err).toBe('error.nothingToFastForward');
   });
 
   it('after successful fast-forward, action is removed from timedActions', () => {
@@ -674,7 +674,7 @@ describe('Edge cases', () => {
     country.money = 100_000;
 
     const err = promoteWorker(state, worker.id);
-    expect(err).toBe('Not at the skill cap yet');
+    expect(err).toBe('error.notAtCap');
   });
 
   it('cannot promote the principal tier (already at top)', () => {
@@ -690,7 +690,7 @@ describe('Edge cases', () => {
     country.money = 100_000;
 
     const err = promoteWorker(state, worker.id);
-    expect(err).toBe('Already at the top grade');
+    expect(err).toBe('error.topGrade');
   });
 });
 

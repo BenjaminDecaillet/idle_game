@@ -554,11 +554,11 @@ export function assignFloorProject(
   projectId: string | null,
 ): string | null {
   const company = activeCompany(state);
-  if (!Number.isInteger(floor) || floor < 0 || floor >= company.floors) return 'No such floor';
+  if (!Number.isInteger(floor) || floor < 0 || floor >= company.floors) return 'error.noSuchFloor';
   if (projectId !== null) {
     const project = company.projects.find((p) => p.defId === projectId);
-    if (!project) return 'No such project';
-    if (!project.unlocked) return 'Project is locked';
+    if (!project) return 'error.noSuchProject';
+    if (!project.unlocked) return 'error.projectLocked';
   }
   const next = [...company.floorProjects];
   while (next.length < company.floors) next.push(null);
@@ -787,7 +787,7 @@ export function hireBuilder(state: GameState): string | null {
   const country = activeCountry(state);
   const price = builderCost(country);
   if ('cash' in price) {
-    if (country.money < price.cash) return 'Not enough money';
+    if (country.money < price.cash) return 'error.notEnoughMoney';
     country.money -= price.cash;
   } else {
     const err = spendVsCoin(state, price.vsCoin, 'shop:builder');
@@ -832,14 +832,14 @@ export function trainWorker(state: GameState, workerId: number): string | null {
   const country = activeCountry(state);
   const company = activeCompany(state);
   const worker = company.workers.find((w) => w.id === workerId);
-  if (!worker) return 'Worker not found';
-  if (workerBusy(company, workerId)) return 'Already busy';
+  if (!worker) return 'error.workerNotFound';
+  if (workerBusy(company, workerId)) return 'error.workerBusy';
   if (atSkillCap(worker)) {
     return nextTier(worker) ? 'At skill cap — promote instead' : 'Already at max skill level';
   }
   if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = trainCost(company, worker);
-  if (country.money < cost) return 'Not enough money';
+  if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
   const duration = trainDurationSec(company, worker);
   company.timedActions.push({
@@ -863,14 +863,14 @@ export function promoteWorker(state: GameState, workerId: number): string | null
   const country = activeCountry(state);
   const company = activeCompany(state);
   const worker = company.workers.find((w) => w.id === workerId);
-  if (!worker) return 'Worker not found';
-  if (workerBusy(company, workerId)) return 'Already busy';
+  if (!worker) return 'error.workerNotFound';
+  if (workerBusy(company, workerId)) return 'error.workerBusy';
   const to = nextTier(worker);
-  if (!to) return 'Already at the top grade';
-  if (!atSkillCap(worker)) return 'Not at the skill cap yet';
+  if (!to) return 'error.topGrade';
+  if (!atSkillCap(worker)) return 'error.notAtCap';
   if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = promoteCost(company, worker)!;
-  if (country.money < cost) return 'Not enough money';
+  if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
   const duration = promoteDurationSec(worker)!;
   company.timedActions.push({
@@ -921,15 +921,15 @@ export function upgradeDesk(state: GameState, stationId: number): string | null 
   const country = activeCountry(state);
   const company = activeCompany(state);
   const station = company.workstations.find((w) => w.id === stationId);
-  if (!station) return 'Desk not found';
+  if (!station) return 'error.deskNotFound';
   if (timedActionsFor(company, stationId).some((a) => a.kind === 'desk-upgrade')) {
-    return 'Already being upgraded';
+    return 'error.deskUpgrading';
   }
   const to = nextStationDef(station.defId);
-  if (!to) return 'Already the best desk';
+  if (!to) return 'error.bestDesk';
   if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = deskUpgradeCost(company, station.defId)!;
-  if (country.money < cost) return 'Not enough money';
+  if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
   const duration = deskUpgradeDurationSec(station.defId)!;
   company.timedActions.push({
@@ -987,7 +987,7 @@ export function fastForwardAction(state: GameState, actionId: number): string | 
     completeTimedAction(state, company, action, emptyEvents());
     return null;
   }
-  return 'Nothing to fast-forward';
+  return 'error.nothingToFastForward';
 }
 
 /** Apply a finished timed action's effect (the single place effects fire). */
@@ -1415,9 +1415,9 @@ export function hireWorker(state: GameState, candidateIndex: number): string | n
   const country = activeCountry(state);
   const company = activeCompany(state);
   const candidate = company.candidates[candidateIndex];
-  if (!candidate) return 'Candidate not found';
+  if (!candidate) return 'error.candidateNotFound';
   const cost = hireCost(company, candidate.tierId);
-  if (country.money < cost) return 'Not enough money';
+  if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
   company.workers.push({
     id: state.nextEntityId++,
@@ -1439,7 +1439,7 @@ export function hireWorker(state: GameState, candidateIndex: number): string | n
 export function fireWorker(state: GameState, workerId: number): string | null {
   const company = activeCompany(state);
   const index = company.workers.findIndex((w) => w.id === workerId);
-  if (index === -1) return 'Worker not found';
+  if (index === -1) return 'error.workerNotFound';
   company.workers.splice(index, 1);
   // Orphaned personal actions (training/promotion) die with the departure.
   company.timedActions = company.timedActions.filter(
@@ -1453,10 +1453,10 @@ export function buyWorkstation(state: GameState, defId: string): string | null {
   const country = activeCountry(state);
   const company = activeCompany(state);
   if (company.workstations.length >= deskCapacity(company)) {
-    return 'No office space left — unlock a new floor';
+    return 'error.officeFull';
   }
   const cost = stationCost(company, defId);
-  if (country.money < cost) return 'Not enough money';
+  if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
   company.workstations.push({ id: state.nextEntityId++, defId });
   autoSeat(company);
@@ -1471,11 +1471,11 @@ export function buyWorkstation(state: GameState, defId: string): string | null {
 export function buyFloor(state: GameState): string | null {
   const country = activeCountry(state);
   const company = activeCompany(state);
-  if (company.floors >= MAX_FLOORS) return 'Building is already at max height';
+  if (company.floors >= MAX_FLOORS) return 'error.maxHeight';
   if (floorUnderConstruction(company)) return 'error.floorAlreadyBuilding';
   if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = floorCost(company);
-  if (country.money < cost) return 'Not enough money';
+  if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
   const duration = floorBuildDurationSec(country, company);
   company.timedActions.push({
@@ -1518,7 +1518,7 @@ export function claimFloorGift(state: GameState): string | null {
 export function setActiveProject(state: GameState, projectId: string): string | null {
   const company = activeCompany(state);
   const project = getProject(company, projectId);
-  if (!project.unlocked) return 'Project is locked';
+  if (!project.unlocked) return 'error.projectLocked';
   company.activeProjectId = projectId;
   autoSeat(company);
   return null;
@@ -1528,9 +1528,9 @@ export function unlockProject(state: GameState, projectId: string): string | nul
   const country = activeCountry(state);
   const company = activeCompany(state);
   const project = getProject(company, projectId);
-  if (project.unlocked) return 'Already unlocked';
+  if (project.unlocked) return 'error.alreadyUnlocked';
   const cost = projectUnlockCost(company, projectId);
-  if (country.money < cost) return 'Not enough money';
+  if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
   project.unlocked = true;
   return null;
@@ -1547,16 +1547,16 @@ export function buyUpgrade(state: GameState, upgradeId: string): string | null {
   if (def.vsCoinCost !== undefined) {
     // Premium upgrades are global: one purchase applies everywhere.
     const level = state.globalUpgrades[upgradeId] ?? 0;
-    if (level >= def.maxLevel) return 'Already at max level';
+    if (level >= def.maxLevel) return 'error.maxLevel';
     const err = spendVsCoin(state, upgradeVsCoinCost(state, upgradeId)!, `shop:${upgradeId}`);
     if (err) return err;
     state.globalUpgrades[upgradeId] = level + 1;
     return null;
   }
   const level = company.upgrades[upgradeId] ?? 0;
-  if (level >= def.maxLevel) return 'Already at max level';
+  if (level >= def.maxLevel) return 'error.maxLevel';
   const cost = upgradeCost(company, upgradeId);
-  if (country.money < cost) return 'Not enough money';
+  if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
   company.upgrades[upgradeId] = level + 1;
   return null;
@@ -1565,7 +1565,7 @@ export function buyUpgrade(state: GameState, upgradeId: string): string | null {
 export function rerollCandidates(state: GameState): string | null {
   const country = activeCountry(state);
   const company = activeCompany(state);
-  if (country.money < company.candidateRerollCost) return 'Not enough money';
+  if (country.money < company.candidateRerollCost) return 'error.notEnoughMoney';
   country.money -= company.candidateRerollCost;
   company.candidates = rollCandidates(state);
   company.candidateRerollCost = Math.round(
@@ -1582,12 +1582,12 @@ export function rerollCandidates(state: GameState): string | null {
 export function buyCompany(state: GameState, siteId: string): string | null {
   const country = activeCountry(state);
   siteById(siteId);
-  if (companyAtSite(state, siteId)) return 'Site already occupied';
+  if (companyAtSite(state, siteId)) return 'error.siteOccupied';
   if (siteUnderConstruction(country, siteId)) return 'error.siteAlreadyBuilding';
   const duration = companyBuildDurationSec(country);
   if (duration > 0 && freeBuilders(country) <= 0) return 'error.noFreeBuilders';
   const cost = companyCost(state, siteId);
-  if (country.money < cost) return 'Not enough money';
+  if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
   if (duration <= 0) {
     // A country's first company is instant (tutorial / fresh start abroad).
@@ -1609,7 +1609,7 @@ export function buyCompany(state: GameState, siteId: string): string | null {
 
 export function setActiveCompany(state: GameState, companyId: number): string | null {
   const country = activeCountry(state);
-  if (!country.companies.some((c) => c.id === companyId)) return 'Company not found';
+  if (!country.companies.some((c) => c.id === companyId)) return 'error.companyNotFound';
   country.activeCompanyId = companyId;
   return null;
 }
@@ -1636,11 +1636,11 @@ export function countryUnlockCost(state: GameState): number {
  */
 export function unlockCountry(state: GameState, countryId: string): string | null {
   countryDefById(countryId);
-  if (countryById(state, countryId)) return 'Country already unlocked';
-  if (!worldUnlocked(state)) return 'Own every company in your city first';
+  if (countryById(state, countryId)) return 'error.countryUnlocked';
+  if (!worldUnlocked(state)) return 'error.ownCityFirst';
   const from = activeCountry(state);
   const cost = countryUnlockCost(state);
-  if (from.money < cost) return 'Not enough money';
+  if (from.money < cost) return 'error.notEnoughMoney';
   from.money -= cost;
   createCountry(state, countryId as CountryId);
   state.activeCountryId = countryId as CountryId;
@@ -1649,7 +1649,7 @@ export function unlockCountry(state: GameState, countryId: string): string | nul
 
 /** Travel to an already-unlocked country (free, any time). */
 export function setActiveCountry(state: GameState, countryId: string): string | null {
-  if (!countryById(state, countryId)) return 'Country not unlocked';
+  if (!countryById(state, countryId)) return 'error.countryLocked';
   state.activeCountryId = countryId as CountryId;
   return null;
 }
@@ -1660,9 +1660,9 @@ export function setActiveCountry(state: GameState, countryId: string): string | 
  */
 export function setStartingCountry(state: GameState, countryId: string): string | null {
   countryDefById(countryId);
-  if (state.tutorial.done) return 'The journey has already begun';
+  if (state.tutorial.done) return 'error.journeyBegun';
   if (state.totalEarned > 0 || state.projectsCompleted > 0 || allCompanies(state).some((c) => c.workers.length > 0)) {
-    return 'The journey has already begun';
+    return 'error.journeyBegun';
   }
   if (state.activeCountryId === countryId) return null;
   const previousName = activeCompany(state).name;
@@ -1683,7 +1683,7 @@ export function setStartingCountry(state: GameState, countryId: string): string 
  * recorded in the ledger for restore/debug/analytics.
  */
 export function grantVsCoin(state: GameState, amount: number, source: string): string | null {
-  if (!Number.isFinite(amount) || amount <= 0) return 'Invalid amount';
+  if (!Number.isFinite(amount) || amount <= 0) return 'error.invalidAmount';
   state.vsCoin += amount;
   pushLedger(state, { amount, source });
   return null;
@@ -1691,8 +1691,8 @@ export function grantVsCoin(state: GameState, amount: number, source: string): s
 
 /** Spend VsCoin on a sink (premium upgrades, cosmetics, boosts). */
 export function spendVsCoin(state: GameState, amount: number, sink: string): string | null {
-  if (!Number.isFinite(amount) || amount <= 0) return 'Invalid amount';
-  if (state.vsCoin < amount) return 'Not enough VsCoin';
+  if (!Number.isFinite(amount) || amount <= 0) return 'error.invalidAmount';
+  if (state.vsCoin < amount) return 'error.notEnoughVsCoin';
   state.vsCoin -= amount;
   pushLedger(state, { amount: -amount, source: sink });
   return null;
@@ -1716,7 +1716,7 @@ export function upgradeVsCoinCost(state: GameState, upgradeId: string): number |
 /** Buy the premium output boost with VsCoin. */
 export function buyVsCoinBoost(state: GameState): string | null {
   const existing = state.boosts.find((b) => b.source === 'vscoin');
-  if (!existing && state.boosts.length >= 5) return 'Too many active boosts';
+  if (!existing && state.boosts.length >= 5) return 'error.tooManyBoosts';
   const err = spendVsCoin(state, VSCOIN_BOOST_COST, 'shop:boost');
   if (err) return err;
   return grantBoost(state, VSCOIN_BOOST_MULT, VSCOIN_BOOST_DURATION_SEC, 'vscoin');
@@ -1733,12 +1733,12 @@ export function grantBoost(
   durationSec: number,
   source: string,
 ): string | null {
-  if (mult <= 1 || durationSec <= 0) return 'Invalid boost';
+  if (mult <= 1 || durationSec <= 0) return 'error.invalidBoost';
   const existing = state.boosts.find((b) => b.source === source && b.mult === mult);
   if (existing) {
     existing.remainingSec += durationSec;
   } else {
-    if (state.boosts.length >= 5) return 'Too many active boosts';
+    if (state.boosts.length >= 5) return 'error.tooManyBoosts';
     state.boosts.push({ mult, remainingSec: durationSec, source });
   }
   return null;
@@ -1824,7 +1824,7 @@ export function buyShopPack(state: GameState, packId: string): string | null {
 export function buyMarketingCampaign(state: GameState): string | null {
   const country = activeCountry(state);
   const cost = marketingCost(state);
-  if (country.money < cost) return 'Not enough money';
+  if (country.money < cost) return 'error.notEnoughMoney';
   const err = grantBoost(state, MARKETING_MULT, MARKETING_DURATION_SEC, 'marketing');
   if (err) return err;
   country.money -= cost;
@@ -1833,7 +1833,7 @@ export function buyMarketingCampaign(state: GameState): string | null {
 
 /** Set the free live-play simulation speed (1, 2 or 4). */
 export function setTimeScale(state: GameState, scale: number): string | null {
-  if (!TIME_SCALES.includes(scale)) return 'Invalid speed';
+  if (!TIME_SCALES.includes(scale)) return 'error.invalidSpeed';
   state.settings.timeScale = scale;
   return null;
 }
@@ -1841,7 +1841,7 @@ export function setTimeScale(state: GameState, scale: number): string | null {
 /** Persist the UI language choice ('auto' follows the browser). */
 export function setLanguage(state: GameState, language: string): string | null {
   if (language !== 'auto' && language !== 'en' && language !== 'fr') {
-    return 'Unknown language';
+    return 'error.unknownLanguage';
   }
   state.settings.language = language;
   return null;
@@ -1860,12 +1860,12 @@ export function effectiveWallpaper(state: GameState, company: CompanyState): str
 export function buyWallpaper(state: GameState, wallpaperId: string): string | null {
   const country = activeCountry(state);
   const def = wallpaperById(wallpaperId);
-  if (state.ownedWallpapers.includes(wallpaperId)) return 'Already owned';
+  if (state.ownedWallpapers.includes(wallpaperId)) return 'error.alreadyOwned';
   if (def.vsCoinCost !== undefined) {
     const err = spendVsCoin(state, def.vsCoinCost, `shop:wallpaper-${wallpaperId}`);
     if (err) return err;
   } else {
-    if (country.money < def.cost) return 'Not enough money';
+    if (country.money < def.cost) return 'error.notEnoughMoney';
     country.money -= def.cost;
   }
   state.ownedWallpapers.push(wallpaperId);
@@ -1879,7 +1879,7 @@ export function setCompanyWallpaper(
 ): string | null {
   if (wallpaperId !== null) {
     wallpaperById(wallpaperId);
-    if (!state.ownedWallpapers.includes(wallpaperId)) return 'Wallpaper not owned';
+    if (!state.ownedWallpapers.includes(wallpaperId)) return 'error.wallpaperNotOwned';
   }
   activeCompany(state).wallpaperId = wallpaperId;
   return null;
@@ -1888,7 +1888,7 @@ export function setCompanyWallpaper(
 /** Set the player-level default wallpaper (companies without a pick use it). */
 export function setDefaultWallpaper(state: GameState, wallpaperId: string): string | null {
   wallpaperById(wallpaperId);
-  if (!state.ownedWallpapers.includes(wallpaperId)) return 'Wallpaper not owned';
+  if (!state.ownedWallpapers.includes(wallpaperId)) return 'error.wallpaperNotOwned';
   state.defaultWallpaperId = wallpaperId;
   return null;
 }
@@ -1896,8 +1896,8 @@ export function setDefaultWallpaper(state: GameState, wallpaperId: string): stri
 export function buyMapTheme(state: GameState, themeId: string): string | null {
   const country = activeCountry(state);
   const def = mapThemeById(themeId);
-  if (state.ownedMapThemes.includes(themeId)) return 'Already owned';
-  if (country.money < def.cost) return 'Not enough money';
+  if (state.ownedMapThemes.includes(themeId)) return 'error.alreadyOwned';
+  if (country.money < def.cost) return 'error.notEnoughMoney';
   country.money -= def.cost;
   state.ownedMapThemes.push(themeId);
   state.mapThemeId = themeId; // buying selects it right away
@@ -1906,7 +1906,7 @@ export function buyMapTheme(state: GameState, themeId: string): string | null {
 
 export function setMapTheme(state: GameState, themeId: string): string | null {
   mapThemeById(themeId);
-  if (!state.ownedMapThemes.includes(themeId)) return 'Map theme not owned';
+  if (!state.ownedMapThemes.includes(themeId)) return 'error.mapThemeNotOwned';
   state.mapThemeId = themeId;
   return null;
 }
@@ -1931,7 +1931,7 @@ export function renameVsCoinCost(company: CompanyState): number {
 
 export function renameCompany(state: GameState, name: string): string | null {
   const trimmed = name.trim().slice(0, 30);
-  if (!trimmed) return 'Name cannot be empty';
+  if (!trimmed) return 'error.emptyName';
   const country = activeCountry(state);
   const company = activeCompany(state);
   // The tutorial's naming of the very first company is the free creation
@@ -1942,8 +1942,8 @@ export function renameCompany(state: GameState, name: string): string | null {
   }
   const cash = renameCashCost(company);
   const coins = renameVsCoinCost(company);
-  if (country.money < cash) return 'Not enough money';
-  if (state.vsCoin < coins) return 'Not enough VsCoin';
+  if (country.money < cash) return 'error.notEnoughMoney';
+  if (state.vsCoin < coins) return 'error.notEnoughVsCoin';
   const err = spendVsCoin(state, coins, 'shop:rename');
   if (err) return err;
   country.money -= cash;
