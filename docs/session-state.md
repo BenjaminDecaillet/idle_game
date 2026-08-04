@@ -24,9 +24,13 @@ language change).
 
 1. ~~A: per-floor projects + cost scaling + beta shop~~ → PR #17 merged
 2. ~~B: one Office tab~~ → PR #18 merged
-3. C: chiptune + chimes → this branch, PR next
-4. D+: improvements.md top tier (daily contracts → i18n sweep → traits
-   → random events → vault), then second tier / polish / tech.
+3. ~~C: chiptune + chimes~~ → PR #19 merged
+4. ~~D1: daily contracts~~ → this branch, PR next
+5. D2+: improvements.md — i18n sweep → worker traits → random events →
+   vault, then second tier (specialization, push opt-in, cosmetics),
+   polish (construction art, builder visibility, confetti, city
+   scenes), tech (balance harness). Skip only external-account items
+   (analytics/ads/IAP/Capacitor — see monetization.md).
 
 ## 3. Standing decisions to remember
 
