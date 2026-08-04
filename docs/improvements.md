@@ -51,11 +51,10 @@ missing and reuses existing plumbing.
 
 ## Second tier — gameplay depth
 
-9. **Per-company specialization identity** — Companies play identically
-   apart from scale. Letting each site favor one specialization (Seattle =
-   DevOps contracts +50%) makes founding a build choice and gives the
-   spec-match bonus a portfolio-level layer. Pure `data.ts` + one
-   multiplier.
+9. ~~**Per-company specialization identity**~~ — shipped: every paid site
+   favors one specialization (+50% on matching contracts, garage stays
+   generalist), stacking with the personal spec match (decisions.md
+   #32); site sheet + contract cards surface it.
 
 ## Second tier — retention & monetization
 

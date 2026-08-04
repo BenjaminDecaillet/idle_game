@@ -46,6 +46,7 @@ import {
   PROJECT_REWARD_CAP_MULT,
   PROJECT_WORK_SCALE_EXP,
   RARE_TRAIT_CHANCE,
+  SITE_SPEC_BONUS,
   VAULT_CAP_MIN,
   VAULT_CAP_MINUTES,
   VAULT_OPEN_COST,
@@ -623,14 +624,18 @@ export function workerRate(
   projectId: string,
 ): number {
   const tier = tierById(worker.tierId);
-  const specBonus =
-    projectDefById(projectId).specialization === worker.specialization ? SPEC_MATCH_BONUS : 1;
+  const projectSpec = projectDefById(projectId).specialization;
+  const specBonus = projectSpec === worker.specialization ? SPEC_MATCH_BONUS : 1;
+  // Site specialty: this site is simply better at contracts of its favored
+  // specialization, whoever works them.
+  const siteBonus = siteById(company.siteId).favoredSpec === projectSpec ? SITE_SPEC_BONUS : 1;
   return (
     tier.baseRate *
     skillMultiplier(worker) *
     stationMultiplier(company, worker.stationId) *
     globalOutputMultiplier(state, company) *
     specBonus *
+    siteBonus *
     traitOutputMult(worker.traits)
   );
 }

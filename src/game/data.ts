@@ -16,6 +16,9 @@ import type {
 } from './types';
 
 export const SPEC_MATCH_BONUS = 1.5;
+// Site specialty: contracts matching a site's favoredSpec earn this much
+// more there (the garage stays generalist). Makes founding a build choice.
+export const SITE_SPEC_BONUS = 1.5;
 export const OFFLINE_CAP_HOURS = 24;
 export const SKILL_OUTPUT_PER_LEVEL = 0.1; // +10% output per skill level above 1
 
@@ -293,13 +296,13 @@ export const WORKSTATIONS: WorkstationDef[] = [
  */
 export const COMPANY_SITES: CompanySiteDef[] = [
   { id: 'garage', name: 'The Garage', cost: 0, outputBonus: 1, floorCostFactor: 1, projectScale: 1, emoji: '🏚️', blurb: 'Every empire starts between a lawnmower and a surfboard.' },
-  { id: 'loft', name: 'SoMa Loft', cost: 200_000, outputBonus: 1.1, floorCostFactor: 5, projectScale: 4, emoji: '🏬', blurb: 'Exposed brick, cold brew on tap, rent that hurts.' },
-  { id: 'paloalto', name: 'Palo Alto Office', cost: 3_000_000, outputBonus: 1.25, floorCostFactor: 25, projectScale: 16, emoji: '🏢', blurb: 'Walking distance from three VC firms and a Nobel laureate.' },
-  { id: 'campus', name: 'Mountain View Campus', cost: 40_000_000, outputBonus: 1.5, floorCostFactor: 125, projectScale: 64, emoji: '🏛️', blurb: 'Free lunches, nap pods, and a climbing wall nobody uses.' },
-  { id: 'tower', name: 'SF Skyline Tower', cost: 500_000_000, outputBonus: 2, floorCostFactor: 625, projectScale: 256, emoji: '🌆', blurb: 'Your logo, visible from two bridges.' },
-  { id: 'seattle', name: 'Seattle Cloud Campus', cost: 6_000_000_000, outputBonus: 2.5, floorCostFactor: 3_125, projectScale: 1_024, emoji: '🌲', blurb: 'Rain outside, servers inside, espresso everywhere.' },
-  { id: 'nyc', name: 'NYC Flatiron Hub', cost: 75_000_000_000, outputBonus: 3, floorCostFactor: 15_625, projectScale: 4_096, emoji: '🗽', blurb: 'Wall Street money meets your changelog.' },
-  { id: 'orbital', name: 'Orbital HQ', cost: 1_000_000_000_000, outputBonus: 4, floorCostFactor: 78_125, projectScale: 16_384, emoji: '🛰️', blurb: 'Zero gravity, zero distractions — the lab your dream deserves.' },
+  { id: 'loft', name: 'SoMa Loft', cost: 200_000, outputBonus: 1.1, floorCostFactor: 5, projectScale: 4, favoredSpec: 'Frontend', emoji: '🏬', blurb: 'Exposed brick, cold brew on tap, rent that hurts.' },
+  { id: 'paloalto', name: 'Palo Alto Office', cost: 3_000_000, outputBonus: 1.25, floorCostFactor: 25, projectScale: 16, favoredSpec: 'Backend', emoji: '🏢', blurb: 'Walking distance from three VC firms and a Nobel laureate.' },
+  { id: 'campus', name: 'Mountain View Campus', cost: 40_000_000, outputBonus: 1.5, floorCostFactor: 125, projectScale: 64, favoredSpec: 'Data Science', emoji: '🏛️', blurb: 'Free lunches, nap pods, and a climbing wall nobody uses.' },
+  { id: 'tower', name: 'SF Skyline Tower', cost: 500_000_000, outputBonus: 2, floorCostFactor: 625, projectScale: 256, favoredSpec: 'Frontend', emoji: '🌆', blurb: 'Your logo, visible from two bridges.' },
+  { id: 'seattle', name: 'Seattle Cloud Campus', cost: 6_000_000_000, outputBonus: 2.5, floorCostFactor: 3_125, projectScale: 1_024, favoredSpec: 'DevOps', emoji: '🌲', blurb: 'Rain outside, servers inside, espresso everywhere.' },
+  { id: 'nyc', name: 'NYC Flatiron Hub', cost: 75_000_000_000, outputBonus: 3, floorCostFactor: 15_625, projectScale: 4_096, favoredSpec: 'Backend', emoji: '🗽', blurb: 'Wall Street money meets your changelog.' },
+  { id: 'orbital', name: 'Orbital HQ', cost: 1_000_000_000_000, outputBonus: 4, floorCostFactor: 78_125, projectScale: 16_384, favoredSpec: 'Data Science', emoji: '🛰️', blurb: 'Zero gravity, zero distractions — the lab your dream deserves.' },
 ];
 
 export const PROJECTS: ProjectDef[] = [

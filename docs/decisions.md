@@ -229,3 +229,13 @@ be revisited cheaply.
     the shared payout path. No welcome-back callout yet (would need a
     pre-sim snapshot through loadGame; candidate for the sound/polish
     passes).
+32. **Site specialization (second tier #9)**: each paid site favors one
+    specialization (loft/tower Frontend, paloalto/nyc Backend, seattle
+    DevOps, campus/orbital Data Science; the garage stays generalist) —
+    contracts of that specialization earn SITE_SPEC_BONUS (×1.5) there,
+    whoever works them, stacking multiplicatively with the personal
+    spec-match ×1.5. A site-level bonus on the PROJECT's spec (not the
+    worker's) so the choice lives at founding/assignment time: found
+    Seattle to run DevOps contracts, staff it however you like.
+    Surfaced in the map site sheet (Specialty row) and starred on
+    matching contract cards.

@@ -396,6 +396,7 @@ export const en = {
   'ui.statFloors': 'Floors',
   'ui.statPrice': 'Price',
   'ui.contractScale': 'Contract scale',
+  'ui.siteSpecialty': 'Specialty',
   'ui.foundCompanyBtn': 'Found a company — {price}',
   'ui.unlockBtn': 'Unlock {price}',
   'ui.noDesk': 'No desk — idle!',

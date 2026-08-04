@@ -6,22 +6,22 @@ whole backlog (per-floor projects + cost scaling → Office tab → chiptune
 Angular naming, no AI attribution in git history, checkpoint after every
 slice.
 
-## 1. Current slice — D4: random events
+## 1. Current slice — second tier: site specialization
 
-A–D3 merged (PRs #17–#22). D4 on branch `feat/random-events`:
-complete, **PR #23 open, waiting on CI**. Gates green: 674 tests / 29
-files, build, smoke. Shipped: 4 income-scaled event offers with real
-trade-offs via Boost.salaryMult (balance.md Phase E, decisions.md
-#30), Gabriel-surface Accept/Pass dialog, main.ts wall-clock
-scheduler, 50 event tests, improvements #4 ticked.
+Top tier COMPLETE: A–D5 merged (PRs #17–#24). Current slice on branch
+`feat/site-specialization`: complete, gates green (700 tests / 31
+files, build, smoke). Shipped: favoredSpec per paid site (+50% on
+matching contracts via SITE_SPEC_BONUS in workerRate, stacks with the
+personal spec match), site-sheet Specialty row + starred contract
+cards (decisions.md #32), 4 tests, improvements #9 ticked.
 
-**Next action:** merge #23 when the `test` check is green → D5:
-piggy-bank vault (improvements #5, last top-tier item — % of earnings
-accrues to a capped vault opened with VsCoin; exploration running).
-After D5: second tier (per-company specialization → push opt-in →
-cosmetic catalog), then polish, then the balance harness. Push opt-in
-may be skippable (needs backend/Notification API — decide when
-reached, note it here).
+**Next action:** PR (strip auto-appended session footer) → CI → merge
+→ next: improvements #12 push opt-in (likely SKIP: needs a backend or
+Notification-API scheduling work — assess briefly, record the skip) →
+#14 cosmetic-first premium catalog → polish items (#15 construction
+art via art-skinner, #16 builder visibility, #18 confetti) → tech #21
+balance harness. Sourcery's innerHTML flags remain established false
+positives — merge on the `test` check.
 
 ## 2. Slice queue (mission order)
 

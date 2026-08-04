@@ -8,6 +8,7 @@ import {
   MARKETING_DURATION_SEC,
   MARKETING_MULT,
   MAX_FLOORS,
+  SITE_SPEC_BONUS,
   VAULT_OPEN_COST,
   VAULT_RATE,
   traitById,
@@ -1038,6 +1039,7 @@ export class UI {
           <div class="sheet-stat"><span>${t('ui.statIncome')}</span>
             <strong class="${income < 0 ? 'negative' : ''}">${income >= 0 ? '▲' : '▼'} ${formatMoney(income)}/s</strong></div>
           <div class="sheet-stat"><span>${t('ui.statSiteBonus')}</span><strong>×${site.outputBonus}</strong></div>
+          ${site.favoredSpec ? `<div class="sheet-stat"><span>${t('ui.siteSpecialty')}</span><strong>${site.favoredSpec} +${Math.round((SITE_SPEC_BONUS - 1) * 100)}%</strong></div>` : ''}
           <div class="sheet-stat"><span>${t('ui.statTeam')}</span><strong>${t('ui.teamStat', { people: company.workers.length, desks: seats })}</strong></div>
           <div class="sheet-stat"><span>${t('ui.statSalaries')}</span><strong>${formatMoney(companySalaries(company))}/s</strong></div>
           <div class="sheet-stat"><span>${t('ui.statOutput')}</span><strong>${formatRate(companyWorkRate(s, company))}</strong></div>
@@ -1080,6 +1082,7 @@ export class UI {
       <div class="sheet-stats">
         <div class="sheet-stat"><span>${t('ui.statPrice')}</span><strong>${formatMoney(price)}</strong></div>
         <div class="sheet-stat"><span>${t('ui.statSiteBonus')}</span><strong>×${site.outputBonus}</strong></div>
+          ${site.favoredSpec ? `<div class="sheet-stat"><span>${t('ui.siteSpecialty')}</span><strong>${site.favoredSpec} +${Math.round((SITE_SPEC_BONUS - 1) * 100)}%</strong></div>` : ''}
         <div class="sheet-stat"><span>${t('ui.contractScale')}</span><strong>×${formatNumber(site.projectScale)} rewards</strong></div>
       </div>
       <div class="sheet-actions">
@@ -1136,7 +1139,9 @@ export class UI {
             <span class="card-emoji">${projectArt(def.id, 38)}</span>
             <div class="card-main">
               <h3>${def.name}</h3>
-              <span class="spec-badge spec-${def.specialization.replace(' ', '')}">${def.specialization}</span>
+              <span class="spec-badge spec-${def.specialization.replace(' ', '')}">
+                ${def.specialization}${siteById(c.siteId).favoredSpec === def.specialization ? ` ★${SITE_SPEC_BONUS}x` : ''}
+              </span>
             </div>
             <div class="card-right">
               <strong>${formatMoney(p.currentReward)}</strong>
