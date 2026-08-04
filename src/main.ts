@@ -3,6 +3,8 @@ import { registerSW } from 'virtual:pwa-register';
 import { BETA_FORCE_REFRESH } from './game/data';
 import { activeCompany, grantBoost, tick, timeSkip } from './game/engine';
 import { ensureDaily } from './game/daily';
+import { rollEventOffer } from './game/events';
+import { EVENT_INTERVAL_MAX_SEC, EVENT_INTERVAL_MIN_SEC } from './game/data';
 import { loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
 import { resolveLang, setCurrentLang, t } from './i18n';
@@ -156,6 +158,34 @@ if (BETA_FORCE_REFRESH && 'serviceWorker' in navigator) {
     window.location.reload();
   });
 }
+
+// ---------------------------------------------------------------------------
+// Random events — live opportunity dialogs with a trade-off (docs/balance.md
+// Phase E). Wall-clock scheduled like the briefcase: never while hidden,
+// never offline, and only once the engine says events are unlocked. The
+// engine computes and resolves the offer; this is just the doorbell.
+// ---------------------------------------------------------------------------
+
+let eventTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleEvent(): void {
+  clearTimeout(eventTimer);
+  const delay =
+    EVENT_INTERVAL_MIN_SEC + Math.random() * (EVENT_INTERVAL_MAX_SEC - EVENT_INTERVAL_MIN_SEC);
+  eventTimer = setTimeout(fireEvent, delay * 1000);
+}
+function fireEvent(): void {
+  if (document.visibilityState === 'hidden') {
+    scheduleEvent();
+    return;
+  }
+  const offer = rollEventOffer(state);
+  if (!offer || !ui.offerEvent(offer)) {
+    scheduleEvent();
+    return;
+  }
+  scheduleEvent();
+}
+scheduleEvent();
 
 // ---------------------------------------------------------------------------
 // Golden briefcase — a rare, optional tap bonus (classic idle-game "juice").

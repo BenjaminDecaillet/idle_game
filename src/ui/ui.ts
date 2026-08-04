@@ -126,6 +126,8 @@ import {
   missionProgress,
   visibleMissions,
 } from '../game/missions';
+import { acceptEventOffer } from '../game/events';
+import type { EventOffer } from '../game/events';
 import {
   claimableDailyContracts,
   claimDailyContract,
@@ -218,6 +220,8 @@ export class UI {
   private officeFloorIdx = 0;
   /** Candidate popup (bottom sheet on the Office tab). */
   private hireOpen = false;
+  /** Live random-event offer awaiting a choice (modal on any tab). */
+  private pendingEvent: EventOffer | null = null;
   /** Offline earnings shown by the current Welcome-back modal (doubler). */
   private pendingOfflineEarnings = 0;
   private sheetSiteId: string | null = null;
@@ -585,6 +589,44 @@ export class UI {
           <button class="btn btn-primary" data-action="close-modal">${t('ui.done')}</button>
         </div>
       </div>`;
+  }
+
+  /**
+   * Offer a random event (called by main.ts's scheduler). Returns false when
+   * a story modal or another offer occupies the modal zone — the scheduler
+   * just tries again later.
+   */
+  offerEvent(offer: EventOffer): boolean {
+    const zone = document.getElementById('modal-zone');
+    if (!zone || zone.childElementCount > 0 || this.pendingEvent) return false;
+    this.pendingEvent = offer;
+    const params = {
+      cash: formatMoney(Math.abs(offer.cash)),
+      duration: formatDuration(offer.durationSec),
+      mult: offer.mult,
+      salaryMult: offer.salaryMult,
+    };
+    zone.innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal card story-modal event-modal">
+          <div class="story-gabriel">${gabrielDialogPortrait('think', 84)}</div>
+          <span class="story-kicker">${offer.emoji} ${t('ui.eventKicker')}</span>
+          <h2>${lookup(`event.${offer.id}.title`)}</h2>
+          <p class="story-text">${lookup(`event.${offer.id}.text`, params)}</p>
+          <div class="event-actions">
+            <button class="btn btn-primary" data-action="event-accept">${t('ui.eventAccept')}</button>
+            <button class="btn btn-ghost" data-action="event-decline">${t('ui.eventDecline')}</button>
+          </div>
+        </div>
+      </div>`;
+    this.fx.click();
+    return true;
+  }
+
+  private closeEventModal(): void {
+    this.pendingEvent = null;
+    const zone = document.getElementById('modal-zone');
+    if (zone) zone.innerHTML = '';
   }
 
   private showStoryModal(beatId: string): void {
@@ -2485,6 +2527,21 @@ export class UI {
         if (!error) this.updateNarrative();
         break;
       }
+      case 'event-accept': {
+        if (this.pendingEvent) {
+          error = acceptEventOffer(s, this.pendingEvent);
+          if (!error) {
+            this.toast(`🤝 ${t('ui.eventAccepted')}`, 'info');
+            this.closeEventModal();
+          }
+        }
+        structural = false;
+        break;
+      }
+      case 'event-decline':
+        this.closeEventModal();
+        structural = false;
+        break;
       case 'story-continue': {
         error = dismissStoryBeat(s);
         const zone = document.getElementById('modal-zone');

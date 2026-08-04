@@ -207,3 +207,15 @@ be revisited cheaply.
     T, expected +4.6% output across all hires) — the feature is hiring
     excitement, not a growth axis. Steve Gates stays traitless so the
     tutorial script stays exact.
+30. **Random events (D4)**: offers are ephemeral (not saved — an offer
+    lost to an app close is gone, like the briefcase), but everything
+    consequential is engine-pure: `rollEventOffer(state, rand)` computes
+    the income-scaled offer deterministically and
+    `acceptEventOffer` resolves it (upfront charge validated, modifier
+    through `grantBoost`). The trade-off lever is a new optional
+    `salaryMult` on Boost applied in tick's wage payment and the HUD —
+    additive field, no save bump. The dialog reuses the Gabriel story
+    modal surface with an Accept/Pass row; story beats keep priority
+    (an offer never covers a queued beat). Events don't fire offline by
+    design — they're live decision moments, and offline sim must stay
+    a pure function of elapsed time.

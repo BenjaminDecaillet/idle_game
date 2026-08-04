@@ -53,7 +53,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [x] **Prestige** ("IPO & open-source the dream") — post-epilogue reset banking permanent Reputation from all-time earnings (`1 + 0.5·√rep` output multiplier, docs/balance.md Phase P, decisions.md #18); keeps VsCoin/cosmetics/story, restarts from the garage; epilogue beat `new-venture`
 - [ ] **Achievements** (first hire, $1M, 100 completions…) with small permanent bonuses
 - [ ] **Statistics graphs** — money-over-time sparkline on the Stats tab
-- [ ] **Random events** — "Investor visit: 2× output for 60 s", outage debuffs
+- [x] **Random events** (balance.md Phase E, decisions.md 30) — 4 live opportunity dialogs with trade-offs (cash vs output vs salary multipliers), engine-pure offers/resolution, UI wall-clock scheduling
 - [x] **Multiple concurrent projects** — project slots unlocked by building height; upper floors assignable to their own projects (v8 expansion)
 - [x] **Worker traits** (balance.md Phase T, decisions.md 29) — 6 deterministic traits (output/salary/XP multipliers) rolled at candidate creation, rare double-trait candidates with golden cards, badges + trait-aware salaries in the UI
 - [ ] **Cloud saves** — optional backend or Google Drive sync

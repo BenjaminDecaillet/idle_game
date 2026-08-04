@@ -672,7 +672,7 @@ export function countrySalaries(country: CountryState): number {
 
 /** Salaries of the active country in $/sec (what the HUD shows). */
 export function totalSalaries(state: GameState): number {
-  return countrySalaries(activeCountry(state));
+  return countrySalaries(activeCountry(state)) * salaryBoostMult(state);
 }
 
 /** Net income of one company in $/sec (reward rate minus its salaries). */
@@ -1302,8 +1302,9 @@ function tickCountry(
   boostCorrection: number,
   events: TickEvents,
 ): void {
-  // 1. Pay salaries — the wallet CAN go below zero (debt).
-  country.money -= countrySalaries(country) * dt;
+  // 1. Pay salaries — the wallet CAN go below zero (debt). Event boosts can
+  // temporarily raise wages (salaryMult on Boost).
+  country.money -= countrySalaries(country) * salaryBoostMult(state) * dt;
 
   // 2. Debt: interest compounds while under water; past the crisis
   //    threshold one employee resigns per interval (never the last one —
@@ -1773,16 +1774,28 @@ export function grantBoost(
   mult: number,
   durationSec: number,
   source: string,
+  salaryMult?: number,
 ): string | null {
-  if (mult <= 1 || durationSec <= 0) return 'error.invalidBoost';
-  const existing = state.boosts.find((b) => b.source === source && b.mult === mult);
+  // Events may trade pure salary pain (mult 1 + salaryMult > 1); classic
+  // boosts still require an output gain.
+  if ((mult <= 1 && (salaryMult ?? 1) <= 1) || durationSec <= 0) return 'error.invalidBoost';
+  const existing = state.boosts.find(
+    (b) => b.source === source && b.mult === mult && (b.salaryMult ?? 1) === (salaryMult ?? 1),
+  );
   if (existing) {
     existing.remainingSec += durationSec;
   } else {
     if (state.boosts.length >= 5) return 'error.tooManyBoosts';
-    state.boosts.push({ mult, remainingSec: durationSec, source });
+    state.boosts.push({ mult, salaryMult, remainingSec: durationSec, source });
   }
   return null;
+}
+
+/** Product of active salary multipliers (events raising wages; 1 = none). */
+export function salaryBoostMult(state: GameState): number {
+  let m = 1;
+  for (const b of state.boosts) m *= b.salaryMult ?? 1;
+  return m;
 }
 
 /**

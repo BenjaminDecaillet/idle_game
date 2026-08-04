@@ -525,4 +525,22 @@ export const fr: Record<keyof typeof en, string> = {
   'trait.perfectionist.desc': 'Peaufine tout : +10 % de production, −15 % d’expérience.',
   'trait.rockstar.name': 'Rockstar',
   'trait.rockstar.desc': 'Une légende en devenir : +40 % de production, +25 % de salaire.',
+
+  // --- Événements aléatoires ------------------------------------------------
+  'ui.eventKicker': 'Opportunité',
+  'ui.eventAccept': 'Marché conclu !',
+  'ui.eventDecline': 'Passer',
+  'ui.eventAccepted': 'Affaire conclue !',
+  'event.investor-offer.title': 'Un investisseur appelle',
+  'event.investor-offer.text':
+    'Il vous vire {cash} immédiatement — si tous les salaires doublent pendant {duration}. Marché conclu ?',
+  'event.press-coverage.title': 'Une journaliste veut votre histoire',
+  'event.press-coverage.text':
+    'Sponsorisez l’article pour {cash} et le buzz double votre production pendant {duration}.',
+  'event.crunch-pizza.title': 'Nuit de rush à la pizza',
+  'event.crunch-pizza.text':
+    'Commandez des pizzas pour tout l’étage ({cash}) : production ×{mult}, mais salaires ×{salaryMult} pendant {duration}.',
+  'event.conference-keynote.title': 'Un créneau de keynote se libère',
+  'event.conference-keynote.text':
+    'Payez {cash} pour le créneau et la démo fait sensation : production ×{mult} pendant {duration}.',
 };

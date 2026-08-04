@@ -2002,3 +2002,10 @@ input.music-volume {
   letter-spacing: 0.08em;
   color: #b45309;
 }
+
+/* Random event modal: two-choice actions row. */
+.event-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
