@@ -239,3 +239,14 @@ be revisited cheaply.
     Seattle to run DevOps contracts, staff it however you like.
     Surfaced in the map site sheet (Specialty row) and starred on
     matching contract cards.
+33. **Cosmetic catalog = office pets; push opt-in SKIPPED**: the
+    cosmetic-first premium item (#14) shipped as four zero-power VsCoin
+    pets (4–10 coins) — owned globally like wallpapers, picked per
+    company (`petId`, additive state, unknown-id hygiene), rendered as
+    a bobbing companion in the lobby band and managed in the staff
+    room's pet corner. Push notifications (#12) are SKIPPED for now:
+    real web-push needs a push service backend (VAPID keys +
+    subscription storage) — external infrastructure per the session's
+    skip rule — and a page-open-only Notification fallback is useless
+    for re-engagement; revisit with monetization Phase 0's backend
+    decisions (docs/monetization.md).

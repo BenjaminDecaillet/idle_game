@@ -552,4 +552,13 @@ export const en = {
   'ui.vaultHint':
     'Every project payout drops an extra {rate}% in here. It fills up to two hours of income — crack it whenever you like.',
   'error.vaultEmpty': 'The vault is empty — earn something first.',
+
+  // --- Office pets ----------------------------------------------------------
+  'ui.petsTitle': 'Pet corner',
+  'ui.petHint': 'A zero-power companion for your floors.',
+  'ui.petAdopt': 'Bring it here',
+  'ui.petHere': 'Lives here',
+  'ui.petDismiss': 'Send the pet home',
+  'ui.petAdopted': 'New office companion adopted!',
+  'error.petNotOwned': 'You don’t own that pet yet.',
 } as const;

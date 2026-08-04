@@ -647,6 +647,7 @@ describe('Debt: crisis quits across multiple companies', () => {
       timedActions: [],
       purchasePrice: 200000,
       renameCount: 0,
+      petId: null,
       floorProjects: [],
     };
 

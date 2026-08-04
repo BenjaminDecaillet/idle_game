@@ -478,6 +478,27 @@ export const EVENT_MIN_EARNED = 5_000;
 export const EVENT_INTERVAL_MIN_SEC = 360;
 export const EVENT_INTERVAL_MAX_SEC = 660;
 
+// Office pets: zero-power VsCoin cosmetics (the cosmetic-first premium
+// catalog). Bought once globally, then picked per company; the active pet
+// wanders the ground floor. Deliberately no gameplay effect.
+export interface PetDef {
+  id: string;
+  name: string;
+  emoji: string;
+  vsCoinCost: number;
+}
+export const PETS: PetDef[] = [
+  { id: 'cat', name: 'Office Cat', emoji: '🐈', vsCoinCost: 4 },
+  { id: 'corgi', name: 'Standup Corgi', emoji: '🐕', vsCoinCost: 4 },
+  { id: 'duck', name: 'Rubber-Duck Debugger', emoji: '🦆', vsCoinCost: 6 },
+  { id: 'trex', name: 'Legacy T-Rex', emoji: '🦖', vsCoinCost: 10 },
+];
+export function petById(id: string): PetDef {
+  const p = PETS.find((p) => p.id === id);
+  if (!p) throw new Error(`Unknown pet: ${id}`);
+  return p;
+}
+
 // Piggy vault (docs/balance.md Phase V): VAULT_RATE of every project payout
 // accrues ON TOP into a global vault (a bonus pool, not a tax — skimming
 // from payouts would silently distort income, missions and the balance

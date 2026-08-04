@@ -58,15 +58,16 @@ missing and reuses existing plumbing.
 
 ## Second tier — retention & monetization
 
-12. **PWA push notification opt-in at the right moment** — Ask after the
-    first offline-earnings modal, never on first launch. Highest-leverage
-    re-engagement channel on mobile PWA; needs a tiny backend or
-    Notification API + local scheduling first pass.
+12. **PWA push notification opt-in** — SKIPPED this session
+    (decisions.md #33): real web-push needs a push-service backend
+    (VAPID + subscription storage) — external infrastructure; a
+    page-open Notification fallback can't re-engage. Revisit with
+    monetization Phase 0.
 
-14. **Cosmetic-first premium catalog** — Zero-power VsCoin items before any
-    power items: app icon colors, office pets, map weather, avatar
-    outfits (customizer exists). Every item doubles as a mission/story
-    reward candidate.
+14. ~~**Cosmetic-first premium catalog**~~ — first wave shipped: four
+    zero-power office pets (VsCoin, global ownership, per-company pick,
+    staff-room pet corner + lobby companion — decisions.md #33). App
+    icon colors / map weather remain future waves.
 
 ## Polish
 

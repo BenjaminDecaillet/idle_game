@@ -11,6 +11,7 @@ import {
   OFFLINE_CAP_HOURS,
   PROJECTS,
   TIME_SCALES,
+  PETS,
   TRAITS,
   UPGRADES,
   WALLPAPERS,
@@ -213,6 +214,10 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
   // Cosmetics hygiene: drop unknown ids, keep the free defaults owned, and
   // make sure the selected default/theme is actually owned.
   const wallpaperIds = new Set(WALLPAPERS.map((w) => w.id));
+  const petIds = new Set(PETS.map((p) => p.id));
+  state.ownedPets = Array.from(
+    new Set((state.ownedPets ?? []).filter((id) => petIds.has(id))),
+  );
   state.ownedWallpapers = Array.from(
     new Set(['concrete', ...(state.ownedWallpapers ?? []).filter((id) => wallpaperIds.has(id))]),
   );
@@ -300,6 +305,7 @@ function migrateCountry(saved: CountryState, template: CountryState): CountrySta
   const companyTemplate = template.companies[0];
   const knownSites = new Set(COMPANY_SITES.map((s) => s.id));
   const knownTraits = new Set(TRAITS.map((t) => t.id));
+  const knownPets = new Set(PETS.map((p) => p.id));
   country.companies = country.companies.map((c) => {
     const company: CompanyState = {
       ...companyTemplate,
@@ -310,6 +316,9 @@ function migrateCountry(saved: CountryState, template: CountryState): CountrySta
     };
     if (!knownSites.has(company.siteId)) company.siteId = 'garage';
     // Candidates and workers may predate traits — default and drop unknown.
+    if (typeof company.petId !== 'string' || !knownPets.has(company.petId)) {
+      company.petId = null;
+    }
     company.candidates = (company.candidates ?? []).map((cand) => ({
       ...cand,
       traits: Array.isArray(cand.traits) ? cand.traits.filter((id) => knownTraits.has(id)) : [],
