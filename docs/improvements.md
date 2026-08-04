@@ -95,10 +95,9 @@ missing and reuses existing plumbing.
 
 ## Tech
 
-21. **Balance simulation harness** — A greedy bot through `tick()` printing
-    time-to-milestone tables turns curve tuning into a 30-second check;
-    validates the "~1 week to Orbital HQ" pacing target. Nearly free
-    thanks to engine purity.
+21. ~~**Balance simulation harness**~~ — shipped: greedy bot through
+    tick() with always-on CI pacing guards + `npm run balance:sim`
+    tables (balance.md Phase H, decisions.md #36).
 
 22. **Beta exit checklist** — Before real-user testing: flip
     `BETA_FORCE_REFRESH` (decisions.md #17) and `BETA_FREE_IAP`

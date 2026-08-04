@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "balance:sim": "BALANCE_SIM=1 vitest run tests/balance-harness.test.ts",
     "test:watch": "vitest"
   },
   "devDependencies": {
