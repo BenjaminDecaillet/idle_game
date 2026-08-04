@@ -256,5 +256,5 @@ be revisited cheaply.
     nothing stored. Mission/daily/vault claims now burst confetti at
     the clicked button (shared burstAt helper) on top of their chimes.
     The optional "which builder is on it" attribution from #16 was
-    dropped as cosmetic bookkeeping the derived model can't answer
+    dropped as cosmetic bookkeeping that the derived model can't answer
     honestly.
