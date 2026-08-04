@@ -5,9 +5,13 @@ import {
   BUILDER_VSCOIN_BASE,
   BUILDER_VSCOIN_COSTS,
   BUILDER_VSCOIN_GROWTH,
+  CANDIDATE_REROLL_BASE,
+  CANDIDATE_REROLL_GROWTH,
   COMPANY_BUILD_DURATION_BASE,
   COMPANY_BUILD_DURATION_GROWTH,
   COMPANY_COST_GROWTH,
+  COMPANY_COST_SCALE_ESCALATION_EXP,
+  COMPANY_SALARY_SCALE_ESCALATION_EXP,
   COMPANY_SITES,
   COUNTRY_STARTING_MONEY,
   COUNTRY_UNLOCK_BASE,
@@ -40,8 +44,6 @@ import {
   MENTORSHIP_SPEED_FACTOR,
   MOONSHOT_OUTPUT_PER_LEVEL,
   PROJECT_REWARD_CAP_MULT,
-  PROJECT_SLOT_COSTS,
-  PROJECT_SLOT_FLOOR_REQ,
   PROJECT_WORK_SCALE_EXP,
   OFFLINE_DOUBLER_COOLDOWN_SEC,
   PROJECTS,
@@ -72,7 +74,6 @@ import {
   VSCOIN_BOOST_DURATION_SEC,
   VSCOIN_BOOST_MULT,
   VSCOIN_LEDGER_CAP,
-  VSCOIN_PACKS,
   WORKER_TIERS,
   WORLD_OUTPUT_PER_COUNTRY,
   countryDefById,
@@ -109,7 +110,7 @@ import type {
 // v9: per-country builder pool gating every timed action, country-level
 //     timed actions (company-build), timed floor construction, Gabriel's
 //     floor gift + free fast-forward credits, Shop/VsCoin tabs.
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10; // v10: per-floor project slots + company-tier cost scaling
 
 // ---------------------------------------------------------------------------
 // State creation
@@ -202,11 +203,12 @@ export function createCompany(
     activeProjectId: PROJECTS[0].id,
     upgrades: {},
     candidates: [],
-    candidateRerollCost: 10,
+    candidateRerollCost: Math.round(
+      CANDIDATE_REROLL_BASE * companyCostScale({ siteId, purchasePrice }),
+    ),
     timedActions: [],
     purchasePrice,
     renameCount: 0,
-    projectSlots: 1,
     floorProjects: [],
   };
   company.projects[0].unlocked = true;
@@ -447,6 +449,52 @@ export function salaryMultiplier(company: CompanyState): number {
   return Math.max(0.4, 1 - 0.06 * (company.upgrades['hr'] ?? 0));
 }
 
+// ---------------------------------------------------------------------------
+// Company-tier cost scaling (docs/balance.md Phase S)
+// ---------------------------------------------------------------------------
+
+/** Income-parity scale of a site: how much more a company there earns. */
+function siteIncomeScale(siteId: string): number {
+  const site = siteById(siteId);
+  return site.outputBonus * Math.pow(site.projectScale, 1 - PROJECT_WORK_SCALE_EXP);
+}
+
+/** How far above its site's list price this company was founded (≥ 1). */
+function foundingEscalation(company: Pick<CompanyState, 'siteId' | 'purchasePrice'>): number {
+  const site = siteById(company.siteId);
+  if (site.cost <= 0 || company.purchasePrice <= 0) return 1;
+  return Math.max(1, company.purchasePrice / site.cost);
+}
+
+/**
+ * Multiplier on a company's capital costs: desks, desk upgrades, hires,
+ * training, promotions, cash upgrades, candidate rerolls. Exactly 1 for the
+ * first garage company, so the early game keeps today's numbers.
+ */
+export function companyCostScale(
+  company: Pick<CompanyState, 'siteId' | 'purchasePrice'>,
+): number {
+  return (
+    siteIncomeScale(company.siteId) *
+    Math.pow(foundingEscalation(company), COMPANY_COST_SCALE_ESCALATION_EXP)
+  );
+}
+
+/** Multiplier on a company's salaries: income parity only, no escalation. */
+export function companySalaryScale(
+  company: Pick<CompanyState, 'siteId' | 'purchasePrice'>,
+): number {
+  return (
+    siteIncomeScale(company.siteId) *
+    Math.pow(foundingEscalation(company), COMPANY_SALARY_SCALE_ESCALATION_EXP)
+  );
+}
+
+/** Salary in $/sec a worker of this tier costs in this company. */
+export function tierSalary(company: CompanyState, tierId: string): number {
+  return tierById(tierId).salary * salaryMultiplier(company) * companySalaryScale(company);
+}
+
 export function expMultiplier(company: CompanyState): number {
   return 1 + 0.25 * (company.upgrades['agile'] ?? 0);
 }
@@ -487,37 +535,10 @@ export function assignedProjects(company: CompanyState): string[] {
   return [...out];
 }
 
-/** Cost of the next concurrent-project slot (null = all slots unlocked). */
-export function projectSlotCost(company: CompanyState): number | null {
-  const idx = company.projectSlots - 1;
-  if (idx >= PROJECT_SLOT_COSTS.length) return null;
-  return Math.round(PROJECT_SLOT_COSTS[idx] * siteById(company.siteId).projectScale);
-}
-
-/** Floors required for the next concurrent-project slot. */
-export function projectSlotFloorReq(company: CompanyState): number | null {
-  const idx = company.projectSlots - 1;
-  if (idx >= PROJECT_SLOT_FLOOR_REQ.length) return null;
-  return PROJECT_SLOT_FLOOR_REQ[idx];
-}
-
-/** Buy the next concurrent-project slot for the active company. */
-export function unlockProjectSlot(state: GameState): string | null {
-  const country = activeCountry(state);
-  const company = activeCompany(state);
-  const cost = projectSlotCost(company);
-  const floorsNeeded = projectSlotFloorReq(company);
-  if (cost === null || floorsNeeded === null) return 'All project slots unlocked';
-  if (company.floors < floorsNeeded) return `Requires ${floorsNeeded} floors`;
-  if (country.money < cost) return 'Not enough money';
-  country.money -= cost;
-  company.projectSlots += 1;
-  return null;
-}
-
 /**
  * Assign a floor to a project (null = follow the company's main project).
- * The number of distinct projects worked at once is bounded by projectSlots.
+ * Every floor owns its own slot: a company with N floors can work up to N
+ * distinct projects in parallel.
  */
 export function assignFloorProject(
   state: GameState,
@@ -534,14 +555,6 @@ export function assignFloorProject(
   const next = [...company.floorProjects];
   while (next.length < company.floors) next.push(null);
   next[floor] = projectId;
-  const distinct = new Set<string>([company.activeProjectId]);
-  for (let f = 0; f < company.floors; f++) {
-    const assigned = next[f];
-    if (assigned) distinct.add(assigned);
-  }
-  if (distinct.size > company.projectSlots) {
-    return 'Not enough project slots';
-  }
   company.floorProjects = next;
   return null;
 }
@@ -597,9 +610,8 @@ export function totalWorkRate(state: GameState): number {
 
 /** One company's salaries in $/sec. */
 export function companySalaries(company: CompanyState): number {
-  const mult = salaryMultiplier(company);
   let sum = 0;
-  for (const w of company.workers) sum += tierById(w.tierId).salary * mult;
+  for (const w of company.workers) sum += tierSalary(company, w.tierId);
   return sum;
 }
 
@@ -642,13 +654,13 @@ export function getProject(company: CompanyState, id: string): ProjectState {
 export function stationCost(company: CompanyState, defId: string): number {
   const def = stationDefById(defId);
   const owned = company.workstations.filter((w) => w.defId === defId).length;
-  return Math.round(def.baseCost * Math.pow(def.costGrowth, owned));
+  return Math.round(def.baseCost * Math.pow(def.costGrowth, owned) * companyCostScale(company));
 }
 
 export function upgradeCost(company: CompanyState, upgradeId: string): number {
   const def = upgradeDefById(upgradeId);
   const level = company.upgrades[upgradeId] ?? 0;
-  return Math.round(def.baseCost * Math.pow(def.costGrowth, level));
+  return Math.round(def.baseCost * Math.pow(def.costGrowth, level) * companyCostScale(company));
 }
 
 /** Cost of the next floor for a company's building. */
@@ -688,12 +700,13 @@ export function floorBuildDurationSec(country: CountryState, company: CompanySta
  * payback time is uniform across tiers, plus a mild ramp per level already
  * gained.
  */
-export function trainCost(worker: WorkerState): number {
+export function trainCost(company: CompanyState, worker: WorkerState): number {
   const tier = tierById(worker.tierId);
   return Math.round(
     tier.baseRate *
       TRAIN_COST_RATE_FACTOR *
-      (1 + TRAIN_COST_LEVEL_RAMP * (worker.skillLevel - 1)),
+      (1 + TRAIN_COST_LEVEL_RAMP * (worker.skillLevel - 1)) *
+      companyCostScale(company),
   );
 }
 
@@ -789,10 +802,10 @@ export function atSkillCap(worker: WorkerState): boolean {
 }
 
 /** Money price of promoting a worker to the next tier. */
-export function promoteCost(worker: WorkerState): number | null {
+export function promoteCost(company: CompanyState, worker: WorkerState): number | null {
   const to = nextTier(worker);
   if (!to) return null;
-  return Math.round(tierById(to).hireCost * PROMOTE_COST_FACTOR);
+  return Math.round(tierById(to).hireCost * PROMOTE_COST_FACTOR * companyCostScale(company));
 }
 
 /** Duration of promoting a worker to the next tier. */
@@ -817,7 +830,7 @@ export function trainWorker(state: GameState, workerId: number): string | null {
     return nextTier(worker) ? 'At skill cap — promote instead' : 'Already at max skill level';
   }
   if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
-  const cost = trainCost(worker);
+  const cost = trainCost(company, worker);
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
   const duration = trainDurationSec(company, worker);
@@ -848,7 +861,7 @@ export function promoteWorker(state: GameState, workerId: number): string | null
   if (!to) return 'Already at the top grade';
   if (!atSkillCap(worker)) return 'Not at the skill cap yet';
   if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
-  const cost = promoteCost(worker)!;
+  const cost = promoteCost(company, worker)!;
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
   const duration = promoteDurationSec(worker)!;
@@ -872,11 +885,13 @@ export function nextStationDef(defId: string): string | null {
 }
 
 /** Money price of upgrading a desk in place to the next tier. */
-export function deskUpgradeCost(defId: string): number | null {
+export function deskUpgradeCost(company: CompanyState, defId: string): number | null {
   const to = nextStationDef(defId);
   if (!to) return null;
   return Math.round(
-    (stationDefById(to).baseCost - stationDefById(defId).baseCost) * DESK_UPGRADE_COST_FACTOR,
+    (stationDefById(to).baseCost - stationDefById(defId).baseCost) *
+      DESK_UPGRADE_COST_FACTOR *
+      companyCostScale(company),
   );
 }
 
@@ -905,7 +920,7 @@ export function upgradeDesk(state: GameState, stationId: number): string | null 
   const to = nextStationDef(station.defId);
   if (!to) return 'Already the best desk';
   if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
-  const cost = deskUpgradeCost(station.defId)!;
+  const cost = deskUpgradeCost(company, station.defId)!;
   if (country.money < cost) return 'Not enough money';
   country.money -= cost;
   const duration = deskUpgradeDurationSec(station.defId)!;
@@ -1111,7 +1126,7 @@ export function hireCost(company: CompanyState, tierId: string): number {
     0.1,
     1 - TALENT_HIRE_DISCOUNT * (company.upgrades['talent'] ?? 0),
   );
-  return Math.round(tierById(tierId).hireCost * discount);
+  return Math.round(tierById(tierId).hireCost * discount * companyCostScale(company));
 }
 
 /** Unlock price of a project in a company (scaled by the site's contracts). */
@@ -1545,7 +1560,9 @@ export function rerollCandidates(state: GameState): string | null {
   if (country.money < company.candidateRerollCost) return 'Not enough money';
   country.money -= company.candidateRerollCost;
   company.candidates = rollCandidates(state);
-  company.candidateRerollCost = Math.round(company.candidateRerollCost * 1.5);
+  company.candidateRerollCost = Math.round(
+    company.candidateRerollCost * CANDIDATE_REROLL_GROWTH,
+  );
   return null;
 }
 
@@ -1770,7 +1787,9 @@ export function shopPackUnlocked(state: GameState, packId: string): boolean {
  */
 export function claimVsCoinPack(state: GameState, skuId: string): string | null {
   const pack = vsCoinPackById(skuId);
-  if (!BETA_FREE_IAP || pack.id !== VSCOIN_PACKS[0].id) return 'error.iapComingSoon';
+  // Beta: every SKU is a free claim (placeholder until real payments ship,
+  // when the source becomes 'iap:<sku>').
+  if (!BETA_FREE_IAP) return 'error.iapComingSoon';
   return grantVsCoin(state, pack.coins, `shop:${pack.id}`);
 }
 

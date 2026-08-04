@@ -312,17 +312,19 @@ describe('C) VsCoin tab', () => {
     );
   });
 
-  it('claimVsCoinPack other SKUs return error.iapComingSoon and grant nothing', () => {
+  it('claimVsCoinPack: every SKU is a free claim during beta', () => {
     const state = createInitialState(NOW);
     const ledgerLen = state.vsCoinLedger.length;
 
-    expect(claimVsCoinPack(state, 'vsc-angel')).toBe('error.iapComingSoon');
-    expect(claimVsCoinPack(state, 'vsc-venture')).toBe('error.iapComingSoon');
-    expect(claimVsCoinPack(state, 'vsc-growth')).toBe('error.iapComingSoon');
-    expect(claimVsCoinPack(state, 'vsc-unicorn')).toBe('error.iapComingSoon');
+    expect(claimVsCoinPack(state, 'vsc-angel')).toBeNull();
+    expect(claimVsCoinPack(state, 'vsc-venture')).toBeNull();
+    expect(claimVsCoinPack(state, 'vsc-growth')).toBeNull();
+    expect(claimVsCoinPack(state, 'vsc-unicorn')).toBeNull();
 
-    // No ledger entries created
-    expect(state.vsCoinLedger.length).toBe(ledgerLen);
+    expect(state.vsCoinLedger.length).toBe(ledgerLen + 4);
+    expect(state.vsCoinLedger[ledgerLen + 3]).toEqual(
+      expect.objectContaining({ amount: 1000, source: 'shop:vsc-unicorn' }),
+    );
   });
 
   it('BETA_FREE_IAP must be true (guards the beta free claim)', () => {

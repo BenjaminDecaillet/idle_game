@@ -120,3 +120,28 @@ be revisited cheaply.
     (targets 2/3/5, rewards 2/3/6 VsCoin — in line with the neighbor
     chains; the VsCoin missions deliberately do not refund the
     VsCoin-priced builders #4+, they just soften them).
+20. **Per-floor project slots (v10)**: the company-wide `projectSlots`
+    cap, its `unlockProjectSlot` action and `PROJECT_SLOT_COSTS` are gone
+    — every floor owns its own slot, so a company with N floors works up
+    to N distinct projects in parallel (floors are the capacity unit,
+    which also prices concurrency via floor costs). `activeProjectId`
+    stays as the default for floors assigned `null`, so the hero card and
+    "select project" UX keep meaning "the main project". Removing a
+    stored field = state-shape change → SAVE_VERSION 10 beta reset,
+    bundled with the cost-scaling change below (one wipe, not two).
+21. **Company-tier cost scaling (v10, docs/balance.md Phase S)**: capital
+    costs (desks, desk upgrades, hires, training, promotions, cash
+    upgrades, candidate-reroll base) scale by
+    `companyCostScale = outputBonus × projectScale^(1−PROJECT_WORK_SCALE_EXP)
+    × (purchasePrice/site.cost)^0.15`; salaries scale by the same income-
+    parity base but WITHOUT the founding-escalation term (exponent 0), so
+    salary-to-income ratios match the garage at every tier and the debt
+    mechanic stays fair. The garage yields exactly 1 → company 1 keeps
+    today's numbers. Chosen over a raw purchase-price ratio because
+    income only grows as outputBonus×√projectScale; a price-ratio scale
+    would have made every late company permanently insolvent.
+22. **Beta shop = everything claimable (v10)**: under `BETA_FREE_IAP`
+    every VsCoin SKU (not just the starter) is a free unlimited claim —
+    no dead "coming soon" buttons during beta. When the flag flips for
+    real monetization the same cards become paid SKUs (`iap:<sku>`
+    sources); the "coming soon" branch remains only for that off state.

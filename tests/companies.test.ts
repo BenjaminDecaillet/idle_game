@@ -519,7 +519,6 @@ describe('save hygiene migration', () => {
               timedActions: [],
               purchasePrice: 0,
               renameCount: 0,
-              projectSlots: 1,
               floorProjects: [],
             },
           ],

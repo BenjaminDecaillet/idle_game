@@ -53,8 +53,6 @@ import {
   nextStationDef,
   nextTier,
   projectRewardCap,
-  projectSlotCost,
-  projectSlotFloorReq,
   promoteCost,
   promoteWorker,
   renameCashCost,
@@ -63,7 +61,6 @@ import {
   setStartingCountry,
   trainDurationSec,
   unlockCountry,
-  unlockProjectSlot,
   upgradeDesk,
   walletMoney,
   workerBusy,
@@ -109,6 +106,7 @@ import {
   prestigePreview,
   prestigeReset,
   totalWorkRate,
+  tierSalary,
   trainCost,
   trainLevels,
   trainWorker,
@@ -792,9 +790,9 @@ export class UI {
   /** VsCoin tab: IAP-shaped SKUs; the starter pack is free during beta. */
   private renderVsCoinShop(): string {
     const s = this.state;
-    const cards = VSCOIN_PACKS.map((pack, i) => {
+    const cards = VSCOIN_PACKS.map((pack) => {
       const name = lookup(`vscoin.pack.${pack.id}.name`);
-      const freeBeta = BETA_FREE_IAP && i === 0;
+      const freeBeta = BETA_FREE_IAP;
       if (freeBeta) {
         return `
         <div class="card">
@@ -1094,53 +1092,38 @@ export class UI {
     return `<div class="stack">${cards}${this.renderProjectSlots()}</div>`;
   }
 
-  /** Multi-project: unlock slots, assign upper floors to other projects. */
+  /** Per-floor project slots: every floor can work its own project. */
   private renderProjectSlots(): string {
     const s = this.state;
     const c = activeCompany(s);
-    const nextCost = projectSlotCost(c);
-    const floorsNeeded = projectSlotFloorReq(c);
-    const unlockBtn =
-      nextCost !== null && floorsNeeded !== null
-        ? c.floors >= floorsNeeded
-          ? `<button class="btn ${walletMoney(s) >= nextCost ? 'btn-primary' : ''}"
-                     ${walletMoney(s) >= nextCost ? '' : 'disabled'} data-action="unlock-slot">
-               ${t('ui.unlockSlot')} · ${formatMoney(nextCost)}
-             </button>`
-          : `<span class="muted">${icon('lock', 14)} ${t('ui.slotNeedsFloors', { floors: floorsNeeded })}</span>`
-        : '';
-    if (c.projectSlots <= 1 && !unlockBtn) return '';
-    const floorRows =
-      c.projectSlots > 1
-        ? Array.from({ length: c.floors }, (_, f) => {
-            const current = c.floorProjects[f] ?? '';
-            const options = [
-              `<option value="" ${current === '' ? 'selected' : ''}>${t('ui.mainProject')}</option>`,
-              ...c.projects
-                .filter((p) => p.unlocked)
-                .map(
-                  (p) => `
-                  <option value="${p.defId}" ${current === p.defId ? 'selected' : ''}>
-                    ${projectDefById(p.defId).name}
-                  </option>`,
-                ),
-            ].join('');
-            return `
-            <div class="settings-row">
-              <span class="settings-label">${f === 0 ? 'Ground floor' : `Floor ${f + 1}`}</span>
-              <select class="coach-input" data-select="floor-project:${f}">${options}</select>
-            </div>`;
-          })
-            .reverse()
-            .join('')
-        : '';
+    if (c.floors <= 1) return '';
+    const floorRows = Array.from({ length: c.floors }, (_, f) => {
+      const current = c.floorProjects[f] ?? '';
+      const options = [
+        `<option value="" ${current === '' ? 'selected' : ''}>${t('ui.mainProject')}</option>`,
+        ...c.projects
+          .filter((p) => p.unlocked)
+          .map(
+            (p) => `
+            <option value="${p.defId}" ${current === p.defId ? 'selected' : ''}>
+              ${projectDefById(p.defId).name}
+            </option>`,
+          ),
+      ].join('');
+      return `
+      <div class="settings-row">
+        <span class="settings-label">${f === 0 ? t('ui.groundFloor') : t('ui.floorN', { floor: f + 1 })}</span>
+        <select class="coach-input" data-select="floor-project:${f}">${options}</select>
+      </div>`;
+    })
+      .reverse()
+      .join('');
     return `
       <div class="card">
         <div class="section-head"><h2>${t('ui.projectSlots')}</h2>
-          <span class="muted">${c.projectSlots} ${unlockBtn ? '' : '· max'}</span>
+          <span class="muted">${c.floors}</span>
         </div>
         <p class="hint">${t('ui.projectSlotsHint')}</p>
-        ${unlockBtn}
         ${floorRows}
       </div>`;
   }
@@ -1158,7 +1141,7 @@ export class UI {
           <span class="card-emoji persona-slot">${employeePortrait(`c:${cand.name}:${cand.tierId}`, cand.specialization, cand.tierId)}</span>
           <div class="card-main">
             <h3>${cand.name}</h3>
-            <span class="muted">${tier.title} · ${formatRate(tier.baseRate)} · salary ${formatMoney(tier.salary)}/s</span>
+            <span class="muted">${tier.title} · ${formatRate(tier.baseRate)} · salary ${formatMoney(tierSalary(c, cand.tierId))}/s</span>
             <span class="spec-badge spec-${cand.specialization.replace(' ', '')}">${cand.specialization}</span>
           </div>
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
@@ -1204,7 +1187,7 @@ export class UI {
       ? `${stationDefById(station.defId).emoji} ${stationDefById(station.defId).name}`
       : '⚠️ No desk — idle!';
     const expPct = Math.min(100, (w.experience / expToNextLevel(w.skillLevel)) * 100);
-    const cost = trainCost(w);
+    const cost = trainCost(c, w);
     const action = c.timedActions.find(
       (a) => a.targetId === w.id && (a.kind === 'training' || a.kind === 'promotion'),
     );
@@ -1235,11 +1218,11 @@ export class UI {
     const actionBtn = action
       ? ''
       : promote
-        ? `<button class="btn btn-small ${walletMoney(s) >= promoteCost(w)! ? 'btn-primary' : ''}"
-                   ${walletMoney(s) >= promoteCost(w)! ? '' : 'disabled'}
+        ? `<button class="btn btn-small ${walletMoney(s) >= promoteCost(c, w)! ? 'btn-primary' : ''}"
+                   ${walletMoney(s) >= promoteCost(c, w)! ? '' : 'disabled'}
                    data-action="promote:${w.id}"
                    title="${tierById(nextTier(w)!).title}">
-             🎖️ ${t('ui.promote')} ${formatMoney(promoteCost(w)!)}
+             🎖️ ${t('ui.promote')} ${formatMoney(promoteCost(c, w)!)}
            </button>`
         : capped
           ? `<span class="muted">🏔️ ${t('ui.maxGrade')}</span>`
@@ -1261,7 +1244,7 @@ export class UI {
           </div>
           <div class="card-right">
             <strong>${formatRate(rate)}</strong>
-            <span class="muted">-${formatMoney(tier.salary)}/s</span>
+            <span class="muted">-${formatMoney(tierSalary(c, w.tierId))}/s</span>
           </div>
         </div>
         ${progressBar}
@@ -1336,7 +1319,7 @@ export class UI {
       floorBlocks.push(`
         <div class="floor-block">
           <div class="floor-wall">
-            <span class="floor-label">${f === 1 ? 'Ground floor' : `Floor ${f}`}</span>
+            <span class="floor-label">${f === 1 ? t('ui.groundFloor') : t('ui.floorN', { floor: f })}</span>
             ${wall}
           </div>
           <div class="office-grid">${tiles}</div>
@@ -1505,7 +1488,7 @@ export class UI {
       );
       if (candidates.length === 0) return '';
       const toDef = stationDefById(to);
-      const cost = deskUpgradeCost(def.id)!;
+      const cost = deskUpgradeCost(c, def.id)!;
       const duration = deskUpgradeDurationSec(def.id)!;
       const affordable = walletMoney(s) >= cost;
       return `
@@ -2035,10 +2018,6 @@ export class UI {
         if (name !== null) error = renameCompany(s, name);
         break;
       }
-      case 'unlock-slot':
-        error = unlockProjectSlot(s);
-        if (!error) this.toast(`🗂️ ${t('ui.slotUnlocked')}`, 'info');
-        break;
       case 'travel':
         error = setActiveCountry(s, arg);
         if (!error) {

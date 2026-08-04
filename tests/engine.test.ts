@@ -392,11 +392,12 @@ describe('unlockProject / setActiveProject error paths', () => {
 describe('trainWorker (timed program)', () => {
   it('cost is anchored to base output rate with a mild per-level ramp', () => {
     // cost = baseRate * TRAIN_COST_RATE_FACTOR * (1 + TRAIN_COST_LEVEL_RAMP*(level-1))
+    const c = activeCompany(createInitialState(NOW));
     const internWorker = makeWorker({ tierId: 'intern', skillLevel: 1 });
-    expect(trainCost(internWorker)).toBe(Math.round(0.5 * 45)); // $23
+    expect(trainCost(c, internWorker)).toBe(Math.round(0.5 * 45)); // $23
 
     const juniorWorker = makeWorker({ tierId: 'junior', skillLevel: 3 });
-    expect(trainCost(juniorWorker)).toBe(Math.round(1 * 45 * 1.3)); // $59
+    expect(trainCost(c, juniorWorker)).toBe(Math.round(1 * 45 * 1.3)); // $59
   });
 
   it('deducts cost, starts a program, frees the desk, then grants levels via tick', () => {
@@ -410,7 +411,7 @@ describe('trainWorker (timed program)', () => {
     autoSeat(c);
     expect(worker.stationId).not.toBeNull();
 
-    country.money = trainCost(worker);
+    country.money = trainCost(c, worker);
     const err = trainWorker(state, worker.id);
     expect(err).toBeNull();
     expect(country.money).toBe(0);
@@ -444,9 +445,10 @@ describe('trainWorker (timed program)', () => {
   it('training pays for itself in bounded time (balance guard)', () => {
     // For every tier: the extra money/sec from TRAIN_LEVELS skill levels on a
     // basic desk must repay the training cost within 15 minutes of work.
+    const c = activeCompany(createInitialState(NOW));
     for (const tier of WORKER_TIERS) {
       const worker = makeWorker({ tierId: tier.id, skillLevel: 1 });
-      const cost = trainCost(worker);
+      const cost = trainCost(c, worker);
       // Reward/work ratio is ~1 for mid/late projects; use the conservative
       // early-game 'landing' ratio of 0.5 for the payback bound.
       const gainPerSec = tier.baseRate * SKILL_OUTPUT_PER_LEVEL * TRAIN_LEVELS * 0.5;
@@ -478,7 +480,7 @@ describe('trainWorker (timed program)', () => {
     const country = activeCountry(state);
     const worker = makeWorker({ tierId: 'principal', skillLevel: 100, experience: 0 });
     c.workers.push(worker);
-    country.money = trainCost(worker);
+    country.money = trainCost(c, worker);
 
     expect(trainWorker(state, worker.id)).toBe('Already at max skill level');
     expect(worker.skillLevel).toBe(100);
