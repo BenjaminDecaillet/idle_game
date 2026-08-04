@@ -6,19 +6,19 @@ whole backlog (per-floor projects + cost scaling → Office tab → chiptune
 Angular naming, no AI attribution in git history, checkpoint after every
 slice.
 
-## 1. Current slice — C: chiptune + chimes
+## 1. Current slice — D1: daily contracts
 
-A merged (PR #17), B merged (PR #18 — note: Sourcery's check stays red
-there on declined innerHTML false positives; the real `test` check was
-green, rationale on the PR thread). Slice C on branch
-`feat/audio-chiptune`: implementation complete, gates green (553 tests
-/ 26 files, build, smoke). Shipped: "Garage Dreams" loop + music
-settings (off by default) + story/mission/VsCoin chimes (decisions.md
-#26), new `audio-chiptune` skill, improvements #17 ticked.
+A, B, C merged (PRs #17, #18, #19). D1 on branch `feat/daily-contracts`:
+complete, gates green (585 tests / 27 files, build, smoke). Shipped:
+src/game/daily.ts (deterministic day-seeded board, delta baselines,
+desks eligibility filter), VsCoin-tab board + badge, balance.md Phase D,
+decisions.md #27, add-mission skill extended, improvements #1 ticked.
 
-**Next action:** commit checkpoint → PR → strip the auto-appended
-session footer from the PR body (platform adds it server-side; the
-mission forbids it) → CI → merge → slice D1 (daily contracts).
+**Next action:** PR (strip the auto-appended session footer from the PR
+body right after creating it) → CI → merge → D2: the i18n sweep
+(improvements #2 — migrate remaining hardcoded UI strings; run now that
+the slice-B tab set is final; needs a buildSkeleton rebuild hook on
+language change).
 
 ## 2. Slice queue (mission order)
 

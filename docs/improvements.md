@@ -23,11 +23,10 @@ missing and reuses existing plumbing.
 
 ## Top tier (next session, in this order)
 
-1. **Daily contracts (rotating missions)** — The mission engine is
-   metric-driven and can host a "3 contracts today" board seeded from the
-   day number (deterministic, day passed in from the UI layer — no
-   `Date.now()` in `src/game/**`). The genre's strongest comeback trigger
-   and a steady VsCoin trickle that makes premium sinks feel reachable.
+1. ~~**Daily contracts (rotating missions)**~~ — shipped: 3 delta-progress
+   contracts per UTC day seeded from the day number (balance.md Phase D,
+   decisions.md #27), rendered atop the VsCoin tab with badge + chime,
+   ~2.5–3.5 VsCoin/day realized.
 
 2. **Migrate the remaining UI strings into the i18n layer** — Foundation
    proven; sweep `ui.ts` tab labels (needs a `buildSkeleton()` rebuild

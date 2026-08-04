@@ -4,7 +4,7 @@ import {
   DAILY_EARN_FLOOR,
   DAILY_EARN_MINUTES,
 } from './data';
-import { grantVsCoin, grossRewardRate } from './engine';
+import { deskCapacity, grantVsCoin, grossRewardRate } from './engine';
 import { metricValue } from './missions';
 import type { DailyContract, DailyState, GameState } from './types';
 
@@ -30,10 +30,26 @@ export function createDailyState(): DailyState {
   return { day: -1, contracts: [], baselines: {}, claimed: [] };
 }
 
-/** Roll the board for a day: a deterministic sample of the pool. */
+/**
+ * A pool entry is eligible when the player can physically complete it today
+ * (docs/balance.md Phase D): desks need free capacity at roll time — a full
+ * empire (or one blocked on floor construction) must not draw a dead card.
+ */
+function dailyEligible(state: GameState, entry: (typeof DAILY_CONTRACT_POOL)[number]): boolean {
+  if (entry.metric !== 'desks') return true;
+  let free = 0;
+  for (const country of state.countries) {
+    for (const company of country.companies) {
+      free += deskCapacity(company) - company.workstations.length;
+    }
+  }
+  return free >= entry.target;
+}
+
+/** Roll the board for a day: a deterministic sample of the eligible pool. */
 export function rollDailyContracts(state: GameState, day: number): DailyContract[] {
   const rand = mulberry32(day);
-  const pool = [...DAILY_CONTRACT_POOL];
+  const pool = DAILY_CONTRACT_POOL.filter((e) => dailyEligible(state, e));
   const contracts: DailyContract[] = [];
   const count = Math.min(DAILY_CONTRACTS_PER_DAY, pool.length);
   for (let n = 0; n < count; n++) {
