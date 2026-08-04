@@ -17,7 +17,7 @@ user gesture — every dispatch click qualifies).
   `MUSIC_BPM` 132. Square lead, triangle bass, quiet offbeat blips.
 - `scheduleMusic()` is a lookahead scheduler driven from `update(dt)` (60
   fps): it keeps `MUSIC_LOOKAHEAD_SEC` of notes queued with
-  sample-accurate WebAudio timestamps and jumps the playhead after a
+  sample-accurate Web Audio timestamps and jumps the playhead after a
   background-tab pause instead of cramming missed steps.
 - All notes route through `musicGain` (level = `musicVolume ×
   MUSIC_BUS_LEVEL`), so volume changes and ducking are one gain node.
