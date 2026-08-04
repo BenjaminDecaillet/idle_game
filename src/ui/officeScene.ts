@@ -1531,13 +1531,19 @@ export function lobbyDecor(wallpaperId: string): string {
 
 /**
  * Decor for the floor currently under construction (wall band, 64 px):
- * scaffolding with planks and bricks, a hanging warning-stripe banner and a
- * toolbox + paint bucket. Wallpaper-independent and fully deterministic.
+ * scaffolding with planks and bricks, a mini tower crane lowering a wooden
+ * beam, a hard-hat builder on site, and a rotating pick of warning banner,
+ * toolbox + paint bucket and cone barrier. Wallpaper-independent and fully
+ * deterministic — pass a seed (e.g. a floor index) to vary the builder's
+ * look and which extras show; the default composition stays stable.
  */
-export function constructionDecor(): string {
-  const key = '__construction';
+export function constructionDecor(seed = 0): string {
+  const key = `__construction:${seed}`;
   let out = decorCache.get(key);
   if (out === undefined) {
+    // FNV-style scramble of the seed (hashSeed pattern, numeric input).
+    const mix = Math.imul((((seed % 9973) + 9973) % 9973) ^ 0x9e3779b9, 2654435761) >>> 0;
+    const skin = ['#f7c6a3', '#eab188', '#c98d63', '#8d5a3b'][mix & 3];
     const scaffold = item(
       58,
       60,
@@ -1575,7 +1581,69 @@ export function constructionDecor(): string {
         `<path d="M9 14 v-2.5 a4.5 4.5 0 0 1 9 0 V14" fill="none" ${S1}/>` +
         `<rect x="11.5" y="17" width="4" height="4" rx="1" fill="#ffb02e" ${S1}/>`
     );
-    out = scaffold + banner + tools;
+    // Mini tower crane lowering a wooden beam on a sling.
+    const crane = item(
+      76,
+      64,
+      shadow(20, 61, 14) +
+        `<rect x="12" y="55" width="16" height="5" rx="1.5" fill="#b9c4d2" ${S1}/>` +
+        `<rect x="17" y="14" width="6" height="42" fill="#ff8a2a" ${S1}/>` +
+        `<path d="M17 52 l6 -7 M23 38 l-6 -7 M17 24 l6 -7" fill="none" stroke="${INK}" stroke-width="1" opacity=".35"/>` +
+        `<rect x="14.5" y="7" width="11" height="8" rx="1.5" fill="#ffb02e" ${S1}/>` +
+        `<rect x="20.5" y="9" width="4" height="4" rx="1" fill="#cfe9fb" ${S1}/>` +
+        `<rect x="25" y="8" width="44" height="4" rx="1.5" fill="#ffb02e" ${S1}/>` +
+        `<rect x="4" y="8" width="11" height="4" rx="1.5" fill="#ffb02e" ${S1}/>` +
+        `<rect x="2.5" y="12" width="6" height="7" rx="1" fill="#8f97a3" ${S1}/>` +
+        `<path d="M20 7 V2" fill="none" ${S1}/>` +
+        `<path d="M20 2 L66 8 M20 2 L6 8" fill="none" stroke="${INK}" stroke-width="1" opacity=".5"/>` +
+        `<line x1="58" y1="12" x2="58" y2="34" stroke="${INK}" stroke-width="1"/>` +
+        `<path d="M58 34 L49 42 M58 34 L67 42" fill="none" stroke="${INK}" stroke-width="1"/>` +
+        `<g transform="rotate(-6 58 46)">` +
+        `<rect x="45" y="43" width="26" height="6" rx="1.5" fill="#d9a05b" ${S1}/>` +
+        `<line x1="49" y1="46" x2="67" y2="46" stroke="${INK}" stroke-width="1" opacity=".3"/>` +
+        `</g>`
+    );
+    // The builder on site: hard hat, safety vest, rolled-up blueprint.
+    const builder = item(
+      34,
+      58,
+      shadow(17, 55, 11) +
+        `<rect x="11" y="38" width="5" height="15" rx="2" fill="#3d5a80" ${S1}/>` +
+        `<rect x="18" y="38" width="5" height="15" rx="2" fill="#3d5a80" ${S1}/>` +
+        `<rect x="9.5" y="52" width="7" height="4" rx="1.5" fill="#7a4b2c" ${S1}/>` +
+        `<rect x="17.5" y="52" width="7" height="4" rx="1.5" fill="#7a4b2c" ${S1}/>` +
+        tube('M10 29 q-3.5 4 -3 9', skin, 3) +
+        tube('M24 29 q5 -2 6 -7', skin, 3) +
+        `<path d="M9 40 q0 -14 8 -14 q8 0 8 14 z" fill="#ff8a2a" ${S}/>` +
+        `<line x1="9.5" y1="35.5" x2="24.5" y2="35.5" stroke="#ffd23e" stroke-width="2.5"/>` +
+        `<g transform="rotate(-24 30 20)">` +
+        `<rect x="24" y="17.5" width="12" height="4.5" rx="2" fill="#7fb2e5" ${S1}/>` +
+        `</g>` +
+        `<circle cx="17" cy="18" r="6.2" fill="${skin}" ${S1}/>` +
+        `<circle cx="15" cy="18.4" r=".9" fill="${INK}" stroke="none"/>` +
+        `<circle cx="19.4" cy="18.4" r=".9" fill="${INK}" stroke="none"/>` +
+        `<path d="M15.5 21.2 q1.7 1.6 3.4 0" fill="none" ${S1}/>` +
+        `<path d="M10.8 15.2 a6.2 5.2 0 0 1 12.4 0 z" fill="#ffd23e" ${S1}/>` +
+        `<rect x="9" y="14.4" width="16" height="2.6" rx="1.3" fill="#ffd23e" ${S1}/>` +
+        `<path d="M17 10.4 v4" fill="none" stroke="${INK}" stroke-width="1" opacity=".4"/>`
+    );
+    // Two traffic cones carrying a hazard-stripe plank.
+    const cones = item(
+      52,
+      30,
+      shadow(26, 27, 20) +
+        `<rect x="8" y="12" width="36" height="5" rx="1" fill="#ffb02e" ${S1}/>` +
+        `<path d="M11 16.2 l4 -3.6 h4 l-4 3.6 z M22 16.2 l4 -3.6 h4 l-4 3.6 z M33 16.2 l4 -3.6 h4 l-4 3.6 z" fill="${INK}" opacity=".8" stroke="none"/>` +
+        `<rect x="4" y="23" width="12" height="3" rx="1.5" fill="#ff8a2a" ${S1}/>` +
+        `<path d="M6.4 23 L10 10 L13.6 23 z" fill="#ff8a2a" ${S1}/>` +
+        `<line x1="8.2" y1="18.5" x2="11.8" y2="18.5" stroke="#fff" stroke-width="2"/>` +
+        `<rect x="36" y="23" width="12" height="3" rx="1.5" fill="#ff8a2a" ${S1}/>` +
+        `<path d="M38.4 23 L42 10 L45.6 23 z" fill="#ff8a2a" ${S1}/>` +
+        `<line x1="40.2" y1="18.5" x2="43.8" y2="18.5" stroke="#fff" stroke-width="2"/>`
+    );
+    const extras = [banner, tools, cones];
+    const a = (mix >>> 2) % 3;
+    out = scaffold + crane + builder + extras[a] + extras[(a + 1) % 3];
     decorCache.set(key, out);
   }
   return out;

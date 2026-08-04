@@ -71,10 +71,9 @@ missing and reuses existing plumbing.
 
 ## Polish
 
-15. **Construction art pass** — The in-progress floor is a dimmed block +
-    progress bar; a scaffolding/crane illustration (art-svg conventions,
-    `officeScene.ts`) and a builder persona on site would sell the fantasy.
-    Same for map sites under construction (currently a 🏗️ label prefix).
+15. ~~**Construction art pass**~~ — shipped: full cartoon construction
+    scene on rising floors (crane, scaffold, hard-hat builder) and crane
+    silhouettes over map sites under construction (decisions.md #35).
 
 16. ~~**Builder idle visibility**~~ — shipped: persistent HUD chip with
     free/total builders (red when all busy, tap → Office), 60 fps,
