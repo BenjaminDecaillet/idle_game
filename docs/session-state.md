@@ -26,15 +26,13 @@ Contract: `.claude/skills/session-handoff/SKILL.md`.
 
 ## Queue
 
-4. **docs/idle-game-state-of-the-art** — 3 background research reports are
-   COMPLETE (OSS repos survey, design theory, UI/UX+QoL). Raw reports live
-   in the session task outputs; if lost, re-run three general-purpose
-   agents (angles: GitHub OSS idle repos + licences / design theory +
-   pacing + prestige / UI-UX + QoL + PWA offline patterns). Deliverables:
-   the doc, backlog entries in docs/improvements.md, then implement 2–3
-   highest-value low-risk ideas on own feat branches. Leading candidates
-   from the reports: welcome-back offline report modal, export/import
-   saves, bulk-buy/earned automation, achievements-with-multiplier.
+4. **docs/idle-game-state-of-the-art — DONE, PR #35 open** — survey doc
+   + improvements.md #23-#36 (+ correction commit: export/import already
+   existed in the codebase; picks rotated to bulk buy / welcome-back
+   itemization / payback-time display).
+5. **feat/bulk-buy-desks — DONE, PR #36 open** (commit 9824211) —
+   stationCostN/maxAffordableStations/buyWorkstations + x1/x10/Max
+   toggle, 8 tests, Playwright-verified.
 
 ## Conventions in force
 
@@ -47,14 +45,19 @@ Contract: `.claude/skills/session-handoff/SKILL.md`.
 
 ## Next concrete action
 
-Task 4 (state of the art): the full doc draft already exists at
-scratchpad/state-of-the-art-draft.md (content also reproducible from the
-three research reports). Create branch docs/idle-game-state-of-the-art
-off origin/master, land the doc + append backlog entries to
-docs/improvements.md, PR. Then implement picks on own branches:
-(a) feat/save-export-import (settings UI, base64 ISV1| prefix, import
-through normal load path + confirm dialog), (b) feat/bulk-buy-desks
-(closed-form geometric-sum cost + maxAffordable in engine, x1/x10/xMax
-segmented control, UI-local quantity — no save change), (c) welcome-back
-itemized offline report (extend ui.welcomeBack with a state diff from
-loadGame; snapshot cheap counters pre-sim in save.ts).
+Remaining picks, each on its own branch off origin/master:
+(a) feat/welcome-back-report — add simulateOfflineReport(state,
+elapsed, cap) in engine.ts aggregating tick() event counts per chunk
+(projectsCompleted, trainingsDone, promotionsDone, deskUpgradesDone,
+floorsBuilt, companiesBuilt, quits, levelUps) + earnings; keep
+simulateOffline delegating (signature unchanged). loadGame returns the
+report in LoadResult; ui.welcomeBack(offlineSec, report) itemizes
+non-zero lines. IMPORTANT: welcomeBack currently has hardcoded EN
+strings ("Welcome back!", "While you were away...", "Back to work") —
+migrate to i18n as part of this. Tests: report counts after a seeded
+offline window.
+(b) feat/payback-time — display-only payback seconds on desk purchase
+buttons (cost / marginal work-rate→income gain is complex; simpler
+honest metric: cost / current company income per sec = time to recoup
+at current income; decide with balance-designer if unclear). Keep pure
+derived helpers in src/game, no progression math duplication.
