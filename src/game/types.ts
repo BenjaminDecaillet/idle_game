@@ -313,12 +313,11 @@ export interface CompanyState {
   purchasePrice: number;
   /** Paid renames so far — rename price escalates with it. */
   renameCount: number;
-  /** Concurrent project slots unlocked (1 = single project). */
-  projectSlots: number;
   /**
    * Per-floor project assignment (index = floor). null/missing = the
-   * company's main activeProjectId. Distinct assigned projects are limited
-   * by projectSlots; desks on a floor work that floor's project.
+   * company's main activeProjectId. Every floor owns its own slot, so a
+   * company with N floors works up to N distinct projects in parallel;
+   * desks on a floor work that floor's project.
    */
   floorProjects: (string | null)[];
 }

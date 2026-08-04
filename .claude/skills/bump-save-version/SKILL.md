@@ -6,9 +6,10 @@ description: Change GameState safely in Idle Silicon Valley - bump SAVE_VERSION 
 # Changing GameState (beta policy)
 
 **Current policy: BETA RESET.** The game is in beta; save resets were
-approved with the v8 progression/expansion update and again with the v9
-workforce/construction/shop update. `loadGame()` discards any save whose
-`version` is below the current `SAVE_VERSION` (9) and returns a fresh game
+approved with the v8 progression/expansion update, the v9
+workforce/construction/shop update, and the v10 per-floor-projects +
+cost-scaling update. `loadGame()` discards any save whose
+`version` is below the current `SAVE_VERSION` (10) and returns a fresh game
 with `betaReset: true`, which the UI surfaces as a friendly translated
 notice (`ui.betaResetTitle` / `ui.betaResetText` — refresh that copy to
 describe the update that bumps the version). There is **no cross-version

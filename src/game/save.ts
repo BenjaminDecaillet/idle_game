@@ -292,7 +292,6 @@ function migrateCountry(saved: CountryState, template: CountryState): CountrySta
     const neededFloors = Math.ceil(company.workstations.length / FLOOR_CAPACITY);
     const savedFloors = Math.max(1, Math.min(company.floors ?? 1, MAX_FLOORS));
     company.floors = Math.max(savedFloors, neededFloors);
-    company.projectSlots = Math.max(1, Math.min(company.projectSlots ?? 1, 3));
     // Ensure every project defined in data.ts has a state entry (new content
     // added in updates appears automatically), scaled to the company's site.
     const byId = new Map((company.projects ?? []).map((p) => [p.defId, p]));

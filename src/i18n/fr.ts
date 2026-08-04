@@ -142,13 +142,12 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.softCap': 'PLAFOND',
   'ui.softCapHint':
     'Ce contrat a atteint son plafond ici — une société plus grande ira plus loin.',
-  'ui.projectSlots': 'Créneaux de projets',
+  'ui.projectSlots': 'Projets par étage',
   'ui.projectSlotsHint':
-    'Affectez les étages supérieurs à leurs propres projets — ou gardez tout le monde sur le principal.',
-  'ui.unlockSlot': 'Débloquer une seconde équipe',
-  'ui.slotNeedsFloors': 'Nécessite {floors} étages',
-  'ui.slotUnlocked': 'Nouveau créneau de projet débloqué !',
+    'Chaque étage a son propre créneau de projet — donnez à chaque étage son contrat, ou gardez tout le monde sur le principal.',
   'ui.mainProject': 'Projet principal',
+  'ui.groundFloor': 'Rez-de-chaussée',
+  'ui.floorN': 'Étage {floor}',
   'ui.renameCostConfirm': 'Renommer coûte {cash} + {coins} VsCoin. Continuer ?',
 
   'ui.companyFounded': '{name} est fondée !',
@@ -186,7 +185,7 @@ export const fr: Record<keyof typeof en, string> = {
   // --- Réinitialisation bêta ------------------------------------------------
   'ui.betaResetTitle': 'Un nouveau départ (bêta)',
   'ui.betaResetText':
-    'Les équipes de chantier sont arrivées : des ouvriers qui construisent vos étages et vos sociétés au fil du temps, des levées de fonds et une boutique VsCoin. Cette mise à jour bêta repense la croissance de votre empire, et votre ancienne sauvegarde n’a pas pu suivre. Merci de tester — votre prochain empire grandira encore plus vite !',
+    'Grand réaménagement : chaque étage mène désormais son propre projet, et les prix sont enfin à la hauteur de votre société — fini les bureaux à 20 $ dans une tour à mille milliards. Cette mise à jour bêta repense l’économie de fond en comble, et votre ancienne sauvegarde n’a pas pu suivre. Merci de tester — votre prochain empire grandira encore plus vite !',
 
   // --- Bon retour : le doubleur de Gabriel ------------------------------------
   'ui.doublerButton': '×2 avec la bénédiction de Gabriel — gratuit',

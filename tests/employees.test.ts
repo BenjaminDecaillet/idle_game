@@ -195,24 +195,27 @@ describe('Grade caps: maxSkill tier limits', () => {
 
 describe('Promotion: cost and duration formula', () => {
   it('promoteCost for intern→junior is 100 × 0.6 = 60', () => {
+    const c = activeCompany(createInitialState(NOW));
     const worker = makeWorker({ tierId: 'intern', skillLevel: 10 });
-    const cost = promoteCost(worker);
+    const cost = promoteCost(c, worker);
     const juniorHireCost = WORKER_TIERS.find((t) => t.id === 'junior')!.hireCost;
     expect(juniorHireCost).toBe(100);
     expect(cost).toBe(60);
   });
 
   it('promoteCost for junior→mid is 500 × 0.6 = 300', () => {
+    const c = activeCompany(createInitialState(NOW));
     const worker = makeWorker({ tierId: 'junior', skillLevel: 20 });
-    const cost = promoteCost(worker);
+    const cost = promoteCost(c, worker);
     const midHireCost = WORKER_TIERS.find((t) => t.id === 'mid')!.hireCost;
     expect(midHireCost).toBe(500);
     expect(cost).toBe(300);
   });
 
   it('promoteCost returns null for principal (top tier)', () => {
+    const c = activeCompany(createInitialState(NOW));
     const worker = makeWorker({ tierId: 'principal', skillLevel: 100 });
-    const cost = promoteCost(worker);
+    const cost = promoteCost(c, worker);
     expect(cost).toBeNull();
   });
 
@@ -281,7 +284,7 @@ describe('Promotion: action creation and completion', () => {
     c.workers.push(worker);
     expect(worker.stationId).toBe(1);
 
-    const cost = promoteCost(worker)!;
+    const cost = promoteCost(c, worker)!;
     const moneyBefore = country.money;
     const err = promoteWorker(state, worker.id);
 

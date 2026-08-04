@@ -44,6 +44,22 @@ export const PROMOTE_DURATION_GROWTH = 2; // ^ target tier index (1-based)
 // fast-forward is free (offered during the tutorial's training step).
 export const FASTFORWARD_SEC_PER_VSCOIN = 600;
 
+// Company-tier cost scaling (docs/balance.md Phase S): capital costs
+// (desks, hires, training, promotions, cash upgrades) and salaries scale
+// with the owning company's league so a trillion-dollar tower never sells a
+// $20 desk. The parity base is the site's income scale (outputBonus ×
+// projectScale^(1 − PROJECT_WORK_SCALE_EXP)); the founding escalation
+// (purchasePrice ÷ site list cost, i.e. COMPANY_COST_GROWTH^n) adds a mild
+// premium on capital costs only — never on salaries, which are anchored to
+// income so the debt spiral stays fair.
+export const COMPANY_COST_SCALE_ESCALATION_EXP = 0.15;
+export const COMPANY_SALARY_SCALE_ESCALATION_EXP = 0;
+
+// Candidate reroll: base price scales with the company's cost scale at
+// founding, then grows per reroll.
+export const CANDIDATE_REROLL_BASE = 10;
+export const CANDIDATE_REROLL_GROWTH = 1.5;
+
 // Desk upgrades: raise a desk to the next workstation tier in place, for
 // money (cheaper than the buy-new price gap) + time.
 export const DESK_UPGRADE_COST_FACTOR = 0.8; // × (next.baseCost - current.baseCost)
@@ -76,11 +92,6 @@ export const BUILDER_VSCOIN_GROWTH = 1.8;
 // freezes with it (plateau, not decline) so a single company stalls and the
 // next company becomes the way forward.
 export const PROJECT_REWARD_CAP_MULT = 50;
-
-// Multi-project slots: slot k+1 unlocks once the building has
-// PROJECT_SLOT_FLOOR_REQ[k-1] floors, for PROJECT_SLOT_COSTS[k-1] × projectScale.
-export const PROJECT_SLOT_FLOOR_REQ = [4, 8];
-export const PROJECT_SLOT_COSTS = [25_000, 250_000];
 
 // Debt: a country's wallet can go below zero when wages are due. Interest
 // compounds inside tick(); past the crisis threshold employees resign one

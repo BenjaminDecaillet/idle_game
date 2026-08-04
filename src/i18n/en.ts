@@ -143,13 +143,12 @@ export const en = {
   'ui.softCap': 'CAP',
   'ui.softCapHint':
     'This contract has hit its ceiling here — a bigger company can go further.',
-  'ui.projectSlots': 'Project slots',
+  'ui.projectSlots': 'Floor projects',
   'ui.projectSlotsHint':
-    'Assign upper floors to their own projects — or keep everyone on the main one.',
-  'ui.unlockSlot': 'Unlock a second team',
-  'ui.slotNeedsFloors': 'Needs {floors} floors',
-  'ui.slotUnlocked': 'New project slot unlocked!',
+    'Every floor has its own project slot — give each floor its own contract, or keep everyone on the main one.',
   'ui.mainProject': 'Main project',
+  'ui.groundFloor': 'Ground floor',
+  'ui.floorN': 'Floor {floor}',
   'ui.renameCostConfirm': 'Renaming costs {cash} + {coins} VsCoin. Proceed?',
 
   'ui.companyFounded': '{name} founded!',
@@ -187,7 +186,7 @@ export const en = {
   // --- Beta reset ----------------------------------------------------------
   'ui.betaResetTitle': 'A fresh start (beta)',
   'ui.betaResetText':
-    'Construction crews have arrived: a workforce that builds your floors and companies over time, funding rounds, and a VsCoin shop. This beta update reworks how your empire grows, so your old save could not come along. Thank you for testing — your next empire will rise even faster!',
+    'Big remodeling: every floor now runs its own project, and prices finally match your company’s league — no more $20 desks in a trillion-dollar tower. This beta update reworks the economy from the ground up, so your old save could not come along. Thank you for testing — your next empire will rise even faster!',
 
   // --- Welcome back: Gabriel's offline doubler -------------------------------
   'ui.doublerButton': '×2 with Gabriel’s blessing — free',

@@ -385,3 +385,167 @@ Watch metrics: if players prestige at the 1-rep minimum and churn, raise
 `PRESTIGE_MIN_LIFETIME` to 2e14 (one knob, shifts the whole curve); if ten
 prestiges feel flat, raise `PRESTIGE_OUTPUT_K` toward 0.7 (rep 60 → 6.4×)
 without touching the earning curve.
+
+## Phase S — company-tier cost scaling
+
+Requirement: desk price, hire cost, salary, training, promotion, desk
+upgrades and cash-upgrade prices must scale with the owning company's
+founding price — a company bought for 100T must never sell a $20 desk.
+Company 1 (the garage, purchasePrice 0) keeps today's exact numbers.
+
+### Why not the obvious bases
+
+First, derive how a company's *income* actually scales per site. From the
+engine: `currentReward = baseReward × projectScale`,
+`currentWork = baseWork × projectScale^PROJECT_WORK_SCALE_EXP (0.5)`, and
+worker output carries `site.outputBonus`. So per-worker income
+
+`$/s ∝ tier.baseRate × outputBonus × ($/work) = tier.baseRate × outputBonus × projectScale^(1−0.5)`
+
+Define the **income-parity site scale** `S = outputBonus × √projectScale`:
+garage 1, loft 2.2, paloalto 5, campus 12, tower 32, seattle 80, nyc 192,
+orbital 512. (The reward soft cap and its work freeze both carry the same
+`√projectScale` in $/work, so `S` holds at the plateau too.)
+
+- **(a) purchasePrice ratio directly — rejected.** Garage anchors at 0
+  (division by zero), and price grows vastly faster than income: orbital #8
+  costs 113T while income scale is only 512×. Salaries ×~5.7e8 (vs the
+  loft's 200k) against income ×512 → every late company permanently
+  insolvent, debt crisis by construction.
+- **(b) raw projectScale — rejected.** projectScale reaches 16,384 at
+  orbital but income only scales 512× (work grows with the √ exponent).
+  A mid dev there: salary 0.5 × 16,384 = 8,192 $/s vs ~640 $/s gross —
+  every orbital company runs at a loss forever. projectScale does *not*
+  preserve payback ratios; `S = outputBonus × √projectScale` does, exactly.
+- **(c) hybrid — chosen.** `S` for parity, times a *sub-linear* power of
+  the founding escalation (`purchasePrice / site.cost = 2.2^(n−2)`) so the
+  PO's "founding price" intent shows up in capital costs without breaking
+  profitability. Salaries get **no** escalation term (recurring cost: any
+  escalation there compounds into unfair debt crises; capital costs are
+  one-time, so a mild premium just stretches payback slightly).
+
+### The formula
+
+Two derived multipliers, both pure functions of `company.siteId` +
+`company.purchasePrice` (the exact engine inputs):
+
+```
+siteScale(site)   = site.outputBonus × site.projectScale^(1 − PROJECT_WORK_SCALE_EXP)
+escalation        = site.cost > 0 ? max(1, company.purchasePrice / site.cost) : 1
+companyCostScale  = siteScale × escalation^COMPANY_COST_SCALE_ESCALATION_EXP   (0.15)
+companySalaryScale = siteScale × escalation^COMPANY_SALARY_SCALE_ESCALATION_EXP (0)
+```
+
+- Company 1: garage has cost 0 and purchasePrice 0 → escalation 1,
+  siteScale 1 → both multipliers exactly 1. Today's numbers untouched.
+- `siteScale` reuses `outputBonus`, `projectScale` and
+  `PROJECT_WORK_SCALE_EXP` — no new per-site constants, and it stays in
+  lock-step if the work exponent ever changes.
+- Exponent 0.15 sample points: escalation^0.15 = 1.00 at company #2,
+  1.43 at #5 (2.2³ = 10.6), 2.03 at #8 (2.2⁶ = 113.4). Rationale: because
+  2.2^0.15 ≈ 1.125, this is "+12.5% capital cost per extra company in the
+  country" — same shape as `FLOOR_BUILD_COMPANY_GROWTH (1.15)`, and it
+  keeps worst-case fresh-company payback ≈ 2× the garage's (minutes, not
+  hours — see the invariant table). 0.5 would give 10.6× at #8 → ~75 min
+  paybacks; rejected.
+
+**What multiplies by `companyCostScale`** (all per-company): station cost
+(`baseCost × growth^owned × scale`), desk-upgrade cost, hire cost (talent
+discount still multiplies; promotion cost = 0.6 × *scaled* target hireCost
+follows automatically, preserving the "40% cheaper than a fresh hire"
+invariant exactly), training cost, cash upgrade prices (`coffee` … 
+`moonshot`), candidate reroll base (see below).
+**What multiplies by `companySalaryScale`**: salaries only (in
+`companySalaries`; the debt cap/crisis thresholds are salary-anchored so
+they auto-scale).
+**Untouched**: floor cost & project unlock/slot costs (already site-scaled
+via `floorCostFactor`/`projectScale`), marketing (income-anchored), rename
+(purchasePrice-anchored already), builders & shop packs (country/income
+level), VsCoin prices (`aura`, wallpapers — premium economy stays global).
+
+### Worked examples (ladder-order purchase #n → escalation 2.2^(n−2))
+
+**Loft, company #2** — purchasePrice = 200k × 2.2⁰ = 200k, escalation 1,
+S = 1.1 × √4 = 2.2, cost scale = **2.2**, salary scale = **2.2**.
+Basic desk 44, corner 44,000; mid hire 1,100, principal 176,000; mid
+salary 1.10 $/s; mid training (skill 1) ≈ 248; intern→junior promotion 132.
+
+**Tower, company #5** — purchasePrice = 500M × 2.2³ = 5.32B, escalation
+10.65 → ^0.15 ≈ 1.43, S = 2 × √256 = 32, cost scale = **45.6**, salary
+scale = **32**. Basic desk 913, corner ≈ 913k; mid hire 22.8k, principal
+3.65M; mid salary 16 $/s; senior→architect promotion ≈ 411k.
+
+**Orbital, company #8** — purchasePrice = 1T × 2.2⁶ ≈ 113.4T, escalation
+113.4 → ^0.15 ≈ 2.03, S = 4 × √16384 = 512, cost scale = **1,041**, salary
+scale = **512**. Basic desk ≈ 20.8k (the "100T company never sells a $20
+desk" check), corner ≈ 20.8M; mid hire ≈ 520k, principal ≈ 83M (~14 min at
+the ~100k $/s orbital plateau); mid salary 256 $/s; architect→principal
+promotion ≈ 50M.
+
+### Profitability invariant (fresh company: 1 basic desk + 1 mid hire)
+
+Model: 1 mid dev (skill 1, no spec match, no upgrades) on the scaled
+Landing Page: gross = 1.25 × S $/s, salary = 0.5 × S $/s → net =
+0.75 × S $/s (the salary/gross ratio is 40% at *every* tier — identical to
+today's garage, income covers payroll from the first completion). Payback
+= (desk + hire) / net = 693 s × escalation^0.15.
+
+| site (purchase #) | basic desk | mid hire | mid salary/s | 1st-project reward (landing) | payback |
+|---|---|---|---|---|---|
+| garage (#1) | 20 | 500 | 0.50 | 15 | 11.6 min |
+| loft (#2) | 44 | 1,100 | 1.10 | 60 | 11.6 min |
+| paloalto (#3) | 113 | 2,814 | 2.50 | 240 | 13.0 min |
+| campus (#4) | 304 | 7,600 | 6.00 | 960 | 14.6 min |
+| tower (#5) | 913 | 22,813 | 16.00 | 3,840 | 16.5 min |
+| seattle (#6) | 2,568 | 64,194 | 40.00 | 15,360 | 18.5 min |
+| nyc (#7) | 6,936 | 173,400 | 96.00 | 61,440 | 20.9 min |
+| orbital (#8) | 20,816 | 520,400 | 256.00 | 245,760 | 23.5 min |
+
+Every tier pays back its starting outlay in ~12–24 min — early-game feel
+preserved, with a gentle escalation drift that nudges toward "finish the
+plateau before founding the next company". Side effect worth naming: today
+a loft company hires at garage prices while earning 2.2× — a hidden
+discount; removing it slightly slows post-purchase snowballing, which is
+exactly the per-company-plateau pacing target. Training payback keeps its
+~5 min anchor × escalation^0.15 (≤ ~2×) for the same reason.
+
+### Marketing minimum & candidate reroll
+
+- **Marketing min (500): keep flat.** `marketingCost` is already anchored
+  to 300 s of the country's gross income, so it self-scales; the 500 floor
+  only ever binds when income ≈ 0 (fresh or prestiged country), and
+  scaling it would punish exactly those restarts. Not a per-company price;
+  no change.
+- **Candidate reroll base (10): scale by `companyCostScale`.** A flat 10
+  at an orbital company is free infinite scumming for spec-matched
+  principal candidates. Initialize `candidateRerollCost =
+  round(CANDIDATE_REROLL_BASE × companyCostScale)` at company creation
+  (loft 22, tower #5 ≈ 456, orbital #8 ≈ 10.4k — a constant ~2% of a mid
+  hire at every tier, today's friction ratio preserved); keep the ×1.5
+  per-reroll growth. Note: the base 10 and growth 1.5 are currently
+  literals in `engine.ts` — move them to `data.ts` while touching this
+  (hard rule: balance values live in data.ts). `candidateRerollCost` is
+  stored state → bump `SAVE_VERSION` per the beta policy.
+
+### Constants to land (src/game/data.ts)
+
+```ts
+// Company-tier cost scaling (docs/balance.md, Phase S).
+// companyCostScale(company)   = siteScale × escalation^COST_EXP  — capital costs
+// companySalaryScale(company) = siteScale × escalation^SALARY_EXP — salaries
+// siteScale = site.outputBonus × site.projectScale^(1 − PROJECT_WORK_SCALE_EXP)
+// escalation = site.cost > 0 ? max(1, purchasePrice / site.cost) : 1
+export const COMPANY_COST_SCALE_ESCALATION_EXP = 0.15; // 2.2^0.15 ≈ +12.5% per extra company
+export const COMPANY_SALARY_SCALE_ESCALATION_EXP = 0; // recurring cost: parity only (raise only if late companies overprint)
+export const CANDIDATE_REROLL_BASE = 10; // moved from engine.ts literal; × companyCostScale at creation
+export const CANDIDATE_REROLL_GROWTH = 1.5; // moved from engine.ts literal
+```
+
+Engine surface (mechanical): `companyCostScale(company)` and
+`companySalaryScale(company)` reading only `company.siteId` and
+`company.purchasePrice`; multiply into `stationCost`, `deskUpgradeCost`
+(needs a `company` param), `hireCost`, `trainCost` / `promoteCost` (need a
+`company` param), `upgradeCost` (cash branch only), `companySalaries`, and
+the `candidateRerollCost` initializer. Watch metric: if late companies
+still snowball too fast, raise `COMPANY_COST_SCALE_ESCALATION_EXP` toward
+0.25 (payback #8 → ~34 min) — one knob, salaries stay safe by design.

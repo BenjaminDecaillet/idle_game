@@ -50,25 +50,27 @@ describe('nextStationDef', () => {
 });
 
 describe('deskUpgradeCost', () => {
+  const garage = activeCompany(createInitialState(NOW));
+
   it('costs round((next.baseCost - current.baseCost) × 0.8)', () => {
     // basic (20) → standing (250): (250 - 20) × 0.8 = 230 × 0.8 = 184
-    expect(deskUpgradeCost('basic')).toBe(184);
+    expect(deskUpgradeCost(garage, 'basic')).toBe(184);
 
     // standing (250) → dual (2000): (2000 - 250) × 0.8 = 1750 × 0.8 = 1400
-    expect(deskUpgradeCost('standing')).toBe(1400);
+    expect(deskUpgradeCost(garage, 'standing')).toBe(1400);
 
     // dual (2000) → corner (20000): (20000 - 2000) × 0.8 = 18000 × 0.8 = 14400
-    expect(deskUpgradeCost('dual')).toBe(14400);
+    expect(deskUpgradeCost(garage, 'dual')).toBe(14400);
   });
 
   it('returns null for corner (already the best)', () => {
-    expect(deskUpgradeCost('corner')).toBeNull();
+    expect(deskUpgradeCost(garage, 'corner')).toBeNull();
   });
 
   it('is cheaper than buying the new desk directly', () => {
     // Verify that upgrading a basic desk to standing is cheaper than buying a standing desk
     const standingCost = WORKSTATIONS.find((w) => w.id === 'standing')!.baseCost; // 250
-    const upgradeCost = deskUpgradeCost('basic')!;
+    const upgradeCost = deskUpgradeCost(garage, 'basic')!;
     expect(upgradeCost).toBe(184);
     expect(upgradeCost).toBeLessThan(standingCost);
   });
@@ -152,7 +154,7 @@ describe('upgradeDesk — cost & action creation', () => {
 
     buyWorkstation(state, 'basic');
     const deskId = c.workstations[0].id;
-    const cost = deskUpgradeCost('basic')!;
+    const cost = deskUpgradeCost(c, 'basic')!;
     expect(cost).toBe(184);
 
     const before = country.money;
@@ -408,7 +410,7 @@ describe('desk upgrade lifecycle — comprehensive flow', () => {
     const moneyAfterBuy = country.money;
 
     // Upgrade to standing
-    const cost1 = deskUpgradeCost('basic')!;
+    const cost1 = deskUpgradeCost(c, 'basic')!;
     expect(cost1).toBe(184);
     upgradeDesk(state, deskId);
     expect(country.money).toBe(moneyAfterBuy - cost1);
@@ -419,7 +421,7 @@ describe('desk upgrade lifecycle — comprehensive flow', () => {
     const moneyAfterUpgrade1 = country.money;
 
     // Upgrade to dual
-    const cost2 = deskUpgradeCost('standing')!;
+    const cost2 = deskUpgradeCost(c, 'standing')!;
     expect(cost2).toBe(1400);
     upgradeDesk(state, deskId);
     expect(country.money).toBe(moneyAfterUpgrade1 - cost2);
@@ -430,7 +432,7 @@ describe('desk upgrade lifecycle — comprehensive flow', () => {
     const moneyAfterUpgrade2 = country.money;
 
     // Try to upgrade to corner
-    const cost3 = deskUpgradeCost('dual')!;
+    const cost3 = deskUpgradeCost(c, 'dual')!;
     expect(cost3).toBe(14400);
     upgradeDesk(state, deskId);
     expect(country.money).toBe(moneyAfterUpgrade2 - cost3);
