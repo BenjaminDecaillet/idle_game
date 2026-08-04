@@ -316,6 +316,8 @@ export interface PlayerState {
 export interface Boost {
   /** e.g. 2 for a "2x income" boost */
   mult: number;
+  /** Salary multiplier while active — events trade cash for higher wages. */
+  salaryMult?: number;
   remainingSec: number;
   /** where it came from, for analytics: 'ad' | 'iap' | 'event' | 'dev' */
   source: string;

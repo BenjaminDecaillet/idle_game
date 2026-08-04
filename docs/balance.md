@@ -730,3 +730,26 @@ Steve Gates (the scripted tutorial hire) is deliberately traitless: the
 tutorial's cost/time script stays exact.
 
 Constants: `TRAITS`, `TRAIT_CHANCE`, `RARE_TRAIT_CHANCE` in data.ts.
+
+## Phase E — random events
+
+Live opportunity dialogs with a real trade-off, wall-clock scheduled by
+the UI (6–11 min windows, `EVENT_INTERVAL_*`; never while hidden, never
+offline — briefcase precedent) once `tutorial.done && totalEarned ≥
+EVENT_MIN_EARNED (5 000)`. Cash sides are minutes of gross income at
+roll time (floored), so offers stay meaningful at every scale:
+
+| event | weight | you get | you pay |
+|---|---|---|---|
+| 💼 Investor offer | 3 | 30 min income cash now | salaries ×2 for 10 min |
+| 📰 Press coverage | 3 | output ×2 for 4 min | 5 min income upfront |
+| 🍕 Crunch pizza | 2 | output ×1.5 for 10 min | 2 min income + salaries ×1.5 for 10 min |
+| 🎤 Keynote slot | 2 | output ×2.5 for 3 min | 10 min income upfront |
+
+EV check: every accept is mildly positive for an attentive player
+(press coverage nets ≈ +3 min income; the investor offer nets ≈ +30 min
+income minus 10 min of doubled wages, positive whenever salaries <
+gross — guaranteed by Phase S parity), so accepting is never a trap;
+declining costs nothing. The salary lever rides a new optional
+`salaryMult` on Boost (max 5 active boosts caps stacking; same-source
+re-grants extend).

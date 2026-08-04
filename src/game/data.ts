@@ -444,6 +444,37 @@ export const UPGRADES: UpgradeDef[] = [
  * metric; the UI shows the first unclaimed mission of each chain. Progress
  * is always derived from durable state counters — no extra bookkeeping.
  */
+// Random events (docs/balance.md Phase E): live opportunity dialogs with a
+// real trade-off, rolled by the UI layer on a wall-clock cadence (briefcase
+// pattern — never during offline simulation) and resolved through engine
+// actions. Cash amounts are minutes of gross income at roll time (negative =
+// an upfront price), |cash| floored at cashFloor.
+export interface RandomEventDef {
+  id: string;
+  emoji: string;
+  weight: number;
+  /** Minutes of gross income granted (+) or charged (−) on accept. */
+  cashMinutes: number;
+  /** Floor on |cash| so fresh economies still feel the stakes. */
+  cashFloor: number;
+  /** Output multiplier while active (1 = none). */
+  mult: number;
+  /** Salary multiplier while active (1 = none — the trade-off lever). */
+  salaryMult: number;
+  durationSec: number;
+}
+export const RANDOM_EVENTS: RandomEventDef[] = [
+  { id: 'investor-offer', emoji: '💼', weight: 3, cashMinutes: 30, cashFloor: 1_000, mult: 1, salaryMult: 2, durationSec: 600 },
+  { id: 'press-coverage', emoji: '📰', weight: 3, cashMinutes: -5, cashFloor: 250, mult: 2, salaryMult: 1, durationSec: 240 },
+  { id: 'crunch-pizza', emoji: '🍕', weight: 2, cashMinutes: -2, cashFloor: 100, mult: 1.5, salaryMult: 1.5, durationSec: 600 },
+  { id: 'conference-keynote', emoji: '🎤', weight: 2, cashMinutes: -10, cashFloor: 500, mult: 2.5, salaryMult: 1, durationSec: 180 },
+];
+/** Events stay quiet until the player has an economy worth trading with. */
+export const EVENT_MIN_EARNED = 5_000;
+/** UI scheduler window between offers (seconds). */
+export const EVENT_INTERVAL_MIN_SEC = 360;
+export const EVENT_INTERVAL_MAX_SEC = 660;
+
 // Worker traits (docs/balance.md Phase T): rolled once at candidate
 // creation via the injectable rand. TRAIT_CHANCE of candidates carry one
 // trait; RARE_TRAIT_CHANCE additionally roll a second one and present as

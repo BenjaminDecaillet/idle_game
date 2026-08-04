@@ -524,4 +524,22 @@ export const en = {
   'trait.perfectionist.desc': 'Polishes everything: +10% output, −15% experience gain.',
   'trait.rockstar.name': 'Rockstar',
   'trait.rockstar.desc': 'A legend in the making: +40% output, +25% salary.',
+
+  // --- Random events --------------------------------------------------------
+  'ui.eventKicker': 'Opportunity',
+  'ui.eventAccept': 'Deal!',
+  'ui.eventDecline': 'Pass',
+  'ui.eventAccepted': 'Deal closed!',
+  'event.investor-offer.title': 'An investor calls',
+  'event.investor-offer.text':
+    'They wire you {cash} on the spot — if everyone’s salary doubles for {duration}. Deal?',
+  'event.press-coverage.title': 'A journalist wants the story',
+  'event.press-coverage.text':
+    'Sponsor the feature for {cash} and the buzz doubles your output for {duration}.',
+  'event.crunch-pizza.title': 'Pizza-fueled crunch night',
+  'event.crunch-pizza.text':
+    'Order pizza for the whole floor ({cash}): ×{mult} output, but ×{salaryMult} salaries for {duration}.',
+  'event.conference-keynote.title': 'A keynote slot opens up',
+  'event.conference-keynote.text':
+    'Pay {cash} for the slot and the demo blows minds: ×{mult} output for {duration}.',
 } as const;
