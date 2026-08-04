@@ -76,18 +76,18 @@ missing and reuses existing plumbing.
     `officeScene.ts`) and a builder persona on site would sell the fantasy.
     Same for map sites under construction (currently a 🏗️ label prefix).
 
-16. **Builder idle visibility** — Show idle vs busy builders persistently
-    (HUD chip or Office header is count-only today); optional cosmetic
-    "which builder is on it" attribution (engine keeps occupancy derived).
+16. ~~**Builder idle visibility**~~ — shipped: persistent HUD chip with
+    free/total builders (red when all busy, tap → Office), 60 fps,
+    occupancy still derived (decisions.md #34).
 
 17. ~~**Story recap → sound design pass**~~ — shipped with the chiptune
     slice: distinct chimes for story beats (angelic arpeggio), mission
     claims (fanfare) and VsCoin pack claims (sparkle blips), all ducking
     the new theme loop (decisions.md #26).
 
-18. **Confetti/FX on mission claim & tutorial completion** — Route claims
-    through `fx.payoutBurst`-style particles at the button position so
-    VsCoin feels premium.
+18. ~~**Confetti/FX on mission claim**~~ — shipped: mission, daily and
+    vault claims burst confetti at the button position on top of their
+    chimes (decisions.md #34).
 
 19. **Bespoke per-country city scenes** — v8 ships one parameterized
     renderer (`cityMap.ts` `COUNTRY_THEMES`); fully bespoke scenes per

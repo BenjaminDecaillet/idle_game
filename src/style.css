@@ -2026,3 +2026,14 @@ input.music-volume {
   align-self: flex-end;
   margin: 0 10px 2px;
 }
+
+/* Builder availability chip. */
+.badge.badge-builders {
+  background: rgba(59, 130, 246, 0.14);
+  border: 1.5px solid rgba(37, 99, 235, 0.35);
+}
+
+.badge.badge-builders.all-busy {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(220, 38, 38, 0.45);
+}

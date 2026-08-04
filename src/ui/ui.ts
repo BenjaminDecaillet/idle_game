@@ -286,6 +286,8 @@ export class UI {
             </span>
             <button class="badge badge-vault" id="hud-vault" hidden data-action="tab:shop"
                     title="${t('ui.vaultTitle')}">🐷<span id="hud-vault-text"></span></button>
+            <button class="badge badge-builders" id="hud-builders" data-action="tab:office"
+                    title="${t('ui.builders')}">👷<span id="hud-builders-text"></span></button>
             <span class="badge badge-income" id="hud-income" title="${t('ui.netIncomeTitle')}"></span>
             <button class="badge badge-vscoin" id="hud-vscoin" data-action="tab:vscoin" title="VsCoin">
               ${icon('vscoin', 13)}<span id="hud-vscoin-text">0</span>
@@ -375,6 +377,13 @@ export class UI {
       }
     }
 
+    const country = activeCountry(s);
+    const freeB = freeBuilders(country);
+    const buildersEl = document.getElementById('hud-builders');
+    if (buildersEl) {
+      buildersEl.classList.toggle('all-busy', freeB === 0);
+      this.text('hud-builders-text', `${freeB}/${country.builders.count}`);
+    }
     const vaultEl = document.getElementById('hud-vault');
     if (vaultEl) {
       vaultEl.hidden = s.vault.amount <= 0;
@@ -2284,6 +2293,12 @@ export class UI {
   // Actions
   // -------------------------------------------------------------------------
 
+  /** Confetti at an element's center — claims should feel premium. */
+  private burstAt(el: HTMLElement): void {
+    const r = el.getBoundingClientRect();
+    this.fx.burst(r.left + r.width / 2, r.top + r.height / 2);
+  }
+
   private handleClick(e: Event): void {
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
     if (!target || target.hasAttribute('disabled')) return;
@@ -2424,6 +2439,7 @@ export class UI {
         if (!error) {
           this.toast(`🐷 ${t('ui.vaultOpened')}`, 'info');
           this.fx.coinChime();
+          this.burstAt(target);
         }
         break;
       case 'buy-pack':
@@ -2474,6 +2490,7 @@ export class UI {
         if (!error) {
           this.toast(`💎 ${t('ui.claimed')}`, 'info');
           this.fx.claimChime();
+          this.burstAt(target);
         }
         break;
       case 'claim-daily':
@@ -2481,6 +2498,7 @@ export class UI {
         if (!error) {
           this.toast(`📅 ${t('ui.claimed')}`, 'info');
           this.fx.claimChime();
+          this.burstAt(target);
         }
         break;
       case 'buy-vscoin-boost':

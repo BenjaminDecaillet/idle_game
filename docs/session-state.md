@@ -6,18 +6,19 @@ whole backlog (per-floor projects + cost scaling → Office tab → chiptune
 Angular naming, no AI attribution in git history, checkpoint after every
 slice.
 
-## 1. Current slice — second tier: office pets
+## 1. Current slice — polish: builder chip + confetti
 
-PRs #17–#25 merged (top tier + site specialization). Current slice on
-branch `feat/office-pets`: complete, gates pending final run. Shipped:
-4 zero-power VsCoin pets (global ownership, per-company petId, staff
-room pet corner, lobby companion), push opt-in #12 formally SKIPPED
-(decisions.md #33 — needs push-service backend).
+PRs #17–#26 merged. Current slice on branch `feat/polish-visibility`:
+complete, gates green (704 tests / 32 files, build, smoke). Shipped:
+free/total builders HUD chip (red when all busy) + confetti on
+mission/daily/vault claims (decisions.md #34); improvements #16 + #18
+ticked.
 
-**Next action:** gate → PR (strip session footer) → CI (`test` check)
-→ merge → polish tier: #16 builder idle visibility, #18 confetti on
-claims, #15 construction art pass (art-skinner), then tech #21 balance
-harness. #19 bespoke city scenes is big art — only if time remains.
+**Next action:** PR (strip session footer) → CI → merge → #15
+construction art pass (art-skinner: scaffolding/crane on in-progress
+floors + map sites) → tech #21 balance simulation harness → #19
+bespoke city scenes only if time remains. Then final wrap: improvements
+re-baseline, plan.md status, "nothing in flight" checkpoint.
 
 ## 2. Slice queue (mission order)
 

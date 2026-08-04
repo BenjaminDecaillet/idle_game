@@ -250,3 +250,11 @@ be revisited cheaply.
     skip rule — and a page-open-only Notification fallback is useless
     for re-engagement; revisit with monetization Phase 0's backend
     decisions (docs/monetization.md).
+34. **Polish: builder chip + claim confetti (#16, #18)**: a persistent
+    HUD chip shows free/total builders at 60 fps (red state when all
+    busy; tap → Office) — occupancy stays derived via freeBuilders(),
+    nothing stored. Mission/daily/vault claims now burst confetti at
+    the clicked button (shared burstAt helper) on top of their chimes.
+    The optional "which builder is on it" attribution from #16 was
+    dropped as cosmetic bookkeeping that the derived model can't answer
+    honestly.
