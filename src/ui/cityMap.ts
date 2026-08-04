@@ -682,7 +682,13 @@ function roadsSection(P: ThemePalette): string {
 
 // --- neighbourhood filler (parks, houses, courts, parking…) -------------------
 
-function fillerSection(P: ThemePalette): string {
+interface FillerOpts {
+  cottages?: boolean; // west-side filler cottages (bespoke backdrops swap in their own houses)
+  bottomStrip?: boolean; // parking lot + food truck below the boulevard (bespoke water/desert band)
+}
+
+function fillerSection(P: ThemePalette, opts: FillerOpts = {}): string {
+  const { cottages = true, bottomStrip = true } = opts;
   let g = '';
   // pocket park between the campus and the river
   g +=
@@ -698,8 +704,10 @@ function fillerSection(P: ThemePalette): string {
     `<line x1="179" y1="122" x2="179" y2="127" stroke-width="2"/>` +
     `</g>`;
   // west-side filler cottages (below Palo Alto)
-  g += fillerHouse(12, 358, 38, P.roofC, P) + fillerHouse(58, 352, 30, P.roofD, P);
-  g += fillerHouse(126, 356, 32, P.roofA, P);
+  if (cottages) {
+    g += fillerHouse(12, 358, 38, P.roofC, P) + fillerHouse(58, 352, 30, P.roofD, P);
+    g += fillerHouse(126, 356, 32, P.roofA, P);
+  }
   g += treePine(16, 244, 0.85, P) + bush(48, 322, 1, P) + treeRound(112, 328, 0.75, P);
   // riverside basketball court
   g +=
@@ -727,32 +735,34 @@ function fillerSection(P: ThemePalette): string {
     `<rect x="214.5" y="438.5" width="9" height="2.5" rx="1" fill="${P.carA}" stroke-width="1.5"/>` +
     `</g>`;
   // bottom strip: parking lot with slots + parked cars
-  g +=
-    `<g>` +
-    `<rect x="208" y="496" width="134" height="24" fill="${P.road}"/>` +
-    `<g stroke="${P.roadDash}" stroke-width="1.5" opacity=".8">` +
-    `<line x1="234" y1="498" x2="234" y2="518"/>` +
-    `<line x1="262" y1="498" x2="262" y2="518"/>` +
-    `<line x1="290" y1="498" x2="290" y2="518"/>` +
-    `<line x1="318" y1="498" x2="318" y2="518"/>` +
-    `</g>` +
-    parkedCar(210, 501, P.carB, P) +
-    parkedCar(238, 501, P.carD, P) +
-    parkedCar(294, 501, P.carC, P) +
-    `</g>`;
-  // food truck parked on the bottom strip
-  g +=
-    `<g>` +
-    shadow(172, 519, 24, 4) +
-    `<rect x="150" y="498" width="42" height="20" rx="4" fill="${P.carC}"/>` +
-    shadeRect(184, 498, 8, 20) +
-    `<rect x="156" y="502" width="18" height="8" rx="1.5" fill="${P.window}" stroke-width="1.5"/>` +
-    `<rect x="154" y="499" width="24" height="3.5" rx="1.5" fill="${P.carA}" stroke-width="1.5"/>` +
-    `<circle cx="184" cy="507" r="3.5" fill="${P.sail}" stroke-width="1.5"/>` +
-    `<circle cx="158" cy="518" r="3" fill="${INK}"/>` +
-    `<circle cx="184" cy="518" r="3" fill="${INK}"/>` +
-    `</g>`;
-  g += bush(20, 508, 1.1, P) + bush(120, 506, 0.9, P) + treeRound(70, 514, 0.7, P);
+  if (bottomStrip) {
+    g +=
+      `<g>` +
+      `<rect x="208" y="496" width="134" height="24" fill="${P.road}"/>` +
+      `<g stroke="${P.roadDash}" stroke-width="1.5" opacity=".8">` +
+      `<line x1="234" y1="498" x2="234" y2="518"/>` +
+      `<line x1="262" y1="498" x2="262" y2="518"/>` +
+      `<line x1="290" y1="498" x2="290" y2="518"/>` +
+      `<line x1="318" y1="498" x2="318" y2="518"/>` +
+      `</g>` +
+      parkedCar(210, 501, P.carB, P) +
+      parkedCar(238, 501, P.carD, P) +
+      parkedCar(294, 501, P.carC, P) +
+      `</g>`;
+    // food truck parked on the bottom strip
+    g +=
+      `<g>` +
+      shadow(172, 519, 24, 4) +
+      `<rect x="150" y="498" width="42" height="20" rx="4" fill="${P.carC}"/>` +
+      shadeRect(184, 498, 8, 20) +
+      `<rect x="156" y="502" width="18" height="8" rx="1.5" fill="${P.window}" stroke-width="1.5"/>` +
+      `<rect x="154" y="499" width="24" height="3.5" rx="1.5" fill="${P.carA}" stroke-width="1.5"/>` +
+      `<circle cx="184" cy="507" r="3.5" fill="${P.sail}" stroke-width="1.5"/>` +
+      `<circle cx="158" cy="518" r="3" fill="${INK}"/>` +
+      `<circle cx="184" cy="518" r="3" fill="${INK}"/>` +
+      `</g>`;
+    g += bush(20, 508, 1.1, P) + bush(120, 506, 0.9, P) + treeRound(70, 514, 0.7, P);
+  }
   // downtown filler towers around the SF tower (non interactive)
   g +=
     `<g>` +
@@ -820,6 +830,10 @@ function fillerSection(P: ThemePalette): string {
 //     group (only soft shadows / silhouettes opt out with stroke="none").
 //     A prop drawn at natural size may be fitted into the narrow pocket with
 //     a literal translate+scale wrapper — still deterministic.
+//  5. Optional `backdrop(P)` — fully bespoke non-interactive composition
+//     replacing the generic ground/river/filler stack (see the "Bespoke
+//     country backdrops" section below; ch / sa / cn use it). It must still
+//     call roadsSection so streets reach the sites.
 //  Everything must be deterministic: literal coordinates, no randomness.
 
 interface CountryTheme {
@@ -827,6 +841,16 @@ interface CountryTheme {
   palette: Partial<ThemePalette>;
   skyline: (P: ThemePalette) => string;
   landmarks: (P: ThemePalette) => string;
+  /**
+   * Fully bespoke backdrop: replaces the whole generic non-interactive stack
+   * (ground → skyline → river → roads → filler → landmarks). Must keep the
+   * road/boulevard geometry (roadsSection) so streets still reach the sites
+   * and the CSS-animated cars stay on their track, and must never draw over
+   * a site plot — sites are painted after, but bespoke props stay in the
+   * documented free zones plus the strips the backdrop itself owns
+   * (bottom strip y498–536, cottage row, skyline band).
+   */
+  backdrop?: (P: ThemePalette) => string;
 }
 
 // --- ch: Alps ridge, chalet + flag, alpine cow ------------------------------
@@ -1107,12 +1131,28 @@ function deLandmarks(P: ThemePalette): string {
 
 function saSkyline(): string {
   return (
+    // heat-haze sun behind the towers: concentric discs, no filters
+    `<g stroke="none">` +
+    `<circle cx="252" cy="22" r="26" fill="#ffd97a" opacity=".18"/>` +
+    `<circle cx="252" cy="22" r="18" fill="#ffd97a" opacity=".3"/>` +
+    `<circle cx="252" cy="22" r="12" fill="#ffdf8f"/>` +
+    `</g>` +
+    `<g stroke="#ffd97a" stroke-width="1.6" fill="none" opacity=".5">` +
+    `<path d="M216,44 q6,-3 12,0 q6,3 12,0"/>` +
+    `<path d="M246,52 q6,-3 12,0 q6,3 12,0"/>` +
+    `<path d="M276,44 q6,-3 12,0 q6,3 12,0"/>` +
+    `</g>` +
     `<g stroke="none" opacity=".35">` +
     `<path d="M0,60 L0,48 Q46,32 96,46 Q150,58 204,44 Q258,32 308,46 Q336,52 360,46 L360,60 Z" fill="#d3a960"/>` +
     `<rect x="40" y="26" width="11" height="34" fill="#8a7a96"/>` +
     `<path d="M58,60 L58,18 Q66,4 74,18 L74,60 L69,60 L69,24 Q66,17 63,24 L63,60 Z" fill="#8a7a96"/>` +
     `<rect x="86" y="20" width="12" height="40" fill="#8a7a96"/>` +
     `<rect x="102" y="30" width="9" height="30" fill="#8a7a96"/>` +
+    // modern glass cluster east of the old quarter
+    `<path d="M132,60 L132,22 L138,10 L144,22 L144,60 Z" fill="#9aa8c4"/>` +
+    `<rect x="150" y="26" width="10" height="34" fill="#9aa8c4"/>` +
+    `<path d="M166,60 L166,20 L171,20 L174,6 L177,20 L182,20 L182,60 Z" fill="#9aa8c4"/>` +
+    `<rect x="188" y="32" width="9" height="28" fill="#9aa8c4"/>` +
     `</g>`
   );
 }
@@ -1152,17 +1192,37 @@ function saLandmarks(P: ThemePalette): string {
 function cnSkyline(): string {
   return (
     `<g stroke="none" opacity=".35">` +
+    // river mist hugging the waterfront
     `<rect x="0" y="52" width="360" height="8" rx="4" fill="#7e94a6" opacity=".5"/>` +
-    `<path d="M0,60 L0,44 Q8,16 20,44 Q26,24 38,46 Q48,12 62,44 Q70,26 80,46 L80,60 Z" fill="#7e94a6"/>` +
-    `<path d="M310,60 L310,46 Q318,20 330,46 Q338,26 350,48 Q354,36 360,44 L360,60 Z" fill="#7e94a6"/>` +
-    `<path d="M106,50 L134,50 L120,42 Z" fill="#8c4a3e"/>` +
-    `<path d="M109,42 L131,42 L120,34 Z" fill="#8c4a3e"/>` +
-    `<path d="M112,34 L128,34 L120,27 Z" fill="#8c4a3e"/>` +
-    `<rect x="119" y="21" width="2" height="6" fill="#8c4a3e"/>` +
-    `<path d="M282,60 L284.5,20 L286.5,20 L289,60 Z" fill="#8c4a3e"/>` +
-    `<circle cx="285.5" cy="26" r="6" fill="#8c4a3e"/>` +
-    `<circle cx="285.5" cy="12" r="3.5" fill="#8c4a3e"/>` +
-    `<rect x="284.8" y="2" width="1.4" height="7" fill="#8c4a3e"/>` +
+    // Bund-side blocks
+    `<rect x="4" y="34" width="14" height="26" fill="#7e94a6"/>` +
+    `<rect x="22" y="28" width="12" height="32" fill="#7e94a6"/>` +
+    `<path d="M38,60 L38,30 L44,24 L50,30 L50,60 Z" fill="#7e94a6"/>` +
+    `<rect x="56" y="38" width="12" height="22" fill="#7e94a6"/>` +
+    // Oriental-Pearl-style tower: tripod legs, two spheres, antenna
+    `<g fill="#8c5a76">` +
+    `<path d="M96,60 L104,34 L106,34 L100,60 Z"/>` +
+    `<path d="M116,60 L108,34 L110,34 L114,60 Z"/>` +
+    `<circle cx="107" cy="32" r="7.5"/>` +
+    `<rect x="105.4" y="8" width="3.2" height="26"/>` +
+    `<circle cx="107" cy="13" r="4"/>` +
+    `<rect x="106.3" y="0" width="1.4" height="9"/>` +
+    `</g>` +
+    // stepped Jin-Mao-style tower
+    `<g fill="#7e94a6">` +
+    `<rect x="130" y="26" width="18" height="34"/>` +
+    `<rect x="133" y="16" width="12" height="12"/>` +
+    `<rect x="136" y="9" width="6" height="8"/>` +
+    `<rect x="138.6" y="2" width="1.8" height="8"/>` +
+    `</g>` +
+    // bottle-opener tower (aperture via evenodd)
+    `<path fill-rule="evenodd" d="M158,60 L162,8 L174,8 L178,60 Z M164,14 L172,14 L171,22 L165,22 Z" fill="#7e94a6"/>` +
+    // far bank: pagoda + hill
+    `<path d="M300,52 L328,52 L314,44 Z" fill="#8c4a3e"/>` +
+    `<path d="M303,44 L325,44 L314,36 Z" fill="#8c4a3e"/>` +
+    `<path d="M306,36 L322,36 L314,29 Z" fill="#8c4a3e"/>` +
+    `<rect x="313" y="23" width="2" height="6" fill="#8c4a3e"/>` +
+    `<path d="M336,60 L336,44 Q344,28 352,44 L352,60 Z" fill="#7e94a6"/>` +
     `</g>`
   );
 }
@@ -1198,6 +1258,246 @@ function cnLandmarks(): string {
   return g;
 }
 
+// ---------------------------------------------------------------------------
+// Bespoke country backdrops (ch / sa / cn)
+// ---------------------------------------------------------------------------
+//
+// These three countries replace the whole generic backdrop with a bespoke
+// composition instead of a palette swap. The interactive plots, streets and
+// the animated boulevard keep their exact geometry: bespoke art only swaps
+// non-interactive layers (ground texture, water, the bottom filler strip
+// below the boulevard at y498–536, and the west cottage row).
+
+/** Horizontal water band across the bottom strip (Swiss lake / Huangpu). */
+function bandWater(P: ThemePalette, y: number, h: number): string {
+  let g =
+    `<rect x="-6" y="${y}" width="372" height="${h}" fill="${P.river}"/>` +
+    `<rect x="-6" y="${y + h - 9}" width="372" height="7" rx="2" fill="${P.riverDeep}" opacity=".55" stroke="none"/>`;
+  // deterministic ripple scatter: coprime steps walk the band, no randomness
+  let r = `<g stroke="${P.riverGlint}" stroke-width="2" fill="none" opacity=".75">`;
+  for (let i = 0; i < 9; i++) {
+    const rx = 14 + i * 41 + (i % 3) * 7;
+    const ry = y + 7 + ((i * 13) % (h - 16));
+    r += `<path d="M${rx},${ry} q6,2.5 12,0"/>`;
+  }
+  r += `</g>`;
+  return g + r;
+}
+
+/** Small sailboat for the lake band (mast top stays below the promenade). */
+function miniBoat(x: number, y: number, P: ThemePalette): string {
+  return (
+    `<g>` +
+    `<path d="M${x - 9},${y} L${x + 9},${y} L${x + 4},${y + 6} L${x - 4},${y + 6} Z" fill="${P.boat}"/>` +
+    `<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 15}" stroke-width="2"/>` +
+    `<path d="M${x},${y - 15} L${x + 9},${y - 2} L${x},${y - 2} Z" fill="${P.sail}"/>` +
+    `<path d="M${x - 1},${y - 15} L${x - 7},${y - 3} L${x - 1},${y - 3} Z" fill="${P.sail}" opacity=".85"/>` +
+    `</g>`
+  );
+}
+
+/** Crescent dune: light windward face + dark slip face, texture only. */
+function duneShape(P: ThemePalette, x: number, y: number, w: number, d: number): string {
+  const c = Math.round(x + w * 0.45);
+  return (
+    `<path d="M${x},${y} Q${c},${y - d} ${x + w},${y} Z" fill="${P.grassLight}" opacity=".55" stroke="none"/>` +
+    `<path d="M${c},${y} Q${Math.round(x + w * 0.62)},${Math.round(y - d * 0.72)} ${x + w},${y} Z" fill="${P.grassDark}" opacity=".5" stroke="none"/>`
+  );
+}
+
+// --- ch bespoke: lakeside promenade, paddle steamer, chalet rooflines -------
+
+/** Alpine chalet: wide shallow roof, railed balcony, geranium boxes. */
+function chalet(x: number, y: number, w: number, P: ThemePalette): string {
+  const h = 20;
+  const cx = x + w / 2;
+  return (
+    `<g>` +
+    shadow(cx, y + 1, w * 0.62, 4) +
+    `<rect x="${x}" y="${y - h}" width="${w}" height="${h}" fill="${P.trunk}"/>` +
+    shadeRect(x + w - 6, y - h, 6, h) +
+    `<rect x="${x + 2}" y="${y - 12}" width="${w - 4}" height="2.5" rx="1" fill="${CREAM}" stroke-width="1"/>` +
+    `<polygon points="${x - 6},${y - h + 2} ${cx},${y - h - 11} ${x + w + 6},${y - h + 2}" fill="#6f4a2e"/>` +
+    `<polygon points="${cx},${y - h - 11} ${x + w + 6},${y - h + 2} ${cx},${y - h + 2}" fill="${INK}" opacity=".12" stroke="none"/>` +
+    `<rect x="${x + 4}" y="${y - 9}" width="7" height="9" fill="${P.door}"/>` +
+    `<rect x="${x + w - 12}" y="${y - 9}" width="8" height="6" fill="${P.window}" stroke-width="1.5"/>` +
+    `<g stroke-width="1"><circle cx="${x + 14}" cy="${y - 8.5}" r="1.4" fill="#e63946"/><circle cx="${x + w - 5}" cy="${y - 8.5}" r="1.4" fill="#e63946"/></g>` +
+    `</g>`
+  );
+}
+
+function chBackdrop(P: ThemePalette): string {
+  let g = groundSection(P) + chSkyline() + riverSection(P);
+  // the lake: a band along the boulevard, which becomes the promenade
+  g += bandWater(P, 498, 36);
+  // Alps mirrored in the water — soft inverted snow caps, no outline
+  g +=
+    `<g fill="#eef4fb" opacity=".16" stroke="none">` +
+    `<polygon points="26,500 40,516 54,500"/>` +
+    `<polygon points="196,500 210,514 224,500"/>` +
+    `<polygon points="330,500 342,512 354,500"/>` +
+    `</g>`;
+  // wooden jetty off the promenade with a mooring lantern
+  g +=
+    `<g>` +
+    `<rect x="74" y="498" width="14" height="22" rx="2" fill="${P.bridge}"/>` +
+    `<line x1="77" y1="504" x2="85" y2="504" stroke="${P.bridgeDark}" stroke-width="1.5"/>` +
+    `<line x1="77" y1="511" x2="85" y2="511" stroke="${P.bridgeDark}" stroke-width="1.5"/>` +
+    `<circle cx="81" cy="523" r="1.6" fill="${GOLD}" stroke-width="1"/>` +
+    `</g>`;
+  g += miniBoat(24, 516, P) + miniBoat(222, 518, P);
+  // belle-époque paddle steamer, Swiss flag at the stern
+  g +=
+    `<g>` +
+    `<path d="M256,514 L326,514 L318,526 L262,526 Z" fill="${CREAM}"/>` +
+    `<line x1="260" y1="518.5" x2="321" y2="518.5" stroke="#e63946" stroke-width="1.8"/>` +
+    `<circle cx="271" cy="517" r="6" fill="#e63946"/>` +
+    `<circle cx="271" cy="517" r="2" fill="${CREAM}" stroke-width="1"/>` +
+    `<rect x="281" y="505" width="34" height="9" rx="2" fill="${CREAM}"/>` +
+    `<g fill="${P.window}" stroke="none"><rect x="284" y="507.5" width="5" height="4"/><rect x="292" y="507.5" width="5" height="4"/><rect x="300" y="507.5" width="5" height="4"/><rect x="308" y="507.5" width="5" height="4"/></g>` +
+    `<rect x="287" y="498" width="6" height="7" fill="#3d4557"/>` +
+    `<rect x="287" y="498" width="6" height="2.5" fill="#e63946" stroke-width="1"/>` +
+    `<line x1="320" y1="514" x2="320" y2="509" stroke-width="1.5"/>` +
+    `<rect x="317" y="502" width="7" height="7" fill="#e63946"/>` +
+    `<g fill="${CREAM}" stroke="none"><rect x="319.6" y="503.4" width="1.8" height="4.2"/><rect x="318.4" y="504.6" width="4.2" height="1.8"/></g>` +
+    `<path d="M332,521 q8,3 15,1" fill="none" stroke="${P.riverGlint}" stroke-width="2" opacity=".8"/>` +
+    `</g>`;
+  // buoys
+  g +=
+    `<g stroke-width="1"><circle cx="66" cy="530" r="1.6" fill="${GOLD}"/><circle cx="200" cy="527" r="1.6" fill="${GOLD}"/></g>`;
+  g += roadsSection(P);
+  g += fillerSection(P, { cottages: false, bottomStrip: false });
+  // chalet rooflines replace the west cottage row
+  g += chalet(12, 358, 38, P) + chalet(58, 352, 30, P) + chalet(126, 356, 32, P);
+  g += chLandmarks(P);
+  return g;
+}
+
+// --- sa bespoke: dune fields, desert highway, palm clusters -----------------
+
+/** Sand base with crescent dune ridges + wind ripples (replaces grass). */
+function saGround(P: ThemePalette): string {
+  let g = `<rect x="0" y="0" width="360" height="740" fill="${P.grass}" stroke="none"/>`;
+  g +=
+    duneShape(P, 14, 262, 96, 18) +
+    duneShape(P, 60, 74, 120, 22) +
+    duneShape(P, 240, 432, 110, 20) +
+    duneShape(P, 150, 368, 80, 16) +
+    duneShape(P, 40, 562, 110, 20) +
+    duneShape(P, 190, 548, 90, 16) +
+    duneShape(P, 250, 690, 100, 18) +
+    duneShape(P, 20, 716, 90, 16);
+  // wind ripples — deterministic modular walk across the map
+  let rp = `<g stroke="${P.grassDark}" stroke-width="1.4" fill="none" opacity=".45">`;
+  for (let i = 0; i < 12; i++) {
+    const x = 20 + ((i * 89) % 300);
+    const y = 80 + ((i * 157) % 620);
+    rp += `<path d="M${x},${y} q7,-3 14,0 q7,3 14,0"/>`;
+  }
+  rp += `</g>`;
+  return g + rp;
+}
+
+function saBackdrop(P: ThemePalette): string {
+  let g = saGround(P) + saSkyline() + riverSection(P) + roadsSection(P);
+  // desert-highway dressing: painted yellow edge lines along the boulevard
+  g +=
+    `<g stroke="#f2c94c" stroke-width="2" fill="none" opacity=".85">` +
+    `<line x1="-4" y1="455.5" x2="364" y2="455.5"/>` +
+    `<line x1="-4" y1="488.5" x2="364" y2="488.5"/>` +
+    `</g>`;
+  g += fillerSection(P, { cottages: false, bottomStrip: false });
+  // the bottom strip becomes open dunes with palm clusters
+  g += duneShape(P, 0, 532, 120, 12) + duneShape(P, 244, 534, 112, 14);
+  g += palm(24, 528, P) + palm(40, 532, P, true) + bush(32, 534, 0.7, P);
+  g += palm(306, 526, P) + palm(322, 532, P, true);
+  // green highway gantry sign by the shoulder
+  g +=
+    `<g>` +
+    shadow(237, 526, 22, 4) +
+    `<line x1="220" y1="524" x2="220" y2="512" stroke-width="2.5"/>` +
+    `<line x1="254" y1="524" x2="254" y2="512" stroke-width="2.5"/>` +
+    `<rect x="212" y="500" width="50" height="14" rx="2" fill="#1e7a49"/>` +
+    `<g stroke="${CREAM}" stroke-width="1.8" fill="none" opacity=".9">` +
+    `<line x1="217" y1="504.5" x2="238" y2="504.5"/>` +
+    `<line x1="217" y1="509.5" x2="232" y2="509.5"/>` +
+    `<path d="M245,510 L253,503 M253,503 l-4.5,0 M253,503 l0,4.5"/>` +
+    `</g>` +
+    `</g>`;
+  // flat-roofed adobe houses replace the west cottage row
+  g += adobeHouse(12, 358, 38, P) + adobeHouse(58, 352, 30, P) + adobeHouse(126, 356, 32, P);
+  g += saLandmarks(P);
+  return g;
+}
+
+/** Flat-roofed adobe house with viga beam ends and an arched door. */
+function adobeHouse(x: number, y: number, w: number, P: ThemePalette): string {
+  const h = 18;
+  const cx = x + w / 2;
+  return (
+    `<g>` +
+    shadow(cx, y + 1, w * 0.6, 4) +
+    `<rect x="${x}" y="${y - h}" width="${w}" height="${h}" rx="2" fill="#ead9b0"/>` +
+    shadeRect(x + w - 6, y - h + 2, 6, h - 2) +
+    `<rect x="${x - 2}" y="${y - h - 3}" width="${w + 4}" height="5" rx="2" fill="#d9c08a"/>` +
+    `<g fill="#9a6b3d" stroke="none"><circle cx="${x + 6}" cy="${y - h + 6}" r="1.3"/><circle cx="${cx}" cy="${y - h + 6}" r="1.3"/><circle cx="${x + w - 6}" cy="${y - h + 6}" r="1.3"/></g>` +
+    `<path d="M${cx - 4},${y} L${cx - 4},${y - 9} Q${cx},${y - 13} ${cx + 4},${y - 9} L${cx + 4},${y} Z" fill="${P.door}"/>` +
+    `<rect x="${x + 4}" y="${y - 11}" width="6" height="6" fill="${P.window}" stroke-width="1.5"/>` +
+    `</g>`
+  );
+}
+
+// --- cn bespoke: Huangpu river band, junk boat, Bund railing + lanterns -----
+
+function cnBackdrop(P: ThemePalette): string {
+  let g = groundSection(P) + cnSkyline() + riverSection(P);
+  // the Huangpu: river band below the boulevard
+  g += bandWater(P, 498, 36);
+  // junk boat with battened fan sails
+  g +=
+    `<g>` +
+    `<path d="M230,512 L278,512 L272,524 L236,524 Z" fill="#8c5a3c"/>` +
+    `<path d="M230,512 L222,503 L232,509 Z" fill="#8c5a3c"/>` +
+    `<path d="M278,512 L286,502 L276,509 Z" fill="#8c5a3c"/>` +
+    `<line x1="246" y1="512" x2="246" y2="499" stroke-width="1.5"/>` +
+    `<path d="M246,499 Q256,502 255,512 L246,512 Z" fill="#d0342c"/>` +
+    `<g stroke-width="1" opacity=".55"><line x1="247" y1="503" x2="253" y2="505"/><line x1="247" y1="507" x2="254" y2="508.5"/></g>` +
+    `<line x1="262" y1="512" x2="262" y2="502" stroke-width="1.5"/>` +
+    `<path d="M262,502 Q270,504.5 269,512 L262,512 Z" fill="#d0342c"/>` +
+    `<path d="M224,520 q-8,2 -14,0" fill="none" stroke="${P.riverGlint}" stroke-width="2" opacity=".8"/>` +
+    `</g>`;
+  // container barge heading downstream
+  g +=
+    `<g>` +
+    `<path d="M302,512 L348,512 L344,524 L306,524 Z" fill="#5f6b85"/>` +
+    `<rect x="308" y="505" width="10" height="7" fill="${P.carA}"/>` +
+    `<rect x="319" y="505" width="10" height="7" fill="${P.carB}"/>` +
+    `<rect x="330" y="505" width="10" height="7" fill="${P.carC}"/>` +
+    `<rect x="340" y="507" width="6" height="5" fill="${CREAM}"/>` +
+    `<path d="M298,520 q-7,2 -12,0" fill="none" stroke="${P.riverGlint}" stroke-width="2" opacity=".8"/>` +
+    `</g>`;
+  g += roadsSection(P);
+  // Bund promenade railing on the quay (drawn over the sidewalk)
+  const rail = (x0: number, x1: number) => {
+    let r = `<g><line x1="${x0}" y1="494" x2="${x1}" y2="494" stroke-width="2"/>`;
+    for (let x = x0; x <= x1; x += 16) r += `<line x1="${x}" y1="494" x2="${x}" y2="498" stroke-width="1.5"/>`;
+    return r + `</g>`;
+  };
+  g += rail(64, 96) + rail(196, 356);
+  // red lanterns hung over the water (clear of the flatiron flagpole x268–282)
+  const lan = (x: number) =>
+    `<g>` +
+    `<line x1="${x}" y1="494" x2="${x}" y2="499" stroke-width="1.2"/>` +
+    `<rect x="${x - 1.6}" y="499" width="3.2" height="1.8" fill="${GOLD}" stroke="none"/>` +
+    `<ellipse cx="${x}" cy="504" rx="3" ry="3.6" fill="#e04a3a"/>` +
+    `<line x1="${x}" y1="507.6" x2="${x}" y2="510" stroke="${GOLD}" stroke-width="1.2"/>` +
+    `</g>`;
+  g += lan(80) + lan(208) + lan(240) + lan(296) + lan(328) + lan(352);
+  g += fillerSection(P, { bottomStrip: false });
+  g += cnLandmarks();
+  return g;
+}
+
 const COUNTRY_THEMES: Record<string, CountryTheme> = {
   // The Valley itself — the reference look, no extra dressing.
   us: { id: 'us', palette: {}, skyline: () => '', landmarks: () => '' },
@@ -1214,6 +1514,7 @@ const COUNTRY_THEMES: Record<string, CountryTheme> = {
     },
     skyline: chSkyline,
     landmarks: chLandmarks,
+    backdrop: chBackdrop,
   },
   ca: {
     id: 'ca',
@@ -1273,6 +1574,7 @@ const COUNTRY_THEMES: Record<string, CountryTheme> = {
     },
     skyline: saSkyline,
     landmarks: saLandmarks,
+    backdrop: saBackdrop,
   },
   cn: {
     id: 'cn',
@@ -1287,6 +1589,7 @@ const COUNTRY_THEMES: Record<string, CountryTheme> = {
     },
     skyline: cnSkyline,
     landmarks: cnLandmarks,
+    backdrop: cnBackdrop,
   },
 };
 
@@ -1993,12 +2296,18 @@ function renderMap(P: ThemePalette, sites: SiteView[], theme: CountryTheme): str
   parts.push(
     `<g stroke="${INK}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">`,
   );
-  parts.push(groundSection(P)); // ground
-  parts.push(theme.skyline(P)); // country skyline silhouette (distant band)
-  parts.push(riverSection(P)); // river
-  parts.push(roadsSection(P)); // roads + bridge
-  parts.push(fillerSection(P)); // parks, houses, courts, parking, lamps
-  parts.push(theme.landmarks(P)); // country signature landmarks
+  // backdrop: either the country's bespoke composition, or the generic
+  // stack (ground → skyline → river → roads → filler → landmarks)
+  parts.push(
+    theme.backdrop
+      ? theme.backdrop(P)
+      : groundSection(P) +
+          theme.skyline(P) +
+          riverSection(P) +
+          roadsSection(P) +
+          fillerSection(P) +
+          theme.landmarks(P),
+  );
   parts.push(siteCampus(P, sv('campus'))); // site: campus
   parts.push(siteTower(P, sv('tower'))); // site: tower
   parts.push(sitePaloAlto(P, sv('paloalto'))); // site: paloalto
