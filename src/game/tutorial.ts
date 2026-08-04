@@ -35,8 +35,8 @@ export const TUTORIAL_STEPS: TutorialStepDef[] = [
   { id: 'name-company', input: 'company-name' },
   {
     id: 'hire',
-    tab: 'team',
-    target: '[data-action^="hire:"]',
+    tab: 'office',
+    target: '[data-action="open-hire"]',
     isComplete: (s) => activeCompany(s).workers.length >= 1,
   },
   {
@@ -47,13 +47,13 @@ export const TUTORIAL_STEPS: TutorialStepDef[] = [
   },
   {
     id: 'upgrade',
-    tab: 'upgrades',
+    tab: 'office',
     target: '[data-action^="buy-upgrade:"]',
     isComplete: (s) => Object.values(activeCompany(s).upgrades).some((lvl) => lvl > 0),
   },
   {
     id: 'train',
-    tab: 'team',
+    tab: 'office',
     target: '[data-action^="train:"]',
     isComplete: (s) =>
       activeCompany(s).timedActions.some((a) => a.kind === 'training') ||
@@ -61,7 +61,7 @@ export const TUTORIAL_STEPS: TutorialStepDef[] = [
   },
   {
     id: 'fast-forward',
-    tab: 'team',
+    tab: 'office',
     target: '[data-action^="fast-forward:"]',
     // Done once the training finished — by waiting it out or (the offered
     // freebie) fast-forwarding it. Durable either way.

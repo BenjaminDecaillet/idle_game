@@ -124,7 +124,7 @@ describe('nextGoalHint — after skipTutorial', () => {
     const hint = nextGoalHint(state);
     expect(hint).not.toBeNull();
     expect(hint!.kind).toBe('hire');
-    expect(hint!.tab).toBe('team');
+    expect(hint!.tab).toBe('office');
     // Cost should be the cheapest hire cost among candidates
     const expectedCost = Math.min(
       ...company.candidates.map((c) => hireCost(company, c.tierId))

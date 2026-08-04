@@ -78,6 +78,7 @@ import {
   deskCapacity,
   effectiveWallpaper,
   floorCost,
+  floorProject,
   marketingCost,
   setActiveCompany,
   setCompanyWallpaper,
@@ -179,27 +180,17 @@ const SPEECH_LINES = [
   'TODO: fix later',
 ];
 
-type Tab =
-  | 'map'
-  | 'projects'
-  | 'team'
-  | 'office'
-  | 'upgrades'
-  | 'shop'
-  | 'vscoin'
-  | 'missions'
-  | 'stats';
+type Tab = 'map' | 'office' | 'shop' | 'vscoin' | 'stats';
+
+/** Drill-down level inside the Office tab. */
+type OfficeLevel = 'companies' | 'building' | 'floor' | 'staff';
 
 // `icon` overrides the tab-bar icon when a tab has no icon of its own name.
 const TABS: { id: Tab; label: string; icon?: IconName }[] = [
   { id: 'map', label: 'Map' },
-  { id: 'projects', label: 'Projects' },
-  { id: 'team', label: 'Team' },
   { id: 'office', label: 'Office' },
-  { id: 'upgrades', label: 'Upgrades' },
   { id: 'shop', label: 'Shop', icon: 'coin' },
   { id: 'vscoin', label: 'VsCoin', icon: 'vscoin' },
-  { id: 'missions', label: 'Missions' },
   { id: 'stats', label: 'Stats' },
 ];
 
@@ -207,9 +198,14 @@ export class UI {
   private root: HTMLElement;
   private fx: Fx;
   private state: GameState;
-  private tab: Tab = 'projects';
+  private tab: Tab = 'office';
   private rebuildTimer = 0;
   private officeDirty = true;
+  /** Office drill-down: company list → building → one floor / staff room. */
+  private officeLevel: OfficeLevel = 'building';
+  private officeFloorIdx = 0;
+  /** Candidate popup (bottom sheet on the Office tab). */
+  private hireOpen = false;
   /** Offline earnings shown by the current Welcome-back modal (doubler). */
   private pendingOfflineEarnings = 0;
   private sheetSiteId: string | null = null;
@@ -264,7 +260,7 @@ export class UI {
               ${icon('boost', 13)}<span id="hud-boost-text"></span>
             </span>
             <span class="badge badge-income" id="hud-income" title="Estimated net income"></span>
-            <button class="badge badge-vscoin" id="hud-vscoin" data-action="tab:missions" title="VsCoin">
+            <button class="badge badge-vscoin" id="hud-vscoin" data-action="tab:vscoin" title="VsCoin">
               ${icon('vscoin', 13)}<span id="hud-vscoin-text">0</span>
             </button>
           </div>
@@ -336,7 +332,7 @@ export class UI {
     // live completions additionally toast (baseline taken silently).
     const claimable = claimableMissions(s);
     document
-      .getElementById('tab-btn-missions')
+      .getElementById('tab-btn-vscoin')
       ?.classList.toggle('has-badge', claimable.length > 0);
     if (this.knownCompleted === null) {
       this.knownCompleted = new Set(claimable.map((m) => m.id));
@@ -701,37 +697,33 @@ export class UI {
         content.innerHTML = this.renderMap();
         this.refreshSheet();
         break;
-      case 'projects':
-        content.innerHTML = this.renderProjects();
-        break;
-      case 'missions':
-        content.innerHTML = this.renderMissions();
-        break;
-      case 'team':
-        content.innerHTML = this.renderTeam();
-        break;
       case 'office': {
-        // The office floor holds looping CSS animations (typing personas) —
+        // The office scene holds looping CSS animations (typing personas) —
         // rebuilding it at 2 Hz would visibly reset them. Only rebuild the
-        // floor on structural changes; refresh just the shop otherwise.
-        const floor = document.getElementById('office-floor');
-        if (!floor || this.officeDirty) {
+        // scene on structural changes; refresh just the management sections
+        // (#office-shop) otherwise. Levels without animations rebuild fully.
+        const animated = this.officeLevel === 'building' || this.officeLevel === 'floor';
+        const scene = document.getElementById('office-floor');
+        if (!animated || !scene || this.officeDirty) {
           content.innerHTML = this.renderOffice();
           this.officeDirty = false;
         } else {
           const shop = document.getElementById('office-shop');
-          if (shop) shop.innerHTML = this.renderOfficeShop();
+          if (shop) {
+            shop.innerHTML =
+              this.officeLevel === 'floor'
+                ? this.renderFloorManage(this.officeFloorIdx)
+                : this.renderOfficeShop();
+          }
         }
+        this.refreshHireSheet();
         break;
       }
-      case 'upgrades':
-        content.innerHTML = this.renderUpgrades();
-        break;
       case 'shop':
         content.innerHTML = this.renderShop();
         break;
       case 'vscoin':
-        content.innerHTML = this.renderVsCoinShop();
+        content.innerHTML = `<div class="stack">${this.renderMissions()}${this.renderVsCoinShop()}</div>`;
         break;
       case 'stats':
         content.innerHTML = this.renderStats();
@@ -1031,11 +1023,13 @@ export class UI {
 
   private closeSheet(): void {
     this.sheetSiteId = null;
+    this.hireOpen = false;
     const zone = document.getElementById('sheet-zone');
     if (zone) zone.innerHTML = '';
   }
 
-  private renderProjects(): string {
+  /** Contracts: the company's project portfolio (unlock + main project). */
+  private renderContracts(): string {
     const s = this.state;
     const c = activeCompany(s);
     const lastUnlockedIdx = PROJECTS.reduce(
@@ -1089,46 +1083,32 @@ export class UI {
       }
       return '';
     }).join('');
-    return `<div class="stack">${cards}${this.renderProjectSlots()}</div>`;
-  }
-
-  /** Per-floor project slots: every floor can work its own project. */
-  private renderProjectSlots(): string {
-    const s = this.state;
-    const c = activeCompany(s);
-    if (c.floors <= 1) return '';
-    const floorRows = Array.from({ length: c.floors }, (_, f) => {
-      const current = c.floorProjects[f] ?? '';
-      const options = [
-        `<option value="" ${current === '' ? 'selected' : ''}>${t('ui.mainProject')}</option>`,
-        ...c.projects
-          .filter((p) => p.unlocked)
-          .map(
-            (p) => `
-            <option value="${p.defId}" ${current === p.defId ? 'selected' : ''}>
-              ${projectDefById(p.defId).name}
-            </option>`,
-          ),
-      ].join('');
-      return `
-      <div class="settings-row">
-        <span class="settings-label">${f === 0 ? t('ui.groundFloor') : t('ui.floorN', { floor: f + 1 })}</span>
-        <select class="coach-input" data-select="floor-project:${f}">${options}</select>
-      </div>`;
-    })
-      .reverse()
-      .join('');
     return `
-      <div class="card">
-        <div class="section-head"><h2>${t('ui.projectSlots')}</h2>
-          <span class="muted">${c.floors}</span>
-        </div>
-        <p class="hint">${t('ui.projectSlotsHint')}</p>
-        ${floorRows}
+      <div class="section-head"><h2>📋 ${t('ui.contracts')}</h2></div>
+      ${cards}`;
+  }
+
+  /** Hiring popup: candidate cards + reroll, as a bottom sheet. */
+  private openHire(): void {
+    this.hireOpen = true;
+    const zone = document.getElementById('sheet-zone');
+    if (!zone) return;
+    zone.innerHTML = `
+      <div class="sheet-backdrop" data-action="close-sheet"></div>
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div id="sheet-body">${this.renderHireSheet()}</div>
       </div>`;
   }
 
-  private renderTeam(): string {
+  /** Keep the open hire sheet fresh without restarting its animations. */
+  private refreshHireSheet(): void {
+    if (!this.hireOpen) return;
+    const body = document.getElementById('sheet-body');
+    if (body) body.innerHTML = this.renderHireSheet();
+  }
+
+  private renderHireSheet(): string {
     const s = this.state;
     const c = activeCompany(s);
     const candidates = c.candidates
@@ -1141,38 +1121,26 @@ export class UI {
           <span class="card-emoji persona-slot">${employeePortrait(`c:${cand.name}:${cand.tierId}`, cand.specialization, cand.tierId)}</span>
           <div class="card-main">
             <h3>${cand.name}</h3>
-            <span class="muted">${tier.title} · ${formatRate(tier.baseRate)} · salary ${formatMoney(tierSalary(c, cand.tierId))}/s</span>
+            <span class="muted">${tier.title} · ${formatRate(tier.baseRate)} · ${formatMoney(tierSalary(c, cand.tierId))}/s</span>
             <span class="spec-badge spec-${cand.specialization.replace(' ', '')}">${cand.specialization}</span>
           </div>
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                   data-action="hire:${i}">
-            Hire ${formatMoney(price)}
+            ${t('ui.hire')} ${formatMoney(price)}
           </button>
         </div>`;
       })
       .join('');
-
-    const seats = c.workstations.length;
-    const roster = c.workers.length
-      ? c.workers.map((w) => this.renderWorkerCard(w)).join('')
-      : `<div class="empty-hint">No employees yet. Hire your first dev above! 👆</div>`;
-
     return `
-      <div class="stack">
-        <div class="section-head">
-          <h2>Candidates</h2>
-          <button class="btn btn-ghost" data-action="reroll"
-                  ${walletMoney(s) >= c.candidateRerollCost ? '' : 'disabled'}>
-            ${icon('dice', 16)} New batch ${formatMoney(c.candidateRerollCost)}
-          </button>
-        </div>
-        ${candidates}
-        <div class="section-head">
-          <h2>Your team (${c.workers.length})</h2>
-          <span class="muted">${Math.min(c.workers.length, seats)}/${seats} desks used</span>
-        </div>
-        ${roster}
-      </div>`;
+      <div class="section-head">
+        <h2>🤝 ${t('ui.candidates')}</h2>
+        <button class="btn btn-ghost" data-action="reroll"
+                ${walletMoney(s) >= c.candidateRerollCost ? '' : 'disabled'}>
+          ${icon('dice', 16)} ${t('ui.newBatch')} ${formatMoney(c.candidateRerollCost)}
+        </button>
+      </div>
+      ${candidates}
+      <button class="btn btn-ghost" data-action="close-sheet">${t('ui.close')}</button>`;
   }
 
   private renderWorkerCard(w: WorkerState): string {
@@ -1257,10 +1225,230 @@ export class UI {
   }
 
   private renderOffice(): string {
-    return `
+    switch (this.officeLevel) {
+      case 'companies':
+        return this.renderCompanyList();
+      case 'floor':
+        return this.renderFloorView(this.officeFloorIdx);
+      case 'staff':
+        return this.renderStaffRoom();
+      default:
+        return `
       <div class="stack">
         <div id="office-floor">${this.renderOfficeFloor()}</div>
         <div id="office-shop">${this.renderOfficeShop()}</div>
+      </div>`;
+    }
+  }
+
+  /** Office level 1: the country's companies; tap one to enter its building. */
+  private renderCompanyList(): string {
+    const s = this.state;
+    const country = activeCountry(s);
+    const cards = country.companies
+      .map((c) => {
+        const site = siteById(c.siteId);
+        const active = c.id === country.activeCompanyId;
+        return `
+        <button class="card company-card ${active ? 'active-project' : ''}"
+                data-action="office-open:${c.id}">
+          <div class="card-row">
+            <span class="card-emoji">${site.emoji}</span>
+            <div class="card-main">
+              <h3>${c.name}</h3>
+              <span class="muted">${site.name} · ${c.floors}/${MAX_FLOORS} 🏢</span>
+            </div>
+            <div class="card-right">
+              <strong>👥 ${c.workers.length}</strong>
+              <span class="muted">🖥️ ${c.workstations.length}</span>
+            </div>
+          </div>
+        </button>`;
+      })
+      .join('');
+    return `
+      <div class="stack">
+        <div class="section-head"><h2>${t('ui.officeCompanies')}</h2></div>
+        ${cards}
+        <p class="hint">🗺️ ${t('ui.foundOnMap')}</p>
+      </div>`;
+  }
+
+  /** Office level 3: one floor, enlarged — desks, people and project slot. */
+  private renderFloorView(f: number): string {
+    const s = this.state;
+    const c = activeCompany(s);
+    if (f < 0 || f >= c.floors) {
+      this.officeLevel = 'building';
+      return this.renderOffice();
+    }
+    const wpId = effectiveWallpaper(s, c);
+    const slots: ({ id: number; defId: string } | null)[] = c.workstations.slice(
+      f * FLOOR_CAPACITY,
+      (f + 1) * FLOOR_CAPACITY,
+    );
+    while (slots.length < FLOOR_CAPACITY) slots.push(null);
+    const tiles = slots.map((st) => this.renderDeskTile(c, st)).join('');
+    const perks = UPGRADES.filter((u) => (c.upgrades[u.id] ?? 0) > 0)
+      .map((u) => upgradeProp(u.id))
+      .join('');
+    const wall = f === 0 && perks ? perks : wallDecor(wpId, f);
+    const label = f === 0 ? t('ui.groundFloor') : t('ui.floorN', { floor: f + 1 });
+    return `
+      <div class="stack">
+        <div class="section-head">
+          <button class="btn btn-small btn-ghost" data-action="office-building">
+            ${t('ui.officeBackToBuilding')}
+          </button>
+          <h2>${label}</h2>
+          <button class="btn btn-small btn-primary" data-action="open-hire">
+            🤝 ${t('ui.hireEmployees')}
+          </button>
+        </div>
+        <div id="office-floor">
+          <div class="building card floor-zoom" style="${officeWallVars(wpId)}">
+            <div class="floor-block">
+              <div class="floor-wall">
+                <span class="floor-label">${label}</span>
+                ${wall}
+              </div>
+              <div class="office-grid">${tiles}</div>
+            </div>
+          </div>
+        </div>
+        <div id="office-shop">${this.renderFloorManage(f)}</div>
+      </div>`;
+  }
+
+  /** Management sections of the enlarged floor (refreshed at 2 Hz). */
+  private renderFloorManage(f: number): string {
+    const s = this.state;
+    const c = activeCompany(s);
+    const floorStations = c.workstations
+      .map((st, i) => ({ st, i }))
+      .filter(({ i }) => Math.floor(i / FLOOR_CAPACITY) === f)
+      .map(({ st }) => st);
+
+    // This floor's project slot.
+    const current = c.floorProjects[f] ?? '';
+    const options = [
+      `<option value="" ${current === '' ? 'selected' : ''}>${t('ui.mainProject')}</option>`,
+      ...c.projects
+        .filter((p) => p.unlocked)
+        .map(
+          (p) => `
+          <option value="${p.defId}" ${current === p.defId ? 'selected' : ''}>
+            ${projectDefById(p.defId).name}
+          </option>`,
+        ),
+    ].join('');
+    const projectCard = `
+      <div class="card">
+        <div class="section-head"><h2>${t('ui.floorProjectTitle')}</h2></div>
+        <p class="hint">${t('ui.projectSlotsHint')}</p>
+        <div class="settings-row">
+          <span class="settings-label">${projectDefById(floorProject(c, f)).name}</span>
+          <select class="coach-input" data-select="floor-project:${f}">${options}</select>
+        </div>
+      </div>`;
+
+    // Desks on this floor: in-place renovations, one card per desk.
+    const inFlight = c.timedActions.filter((a) => a.kind === 'desk-upgrade');
+    const byTarget = new Map(inFlight.map((a) => [a.targetId, a]));
+    const deskCards = floorStations
+      .map((st) => {
+        const def = stationDefById(st.defId);
+        const action = byTarget.get(st.id);
+        if (action && action.toDefId) {
+          const pct = Math.min(100, (1 - action.remainingSec / action.totalSec) * 100);
+          const ffCost = fastForwardCost(s, action);
+          return `
+        <div class="card">
+          <div class="card-row">
+            <span class="card-emoji">🛠️</span>
+            <div class="card-main">
+              <h3>${def.name} → ${stationDefById(action.toDefId).name}</h3>
+              <span class="muted">${t('ui.deskUpgrading', { time: formatDuration(action.remainingSec) })}</span>
+            </div>
+            <button class="btn btn-small btn-primary" ${ffCost === 0 || s.vsCoin >= ffCost ? '' : 'disabled'}
+                    data-action="fast-forward:${action.id}">
+              ⚡ ${ffCost === 0 ? t('ui.free') : `${icon('vscoin', 14)} ${ffCost}`}
+            </button>
+          </div>
+          <div class="progress mini training"><div class="progress-fill" style="width:${pct}%"></div></div>
+        </div>`;
+        }
+        const to = nextStationDef(st.defId);
+        if (!to) {
+          return `
+        <div class="card">
+          <div class="card-row">
+            <span class="card-emoji">${stationArt(st.defId, 38)}</span>
+            <div class="card-main">
+              <h3>${def.name}</h3>
+              <span class="muted">×${def.multiplier} · 🏔️ ${t('ui.maxGrade')}</span>
+            </div>
+          </div>
+        </div>`;
+        }
+        const toDef = stationDefById(to);
+        const cost = deskUpgradeCost(c, st.defId)!;
+        const duration = deskUpgradeDurationSec(st.defId)!;
+        const affordable = walletMoney(s) >= cost;
+        return `
+        <div class="card">
+          <div class="card-row">
+            <span class="card-emoji">${stationArt(st.defId, 38)}</span>
+            <div class="card-main">
+              <h3>${def.name} → ${toDef.name}</h3>
+              <span class="muted">×${def.multiplier} → ×${toDef.multiplier} · ${formatDuration(duration)}</span>
+            </div>
+            <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
+                    data-action="upgrade-desk:${st.id}">
+              ${t('ui.upgradeDesk')} ${formatMoney(cost)}
+            </button>
+          </div>
+        </div>`;
+      })
+      .join('');
+
+    // New desks land on the lowest floor with free slots — offer the shop
+    // here only when that floor is this one.
+    const nextIdx = c.workstations.length;
+    const buyHere =
+      nextIdx < deskCapacity(c) && Math.floor(nextIdx / FLOOR_CAPACITY) === f
+        ? this.renderWorkstationShop()
+        : '';
+
+    // People seated on this floor.
+    const floorIds = new Set(floorStations.map((st) => st.id));
+    const workers = c.workers.filter((w) => w.stationId !== null && floorIds.has(w.stationId));
+    const roster = workers.length
+      ? workers.map((w) => this.renderWorkerCard(w)).join('')
+      : `<div class="empty-hint">${t('ui.noFloorWorkers')}</div>`;
+
+    return `
+      ${projectCard}
+      <div class="section-head"><h2>🖥️ ${t('ui.renovations')}</h2></div>
+      ${deskCards}
+      ${buyHere}
+      <div class="section-head"><h2>👥 ${t('ui.floorEmployees')}</h2></div>
+      ${roster}`;
+  }
+
+  /** The staff room: every company upgrade, marketing and decor in one spot. */
+  private renderStaffRoom(): string {
+    return `
+      <div class="stack">
+        <div class="section-head">
+          <button class="btn btn-small btn-ghost" data-action="office-building">
+            ${t('ui.officeBackToBuilding')}
+          </button>
+          <h2>☕ ${t('ui.staffRoom')}</h2>
+        </div>
+        <p class="hint">${t('ui.staffRoomHint')}</p>
+        ${this.renderUpgrades()}
+        ${this.renderDecorShop()}
       </div>`;
   }
 
@@ -1300,11 +1488,9 @@ export class UI {
   private renderOfficeFloor(): string {
     const s = this.state;
     const c = activeCompany(s);
-    // Same ordering as autoSeat: best desks first, so the layout mirrors
-    // seating. Desks fill the building from the ground floor up.
-    const stations: ({ id: number; defId: string } | null)[] = [...c.workstations].sort(
-      (a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier,
-    );
+    // Purchase order: desk index ÷ FLOOR_CAPACITY IS the engine's floor
+    // (stationFloor), so what you see on a floor is what works its project.
+    const stations: ({ id: number; defId: string } | null)[] = [...c.workstations];
     const wpId = effectiveWallpaper(s, c);
     // Bought upgrades show up as real props on the ground floor ("perks floor").
     const perks = UPGRADES.filter((u) => (c.upgrades[u.id] ?? 0) > 0)
@@ -1320,11 +1506,24 @@ export class UI {
         <div class="floor-block">
           <div class="floor-wall">
             <span class="floor-label">${f === 1 ? t('ui.groundFloor') : t('ui.floorN', { floor: f })}</span>
+            <button class="btn btn-small btn-ghost floor-manage" data-action="office-floor:${f - 1}">
+              🔍 ${t('ui.manageFloor')}
+            </button>
             ${wall}
           </div>
           <div class="office-grid">${tiles}</div>
         </div>`);
     }
+    // The staff room tops the building — enter it like any floor.
+    floorBlocks.unshift(`
+        <div class="floor-block staff-room">
+          <div class="floor-wall">
+            <span class="floor-label">☕ ${t('ui.staffRoom')}</span>
+            <button class="btn btn-small btn-ghost floor-manage" data-action="office-staff">
+              🔍 ${t('ui.manageFloor')}
+            </button>
+          </div>
+        </div>`);
     const atMax = c.floors >= MAX_FLOORS;
     const nextCost = floorCost(c);
     const building = floorUnderConstruction(c);
@@ -1412,10 +1611,23 @@ export class UI {
       })
       .join('');
 
+    const companyNav =
+      activeCountry(s).companies.length > 1
+        ? `<button class="btn btn-small btn-ghost" data-action="office-companies">
+             ${t('ui.officeAllCompanies')}
+           </button>`
+        : '';
     return `
-      <div class="section-head"><h2>Your building</h2>
-        <span class="muted">${c.workstations.length}/${deskCapacity(c)} desks ·
-          ${c.floors}/${MAX_FLOORS} floors</span>
+      <div class="section-head">
+        ${companyNav}
+        <h2>${c.name}</h2>
+        <button class="btn btn-small btn-primary" data-action="open-hire">
+          🤝 ${t('ui.hireEmployees')}
+        </button>
+      </div>
+      <div class="section-head">
+        <span class="muted">${t('ui.desksUsed', { used: c.workstations.length, total: deskCapacity(c) })} ·
+          ${c.floors}/${MAX_FLOORS} 🏢</span>
       </div>
       ${builderBar}
       <div class="floor-actions">${floorBtn}</div>
@@ -1441,6 +1653,23 @@ export class UI {
   }
 
   private renderOfficeShop(): string {
+    const c = activeCompany(this.state);
+    const benched = c.workers.filter((w) => w.stationId === null);
+    const benchedCards = benched.length
+      ? `<div class="section-head"><h2>${t('ui.offFloor', { count: benched.length })}</h2></div>
+         ${benched.map((w) => this.renderWorkerCard(w)).join('')}`
+      : '';
+    return `
+      <div class="stack">
+        ${this.renderWorkstationShop()}
+        ${this.renderDeskUpgrades()}
+        ${benchedCards}
+        ${this.renderContracts()}
+      </div>`;
+  }
+
+  /** Workstation shop: buy the next desk (it lands on the lowest open slot). */
+  private renderWorkstationShop(): string {
     const s = this.state;
     const c = activeCompany(s);
     const full = c.workstations.length >= deskCapacity(c);
@@ -1464,14 +1693,10 @@ export class UI {
       </div>`;
     }).join('');
     return `
-      <div class="stack">
-        <div class="section-head"><h2>Buy workstations</h2>
-          ${full ? '<span class="muted">🈵 Office full — add a floor</span>' : ''}
-        </div>
-        ${shop}
-        ${this.renderDeskUpgrades()}
-        ${this.renderDecorShop()}
-      </div>`;
+      <div class="section-head"><h2>Buy workstations</h2>
+        ${full ? '<span class="muted">🈵 Office full — add a floor</span>' : ''}
+      </div>
+      ${shop}`;
   }
 
   /** Renovations: upgrade owned desks in place (money + time per desk). */
@@ -1904,9 +2129,37 @@ export class UI {
       case 'hire':
         error = hireWorker(s, Number(arg));
         if (!error) this.toast('🤝 Welcome aboard!', 'info');
+        this.officeDirty = true;
+        this.refreshHireSheet();
         break;
       case 'reroll':
         error = rerollCandidates(s);
+        this.refreshHireSheet();
+        break;
+      case 'open-hire':
+        this.openHire();
+        break;
+      case 'office-open':
+        error = setActiveCompany(s, Number(arg));
+        this.officeLevel = 'building';
+        this.officeDirty = true;
+        break;
+      case 'office-companies':
+        this.officeLevel = 'companies';
+        this.officeDirty = true;
+        break;
+      case 'office-building':
+        this.officeLevel = 'building';
+        this.officeDirty = true;
+        break;
+      case 'office-floor':
+        this.officeLevel = 'floor';
+        this.officeFloorIdx = Number(arg);
+        this.officeDirty = true;
+        break;
+      case 'office-staff':
+        this.officeLevel = 'staff';
+        this.officeDirty = true;
         break;
       case 'train':
         error = trainWorker(s, Number(arg));
