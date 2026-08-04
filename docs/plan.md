@@ -22,6 +22,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 
 ## Roadmap / TODOs (in suggested order)
 
+- [x] **Itemized welcome-back report** — `simulateOfflineReport` aggregates tick events per offline chunk (projects, trainings, promotions, renovations, floors, companies, quits) and the welcome-back modal itemizes the non-zero lines under the earnings figure; previously hardcoded modal strings migrated to i18n (EN+FR); doubler untouched
 - [ ] **Playtest & balance tuning** — adjust `data.ts` values after real play sessions
 - [x] **Monetization groundwork** — timed boosts (`grantBoost`), `timeSkip`, HUD boost badge, save migration (v2), dev console API (`isv.boost/skip`)
 - [x] **Personas & interactivity** — procedural SVG characters (deterministic per worker), animated office floor (typing at desks, standing when desk-less), tap-to-poke speech bubbles, golden briefcase tap bonus (2× 60s via `grantBoost` 'event'), money pop on payouts

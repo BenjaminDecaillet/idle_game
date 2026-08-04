@@ -14,7 +14,7 @@ import { UI } from './ui/ui';
 const root = document.getElementById('app')!;
 const fxCanvas = document.getElementById('fx-canvas') as HTMLCanvasElement;
 
-const { state: loaded, offlineSec, offlineEarnings, betaReset } = loadGame();
+const { state: loaded, offlineSec, offlineEarnings, offlineReport, betaReset } = loadGame();
 let state: GameState = loaded;
 setCurrentLang(resolveLang(state.settings.language, navigator.language));
 
@@ -34,8 +34,8 @@ const ui = new UI(root, state, fx, (next) => {
 
 if (betaReset) {
   ui.notice(t('ui.betaResetTitle'), t('ui.betaResetText'));
-} else if (offlineEarnings > 0) {
-  ui.welcomeBack(offlineSec, offlineEarnings);
+} else if (offlineReport && offlineEarnings > 0) {
+  ui.welcomeBack(offlineSec, offlineReport);
 }
 
 // ---------------------------------------------------------------------------
@@ -115,11 +115,11 @@ document.addEventListener('visibilitychange', () => {
     saveGame(state);
   } else {
     // Returning to a backgrounded tab: fast-forward the missed time.
-    const { state: reloaded, offlineEarnings: gained, offlineSec: sec } = loadGame();
+    const { state: reloaded, offlineReport: report, offlineSec: sec } = loadGame();
     state = reloaded;
     ui.replaceState(state);
     last = performance.now();
-    if (gained > 0 && sec > 60) ui.welcomeBack(sec, gained);
+    if (report && report.earnings > 0 && sec > 60) ui.welcomeBack(sec, report);
   }
 });
 window.addEventListener('pagehide', () => saveGame(state));

@@ -1451,22 +1451,61 @@ function tickCountry(
   }
 }
 
+/** What happened while the player was away — fuels the welcome-back modal. */
+export interface OfflineReport {
+  earnings: number;
+  projectsCompleted: number;
+  trainingsDone: number;
+  promotionsDone: number;
+  deskUpgradesDone: number;
+  floorsBuilt: number;
+  companiesBuilt: number;
+  quits: number;
+}
+
 /**
  * Simulate offline time in coarse chunks using the same tick logic, so
- * offline progress obeys exactly the same rules as online play.
- * Returns total money earned while away.
+ * offline progress obeys exactly the same rules as online play. The
+ * per-chunk tick events are aggregated into an itemized report.
  */
-export function simulateOffline(state: GameState, elapsedSec: number, capSec: number): number {
+export function simulateOfflineReport(
+  state: GameState,
+  elapsedSec: number,
+  capSec: number,
+): OfflineReport {
   const simSec = Math.min(elapsedSec, capSec);
   const before = state.totalEarned;
+  const report: OfflineReport = {
+    earnings: 0,
+    projectsCompleted: 0,
+    trainingsDone: 0,
+    promotionsDone: 0,
+    deskUpgradesDone: 0,
+    floorsBuilt: 0,
+    companiesBuilt: 0,
+    quits: 0,
+  };
   const CHUNK = 60;
   let remaining = simSec;
   while (remaining > 0) {
     const dt = Math.min(CHUNK, remaining);
-    tick(state, dt);
+    const events = tick(state, dt);
+    report.projectsCompleted += events.completions.length;
+    report.trainingsDone += events.trainingsDone.length;
+    report.promotionsDone += events.promotionsDone.length;
+    report.deskUpgradesDone += events.deskUpgradesDone.length;
+    report.floorsBuilt += events.floorBuildsDone.length;
+    report.companiesBuilt += events.companyBuildsDone.length;
+    report.quits += events.quits.length;
     remaining -= dt;
   }
-  return state.totalEarned - before;
+  report.earnings = state.totalEarned - before;
+  return report;
+}
+
+/** Money-only variant, kept for callers that don't need the breakdown. */
+export function simulateOffline(state: GameState, elapsedSec: number, capSec: number): number {
+  return simulateOfflineReport(state, elapsedSec, capSec).earnings;
 }
 
 // ---------------------------------------------------------------------------

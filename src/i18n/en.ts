@@ -25,6 +25,18 @@ export const en = {
   'ui.confirm': 'That’s it!',
   'ui.tutorialStep': 'Step {step} / {total}',
 
+  // --- Welcome back: itemized offline report --------------------------------
+  'ui.welcomeBackTitle': 'Welcome back!',
+  'ui.welcomeBackAway': 'While you were away for {time}, your team kept shipping:',
+  'ui.backToWork': 'Back to work',
+  'ui.awayProjects': 'Projects shipped',
+  'ui.awayTrainings': 'Trainings completed',
+  'ui.awayPromotions': 'Promotions earned',
+  'ui.awayDeskUpgrades': 'Desk renovations finished',
+  'ui.awayFloors': 'Floors built',
+  'ui.awayCompanies': 'Companies opened',
+  'ui.awayQuits': 'Employees quit',
+
   // --- Missions & VsCoin ---------------------------------------------------
   'ui.missions': 'Missions',
   'ui.claim': 'Claim',
