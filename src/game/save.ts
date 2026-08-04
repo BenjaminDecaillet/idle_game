@@ -121,6 +121,14 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
       claimed: Array.isArray(parsed.daily?.claimed) ? parsed.daily.claimed : [],
     },
     boosts: Array.isArray(parsed.boosts) ? parsed.boosts : [],
+    vault: {
+      amount:
+        typeof parsed.vault?.amount === 'number' &&
+        Number.isFinite(parsed.vault.amount) &&
+        parsed.vault.amount >= 0
+          ? parsed.vault.amount
+          : 0,
+    },
     story: {
       seen: Array.isArray(parsed.story?.seen) ? parsed.story.seen : [],
       queue: Array.isArray(parsed.story?.queue) ? parsed.story.queue : [],

@@ -8,6 +8,8 @@ import {
   MARKETING_DURATION_SEC,
   MARKETING_MULT,
   MAX_FLOORS,
+  VAULT_OPEN_COST,
+  VAULT_RATE,
   traitById,
   PROJECTS,
   SHOP_CASH_PACKS,
@@ -108,9 +110,11 @@ import {
   prestigePreview,
   prestigeReset,
   totalWorkRate,
+  openVault,
   tierSalary,
   traitSalaryMult,
   trainCost,
+  vaultCap,
   workerSalary,
   trainLevels,
   trainWorker,
@@ -275,6 +279,8 @@ export class UI {
             <span class="badge badge-boost" id="hud-boost" hidden title="${t('ui.activeBoostTitle')}">
               ${icon('boost', 13)}<span id="hud-boost-text"></span>
             </span>
+            <button class="badge badge-vault" id="hud-vault" hidden data-action="tab:shop"
+                    title="${t('ui.vaultTitle')}">🐷<span id="hud-vault-text"></span></button>
             <span class="badge badge-income" id="hud-income" title="${t('ui.netIncomeTitle')}"></span>
             <button class="badge badge-vscoin" id="hud-vscoin" data-action="tab:vscoin" title="VsCoin">
               ${icon('vscoin', 13)}<span id="hud-vscoin-text">0</span>
@@ -364,6 +370,11 @@ export class UI {
       }
     }
 
+    const vaultEl = document.getElementById('hud-vault');
+    if (vaultEl) {
+      vaultEl.hidden = s.vault.amount <= 0;
+      if (s.vault.amount > 0) this.text('hud-vault-text', formatMoney(s.vault.amount));
+    }
     const boost = activeBoost(s);
     const boostEl = document.getElementById('hud-boost');
     if (boostEl) {
@@ -826,11 +837,31 @@ export class UI {
           </div>
         </div>`;
     }).join('');
+    const cap = vaultCap(s);
+    const vaultPct = Math.min(100, (s.vault.amount / cap) * 100);
+    const canOpen = s.vault.amount > 0 && s.vsCoin >= VAULT_OPEN_COST;
+    const vaultCard = `
+      <div class="card vault-card">
+        <div class="card-row">
+          <span class="card-emoji">🐷</span>
+          <div class="card-main">
+            <h3>${t('ui.vaultTitle')}${s.vault.amount >= cap ? ` <span class="cap-tag">${t('ui.vaultFull')}</span>` : ''}</h3>
+            <span class="muted">${formatMoney(s.vault.amount)} / ${formatMoney(cap)}</span>
+          </div>
+          <button class="btn ${canOpen ? 'btn-primary' : ''}" ${canOpen ? '' : 'disabled'}
+                  data-action="open-vault">
+            🔨 ${t('ui.vaultOpen')} ${icon('vscoin', 14)} ${VAULT_OPEN_COST}
+          </button>
+        </div>
+        <div class="progress mini"><div class="progress-fill" style="width:${vaultPct}%"></div></div>
+        <p class="hint">${t('ui.vaultHint', { rate: Math.round(VAULT_RATE * 100) })}</p>
+      </div>`;
     return `
       <div class="stack">
         <div class="section-head"><h2>💸 ${t('ui.shopTitle')}</h2>
           <span class="muted">${icon('vscoin', 16)} ${formatNumber(s.vsCoin)}</span>
         </div>
+        ${vaultCard}
         <p class="hint">${t('ui.shopHint')}</p>
         ${inDebt ? `<div class="warning-banner">⚠️ ${t('ui.shopDebtNote')}</div>` : ''}
         ${cards}
@@ -2330,6 +2361,13 @@ export class UI {
         }
         break;
       }
+      case 'open-vault':
+        error = openVault(s);
+        if (!error) {
+          this.toast(`🐷 ${t('ui.vaultOpened')}`, 'info');
+          this.fx.coinChime();
+        }
+        break;
       case 'buy-pack':
         error = buyShopPack(s, arg);
         if (!error) {

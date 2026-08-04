@@ -475,6 +475,16 @@ export const EVENT_MIN_EARNED = 5_000;
 export const EVENT_INTERVAL_MIN_SEC = 360;
 export const EVENT_INTERVAL_MAX_SEC = 660;
 
+// Piggy vault (docs/balance.md Phase V): VAULT_RATE of every project payout
+// accrues ON TOP into a global vault (a bonus pool, not a tax — skimming
+// from payouts would silently distort income, missions and the balance
+// phases). Capped at VAULT_CAP_MINUTES of gross income (floor
+// VAULT_CAP_MIN), opened for VAULT_OPEN_COST VsCoin into the active wallet.
+export const VAULT_RATE = 0.05;
+export const VAULT_CAP_MINUTES = 120;
+export const VAULT_CAP_MIN = 10_000;
+export const VAULT_OPEN_COST = 5;
+
 // Worker traits (docs/balance.md Phase T): rolled once at candidate
 // creation via the injectable rand. TRAIT_CHANCE of candidates carry one
 // trait; RARE_TRAIT_CHANCE additionally roll a second one and present as

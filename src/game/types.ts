@@ -440,6 +440,11 @@ export interface GameState {
   /** Daily contracts board (see DailyState). */
   daily: DailyState;
   /**
+   * Piggy vault: a capped bonus pool fed by VAULT_RATE of every payout,
+   * opened with VsCoin. Global — survives prestige like VsCoin does.
+   */
+  vault: { amount: number };
+  /**
    * Levels of VsCoin-bought upgrades. Premium upgrades are global: one
    * purchase applies in every company of every country (cash upgrades stay
    * per-company).

@@ -44,9 +44,10 @@ missing and reuses existing plumbing.
    monotony: an event def table, a timed modifier in `tick`, one dialog on
    the Gabriel surface.
 
-5. **Piggy-bank vault** — A % of earnings accrues to a capped vault opened
-   with VsCoin (later: ad/IAP). Top-converting mechanic of the genre;
-   reuses `grantVsCoin`/`spendVsCoin` and the boost-badge UI patterns.
+5. ~~**Piggy-bank vault**~~ — shipped: 5% of every payout accrues on top
+   into a global, prestige-surviving vault capped at 2 h of income,
+   opened for 5 VsCoin (balance.md Phase V, decisions.md #31); HUD
+   piggy chip + Shop card.
 
 ## Second tier — gameplay depth
 
