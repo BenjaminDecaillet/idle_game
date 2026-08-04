@@ -18,14 +18,14 @@ Contract: `.claude/skills/session-handoff/SKILL.md`.
    updates in frame(); 4 new i18n keys EN+FR; verified with Playwright +
    screenshots; 708 tests + build + smoke green.
 
+3. **feat/desk-slot-employee-cap — DONE, PR #34 open** (commits
+   11087b8 + 9c345a6). `atHeadcountCap` + `error.officeAtCapacity` in
+   engine; hire-sheet banner + disabled buttons + n/cap counters;
+   over-capacity grace; 8 new tests (716 total green); Playwright
+   verified + screenshot.
+
 ## Queue
 
-3. **feat/desk-slot-employee-cap** — headcount hard-capped by
-   `FLOOR_CAPACITY × MAX_FLOORS` desk slots per site (derive, don't
-   hardcode 32). Hire blocked at cap with translated error; hire buttons
-   disabled with reason; live `n / cap` counter in roster/office header;
-   graceful over-capacity handling; unit tests (hire at cap, after firing,
-   cap growth on floor completion).
 4. **docs/idle-game-state-of-the-art** — 3 background research reports are
    COMPLETE (OSS repos survey, design theory, UI/UX+QoL). Raw reports live
    in the session task outputs; if lost, re-run three general-purpose
@@ -47,8 +47,14 @@ Contract: `.claude/skills/session-handoff/SKILL.md`.
 
 ## Next concrete action
 
-Start `feat/desk-slot-employee-cap` off `origin/master`: find the hire
-action in engine.ts, derive the cap from FLOOR_CAPACITY × MAX_FLOORS in
-data.ts (deskCapacity(c) already exists in engine — check it), hard-block
-hire at cap with a translated error, disabled hire buttons with reason,
-live n/cap counter, over-capacity grace, unit tests.
+Task 4 (state of the art): the full doc draft already exists at
+scratchpad/state-of-the-art-draft.md (content also reproducible from the
+three research reports). Create branch docs/idle-game-state-of-the-art
+off origin/master, land the doc + append backlog entries to
+docs/improvements.md, PR. Then implement picks on own branches:
+(a) feat/save-export-import (settings UI, base64 ISV1| prefix, import
+through normal load path + confirm dialog), (b) feat/bulk-buy-desks
+(closed-form geometric-sum cost + maxAffordable in engine, x1/x10/xMax
+segmented control, UI-local quantity — no save change), (c) welcome-back
+itemized offline report (extend ui.welcomeBack with a state diff from
+loadGame; snapshot cheap counters pre-sim in save.ts).
