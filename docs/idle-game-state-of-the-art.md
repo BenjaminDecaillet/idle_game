@@ -172,8 +172,11 @@ what was implemented right away vs. sent to `improvements.md`.
 - **Bulk buy ×1/×10/×Max** — closed-form geometric-series cost + max-affordable
   in the engine, segmented control in the UI. Table stakes for the genre.
 - **Export/import saves** — base64 text + file download, import through the
-  normal load path. Urgent for a localStorage-only PWA under a beta-reset
-  policy.
+  normal load path. The genre-standard insurance for a localStorage-only
+  PWA. **Already shipped in ISV** (`exportSave`/`importSave` in
+  `src/game/save.ts` + Settings buttons) — verified in code during this
+  survey; the research flagged it as missing because the buttons live
+  behind the Stats tab.
 - **Reduced-motion + FX toggles; pause scene animation when `document.hidden`.**
 - **Colorblind-safe redundancy** — never encode affordability by hue alone;
   Okabe-Ito palette for categorical UI colors.
@@ -188,13 +191,13 @@ what was implemented right away vs. sent to `improvements.md`.
 
 | # | Idea | Value | Effort | Decision |
 |---|------|-------|--------|----------|
-| 1 | Export/import saves | very high | low | **implement now** |
+| 1 | Export/import saves | very high | low | already shipped in ISV (verified in code) |
 | 2 | Bulk buy ×1/×10/×Max for desks | very high | low-med | **implement now** |
-| 3 | Welcome-back itemized report | high | low-med | **implement now** (extends existing modal) |
-| 4 | Earned automation (auto-train/auto-hire unlocks) | high | med | backlog |
-| 5 | Achievements with small multipliers | high | med | backlog (plan.md already lists) |
-| 6 | Ownership milestone multipliers (25/50/100) | high | med | backlog (balance work) |
-| 7 | Payback-time display on purchase buttons | med-high | low | backlog |
+| 3 | Welcome-back itemized report | high | low-med | **implement now** (extends existing modal, which is also missing i18n) |
+| 4 | Payback-time display on purchase buttons | med-high | low | **implement now** |
+| 5 | Earned automation (auto-train/auto-hire unlocks) | high | med | backlog |
+| 6 | Achievements with small multipliers | high | med | backlog (plan.md already lists) |
+| 7 | Ownership milestone multipliers (25/50/100) | high | med | backlog (balance work) |
 | 8 | Quarterly market seasons | med-high | med | backlog |
 | 9 | App badge for finished timers | med | low | backlog |
 | 10 | Recruiters (producer-of-producers) | med | med | backlog |
@@ -204,7 +207,9 @@ what was implemented right away vs. sent to `improvements.md`.
 | 14 | `<symbol>`/`<use>` scene refactor | med | med | backlog, when persona count grows |
 | 15 | Floating-number overlay | med | med | backlog (fx.ts has payout bursts already) |
 
-Implementation picks (1–3) were chosen because each is proven across multiple top
+Implementation picks (2–4) were chosen because each is proven across multiple top
 games, touches no balance curves, requires no `GameState` reshape (or only an
-additive one), and lands player-visible value immediately. Everything else is
-appended to `docs/improvements.md`.
+additive one), and lands player-visible value immediately. Pick 1 turned out to
+already exist in the codebase — a reminder that survey findings are verified
+against the code before anything is built. Everything else is appended to
+`docs/improvements.md`.

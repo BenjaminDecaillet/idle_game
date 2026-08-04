@@ -112,9 +112,8 @@ Source: [idle-game-state-of-the-art.md](idle-game-state-of-the-art.md)
     curve into a goal staircase and feeds missions durable counters
     (Pecorella Part II). Needs balance-designer before numbers land.
 
-25. **Payback-time on purchase buttons** — "pays for itself in 3m 12s"
-    derived read-only from data.ts values; makes the buy screen an
-    optimization puzzle instead of a price wall.
+25. ~~**Payback-time on purchase buttons**~~ — promoted to an immediate
+    implementation pick of the survey (shipping as its own feat branch).
 
 26. **Quarterly market seasons** — deterministic boom/stable/crunch/
     recovery cycle from elapsed game time inside `tick()`, multiplying
