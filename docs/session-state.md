@@ -12,15 +12,11 @@ Contract: `.claude/skills/session-handoff/SKILL.md`.
    `scripts/smoke-test.mjs` (verified it fails on master, passes with fix).
    Verified interactively with Playwright: picked project persists in save.
 
-## In progress
-
-2. **feat/floor-training-visibility** — next up, not started.
-   Acceptance: on the floor view, a training/promoting employee's desk
-   shows a state badge (training vs promotion visually distinct), a live
-   progress bar and remaining time, readable without hover. Derive from
-   `timedActions` (`kind === 'training' | 'promotion'`, `targetId`). All
-   strings i18n EN+FR. Screenshot evidence. Relevant code: floor rendering
-   `src/ui/ui.ts` ~1399+, desk/stand slots ~1765+.
+2. **feat/floor-training-visibility — DONE, PR #33 open** (commit 6d85721).
+   Shared busy-worker tile (badge gold-Training/blue-Promotion + live bar
+   + countdown) on floor strip and building strip; `data-live-*` targeted
+   updates in frame(); 4 new i18n keys EN+FR; verified with Playwright +
+   screenshots; 708 tests + build + smoke green.
 
 ## Queue
 
@@ -51,6 +47,8 @@ Contract: `.claude/skills/session-handoff/SKILL.md`.
 
 ## Next concrete action
 
-Start `feat/floor-training-visibility` off `origin/master`: read the floor
-desk-slot rendering (`src/ui/ui.ts` ~1765) and the timed-action helpers,
-then design the badge/progress markup.
+Start `feat/desk-slot-employee-cap` off `origin/master`: find the hire
+action in engine.ts, derive the cap from FLOOR_CAPACITY × MAX_FLOORS in
+data.ts (deskCapacity(c) already exists in engine — check it), hard-block
+hire at cap with a translated error, disabled hire buttons with reason,
+live n/cap counter, over-capacity grace, unit tests.
