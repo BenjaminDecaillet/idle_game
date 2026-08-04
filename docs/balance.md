@@ -582,8 +582,8 @@ counters, so offline gains still count toward today's board.
 |---|---|---|---|---|---|---|
 | 📦 Ship | projectsCompleted | 15 | 1 | ~15–30 min (api/payments cadence 15 s–3 min) | passive: ~1/few min across 3–5 companies | passive: 15–40/day (8 companies × 2–3 slots) |
 | 💰 Earn | totalEarned | `gross × 1800`, floor 500 | 2 | 30 $/s → 54k, ~30–40 min active (or idle) | 5k $/s → 9M, same shape | 100k $/s → 180M, same shape |
-| 🧑‍💻 Hire | workers | 2 | 1 | 2 interns ≈ $50–250, minutes | seconds of empire income (or ~10–25 min of the hiring company's net at-tier) | seconds |
-| 🪑 Furnish | desks | 3 | 1 | ~$60–160 (+ $2.4k floor 2 if full), ≤ 10 min | 3 basics in newest company ≈ 2.7k–20k, seconds | filtered out when capacity < 3 |
+| 🤝 Hire | workers | 2 | 1 | 2 interns ≈ $50–250, minutes | seconds of empire income (or ~10–25 min of the hiring company's net at-tier) | seconds |
+| 🖥️ Furnish | desks | 3 | 1 | ~$60–160 (+ $2.4k floor 2 if full), ≤ 10 min | 3 basics in newest company ≈ 2.7k–20k, seconds | filtered out when capacity < 3 |
 | ⚙️ Upgrade | upgradeLevels | 4 | 1 | coffee 200/480/1,152/2,765 ≈ 3–8 min of income | newest company's cheap ladder ≈ seconds–minutes | same via newest company; worst case ~30–75 min (see below) |
 | 🎖️ Promote | promotions | 1 | 2 | often organic (first intern near cap 10) | organic (training pushes workers to caps) | guaranteed fallback ≈ 16 min (see below) |
 

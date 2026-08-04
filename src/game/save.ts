@@ -108,10 +108,15 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
     daily: {
       day: Number.isFinite(parsed.daily?.day) ? parsed.daily!.day : -1,
       contracts: Array.isArray(parsed.daily?.contracts) ? parsed.daily.contracts : [],
-      baselines:
-        parsed.daily?.baselines && typeof parsed.daily.baselines === 'object'
-          ? parsed.daily.baselines
-          : {},
+      // Coerce baseline values: a corrupt entry would turn dailyProgress
+      // into NaN and poison the progress bars.
+      baselines: Object.fromEntries(
+        Object.entries(
+          parsed.daily?.baselines && typeof parsed.daily.baselines === 'object'
+            ? parsed.daily.baselines
+            : {},
+        ).map(([k, v]) => [k, typeof v === 'number' && Number.isFinite(v) ? v : 0]),
+      ),
       claimed: Array.isArray(parsed.daily?.claimed) ? parsed.daily.claimed : [],
     },
     boosts: Array.isArray(parsed.boosts) ? parsed.boosts : [],

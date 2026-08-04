@@ -181,7 +181,7 @@ describe('daily contracts', () => {
       expect(dailyProgress(state, contract)).toBeLessThanOrEqual(contract.target);
     });
 
-    it('is 0 if baseline is not recorded', () => {
+    it('defaults a missing baseline to 0', () => {
       const state = createInitialState(NOW);
       state.daily = { day: 5, contracts: [], baselines: {}, claimed: [] };
       const contract: DailyContract = {
@@ -194,6 +194,25 @@ describe('daily contracts', () => {
       state.projectsCompleted = 5;
       // No baseline recorded => uses 0 as default.
       expect(dailyProgress(state, contract)).toBe(5);
+    });
+
+    it('clamps to 0 when the metric regressed below the baseline', () => {
+      const state = createInitialState(NOW);
+      state.daily = {
+        day: 5,
+        contracts: [],
+        baselines: { workers: 10 },
+        claimed: [],
+      };
+      const contract: DailyContract = {
+        id: 'test-workers',
+        metric: 'workers',
+        target: 2,
+        reward: 1,
+        emoji: '🤝',
+      };
+      // Debt-crisis quits can shrink the workforce below the day baseline.
+      expect(dailyProgress(state, contract)).toBe(0);
     });
   });
 
