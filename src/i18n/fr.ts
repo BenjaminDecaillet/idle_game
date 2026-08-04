@@ -257,7 +257,7 @@ export const fr: Record<keyof typeof en, string> = {
   'tutorial.name-company.text':
     'Magnifique. Maintenant, la société elle-même — choisis un nom digne d’être peint sur une fusée un jour.',
   'tutorial.hire.text':
-    'Une entreprise, c’est des gens. Ouvre l’onglet Office et appuie sur « Recruter » pour rencontrer tes premiers candidats — un stagiaire avec de grands rêves fera parfaitement l’affaire.',
+    'Une entreprise, c’est des gens. Ouvre l’onglet Bureau et appuie sur « Recruter » pour rencontrer tes premiers candidats — un stagiaire avec de grands rêves fera parfaitement l’affaire.',
   'tutorial.desk.text':
     'Ta nouvelle recrue attend debout ! Personne ne code debout dans un garage. Appuie sur le bouton 🔍 « Gérer » de l’étage et achète-lui un bureau.',
   'tutorial.upgrade.text':
@@ -409,7 +409,7 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.maxHeight': 'Hauteur maximale atteinte',
   'ui.awayTraining': 'En formation',
   'ui.officeHint':
-    'Touchez vos employés pour les entendre. Le placement est automatique : les meilleurs profils prennent les meilleurs postes. Chaque étage ajoute {slots} emplacements.',
+    'Touchez vos employés pour les entendre. Le placement est automatique : les meilleurs employés obtiennent les meilleurs bureaux. Chaque étage ajoute {slots} emplacements.',
   'ui.waitingDesk': 'En attente d’un bureau (aucune production) :',
   'ui.addFloorBtn': 'Ajouter un étage {price}',
   'ui.buyWorkstations': 'Acheter des postes de travail',
@@ -427,7 +427,7 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.followDefault': 'Suivre le choix par défaut',
   'ui.marketingName': 'Campagne marketing',
   'ui.marketingDesc':
-    'Production ×{mult} pendant {duration}, toutes sociétés. Racheter prolonge l’effet.',
+    'Production ×{mult} pendant {duration}, pour toutes les sociétés. Racheter prolonge l’effet.',
   'ui.launchBtn': 'Lancer {price}',
   'ui.companiesReq': '{count} sociétés',
   'ui.stat.totalEarned': 'Total gagné',
@@ -466,7 +466,7 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.investorLeft': 'Un investisseur a laissé quelque chose…',
   'ui.investorTip': 'Tuyau d’investisseur ! Revenus ×2 pendant 60 s',
 
-  // --- Identifiants d'erreur du moteur --------------------------------------
+  // --- Identifiants d’erreur du moteur --------------------------------------
   'error.notEnoughMoney': 'Pas assez d’argent',
   'error.noSuchFloor': 'Étage introuvable',
   'error.noSuchProject': 'Projet introuvable',
@@ -475,8 +475,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.workerBusy': 'Déjà occupé',
   'error.topGrade': 'Déjà au sommet de l’échelle',
   'error.notAtCap': 'Pas encore au plafond de compétence',
-  'error.promoteInstead': 'Plafond atteint — promouvez plutôt',
-  'error.maxSkill': 'Déjà au niveau maximal',
+  'error.promoteInstead': 'Plafond de compétence atteint — promouvez plutôt',
+  'error.maxSkill': 'Déjà au niveau de compétence maximal',
   'error.deskNotFound': 'Bureau introuvable',
   'error.deskUpgrading': 'Déjà en rénovation',
   'error.bestDesk': 'Déjà le meilleur bureau',
