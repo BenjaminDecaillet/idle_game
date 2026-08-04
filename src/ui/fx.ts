@@ -26,6 +26,40 @@ interface FloatText {
 
 const COLORS = ['#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#a78bfa', '#22d3ee'];
 
+// ---------------------------------------------------------------------------
+// Chiptune theme ("Garage Dreams") — synthesized, no assets. Notes are MIDI
+// numbers; null = rest. The loop is 4 bars of 8th notes (32 steps) over the
+// classic C–G–Am–F progression: square lead, triangle bass, offbeat blips.
+// ---------------------------------------------------------------------------
+
+const MUSIC_BPM = 132;
+/** Seconds per 8th-note step. */
+const MUSIC_STEP_SEC = 60 / MUSIC_BPM / 2;
+/** Master music level relative to musicVolume — keeps SFX on top. */
+const MUSIC_BUS_LEVEL = 0.22;
+/** Scheduler lookahead: schedule steps this far ahead of the playhead. */
+const MUSIC_LOOKAHEAD_SEC = 0.3;
+
+const midi = (n: number): number => 440 * Math.pow(2, (n - 69) / 12);
+
+// prettier-ignore
+const MUSIC_LEAD: (number | null)[] = [
+  // C                              G
+  72, null, 76, 79, null, 79, 76, null,   71, null, 74, 79, null, 79, 74, null,
+  // Am                             F
+  69, null, 72, 76, null, 76, 72, null,   65, null, 69, 72, null, 74, 71, null,
+];
+// prettier-ignore
+const MUSIC_BASS: (number | null)[] = [
+  36, 48, 36, 48, 36, 48, 36, 48,   43, 55, 43, 55, 43, 55, 43, 55,
+  45, 57, 45, 57, 45, 57, 45, 57,   41, 53, 41, 53, 41, 53, 41, 53,
+];
+// prettier-ignore
+const MUSIC_BLIP: (number | null)[] = [
+  null, null, 88, null, null, null, 88, null,   null, null, 86, null, null, null, 86, null,
+  null, null, 88, null, null, null, 88, null,   null, null, 89, null, null, null, 89, null,
+];
+
 export class Fx {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -36,6 +70,13 @@ export class Fx {
   private lastDing = 0;
   enabled = true;
   soundEnabled = true;
+  /** Music bus: master gain shared by every scheduled note, for volume + ducking. */
+  private musicGain: GainNode | null = null;
+  private musicOn = false;
+  private musicVolume = 0.5;
+  /** Absolute AudioContext time of the next unscheduled step. */
+  private musicNextTime = 0;
+  private musicStep = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -84,6 +125,7 @@ export class Fx {
   }
 
   update(dt: number): void {
+    this.scheduleMusic();
     const ctx = this.ctx;
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     if (!this.enabled) {
@@ -132,6 +174,7 @@ export class Fx {
     const now = performance.now();
     if (now - this.lastDing < 250) return;
     this.lastDing = now;
+    this.duckMusic();
     this.tone([880, 1318.5], 0.08, 0.12);
   }
 
@@ -140,23 +183,162 @@ export class Fx {
     this.tone([440], 0.03, 0.05);
   }
 
-  private tone(freqs: number[], gainValue: number, duration: number): void {
+  /** Angelic rising arpeggio for Gabriel's story beats. */
+  storyChime(): void {
+    if (!this.soundEnabled) return;
+    this.duckMusic(0.9);
+    this.tone([523.25, 659.25, 783.99, 1046.5], 0.06, 0.5, 'sine', 0.09);
+  }
+
+  /** Bright fanfare for a claimed mission. */
+  claimChime(): void {
+    if (!this.soundEnabled) return;
+    this.duckMusic();
+    this.tone([392, 523.25, 659.25], 0.07, 0.25, 'triangle', 0.05);
+  }
+
+  /** Two sparkly blips whenever VsCoin lands in the wallet. */
+  coinChime(): void {
+    if (!this.soundEnabled) return;
+    this.duckMusic();
+    this.tone([987.77, 1318.5], 0.06, 0.15, 'sine', 0.05);
+  }
+
+  private tone(
+    freqs: number[],
+    gainValue: number,
+    duration: number,
+    type: OscillatorType = 'sine',
+    stagger = 0.06,
+  ): void {
     try {
-      this.audio ??= new AudioContext();
-      const t0 = this.audio.currentTime;
+      this.ensureAudio();
+      const t0 = this.audio!.currentTime;
       for (let i = 0; i < freqs.length; i++) {
-        const osc = this.audio.createOscillator();
-        const gain = this.audio.createGain();
-        osc.type = 'sine';
+        const osc = this.audio!.createOscillator();
+        const gain = this.audio!.createGain();
+        osc.type = type;
         osc.frequency.value = freqs[i];
-        gain.gain.setValueAtTime(gainValue, t0 + i * 0.06);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.06 + duration);
-        osc.connect(gain).connect(this.audio.destination);
-        osc.start(t0 + i * 0.06);
-        osc.stop(t0 + i * 0.06 + duration + 0.02);
+        gain.gain.setValueAtTime(gainValue, t0 + i * stagger);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + i * stagger + duration);
+        osc.connect(gain).connect(this.audio!.destination);
+        osc.start(t0 + i * stagger);
+        osc.stop(t0 + i * stagger + duration + 0.02);
       }
     } catch {
       // Audio not available — ignore.
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Chiptune loop
+  // -------------------------------------------------------------------------
+
+  /** Lazily create (and on gesture, resume) the shared AudioContext. */
+  private ensureAudio(): void {
+    this.audio ??= new AudioContext();
+    if (this.audio.state === 'suspended') void this.audio.resume();
+  }
+
+  /**
+   * Turn the theme loop on/off. Call from a user-gesture handler so the
+   * AudioContext is allowed to start.
+   */
+  setMusic(on: boolean): void {
+    this.musicOn = on;
+    if (!on) {
+      this.stopMusicBus();
+      return;
+    }
+    try {
+      this.ensureAudio();
+      if (!this.musicGain) {
+        this.musicGain = this.audio!.createGain();
+        this.musicGain.gain.value = this.musicVolume * MUSIC_BUS_LEVEL;
+        this.musicGain.connect(this.audio!.destination);
+      }
+      this.musicNextTime = this.audio!.currentTime + 0.05;
+      this.musicStep = 0;
+    } catch {
+      // Audio not available — ignore.
+    }
+  }
+
+  setMusicVolume(volume: number): void {
+    this.musicVolume = Math.max(0, Math.min(1, volume));
+    if (this.musicGain && this.audio) {
+      this.musicGain.gain.setTargetAtTime(
+        this.musicVolume * MUSIC_BUS_LEVEL,
+        this.audio.currentTime,
+        0.05,
+      );
+    }
+  }
+
+  private stopMusicBus(): void {
+    if (this.musicGain && this.audio) {
+      // Fade out, then drop the bus — scheduled notes die with it.
+      this.musicGain.gain.setTargetAtTime(0.0001, this.audio.currentTime, 0.1);
+      const old = this.musicGain;
+      setTimeout(() => old.disconnect(), 600);
+    }
+    this.musicGain = null;
+  }
+
+  /** Dip the music under a foreground chime, then recover. */
+  private duckMusic(holdSec = 0.35): void {
+    if (!this.musicGain || !this.audio || !this.musicOn) return;
+    const g = this.musicGain.gain;
+    const now = this.audio.currentTime;
+    g.cancelScheduledValues(now);
+    g.setTargetAtTime(this.musicVolume * MUSIC_BUS_LEVEL * 0.3, now, 0.03);
+    g.setTargetAtTime(this.musicVolume * MUSIC_BUS_LEVEL, now + holdSec, 0.12);
+  }
+
+  /**
+   * Lookahead scheduler, driven by update() at 60 fps: keeps ~0.3 s of the
+   * loop queued with sample-accurate WebAudio timestamps.
+   */
+  private scheduleMusic(): void {
+    if (!this.musicOn || !this.musicGain || !this.audio || this.audio.state !== 'running') {
+      return;
+    }
+    const now = this.audio.currentTime;
+    // After a background tab pause, jump the playhead instead of cramming
+    // every missed step into one burst.
+    if (this.musicNextTime < now - 0.1) this.musicNextTime = now;
+    while (this.musicNextTime < now + MUSIC_LOOKAHEAD_SEC) {
+      const step = this.musicStep % MUSIC_LEAD.length;
+      const t = this.musicNextTime;
+      const lead = MUSIC_LEAD[step];
+      if (lead !== null) this.musicNote(midi(lead), t, MUSIC_STEP_SEC * 0.85, 'square', 0.16);
+      const bass = MUSIC_BASS[step];
+      if (bass !== null) this.musicNote(midi(bass), t, MUSIC_STEP_SEC * 0.95, 'triangle', 0.5);
+      const blip = MUSIC_BLIP[step];
+      if (blip !== null) this.musicNote(midi(blip), t, MUSIC_STEP_SEC * 0.3, 'square', 0.05);
+      this.musicStep = (this.musicStep + 1) % MUSIC_LEAD.length;
+      this.musicNextTime += MUSIC_STEP_SEC;
+    }
+  }
+
+  /** One scheduled chip note into the music bus (attack + exponential decay). */
+  private musicNote(
+    freq: number,
+    at: number,
+    duration: number,
+    type: OscillatorType,
+    level: number,
+  ): void {
+    if (!this.audio || !this.musicGain) return;
+    const osc = this.audio.createOscillator();
+    const gain = this.audio.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(level, at + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+    osc.connect(gain).connect(this.musicGain);
+    osc.start(at);
+    osc.stop(at + duration + 0.02);
   }
 }

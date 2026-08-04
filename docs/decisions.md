@@ -165,3 +165,13 @@ be revisited cheaply.
     view; each floor's view holds only its own project slot. Hiring is
     a bottom-sheet popup (candidate cards + reroll) reachable from the
     building header and every floor view.
+26. **Chiptune theme (slice C)**: "Garage Dreams" is synthesized in
+    fx.ts — a 4-bar C–G–Am–F loop at 132 BPM (square lead, triangle
+    bass, offbeat blips) driven by a lookahead scheduler from the 60 fps
+    update loop, all through one music gain bus that chimes duck. Music
+    is OFF by default with its own volume, stored as additive settings
+    fields (no save bump). Distinct chimes shipped with it
+    (improvements #17): story arpeggio, mission fanfare, VsCoin blips.
+    Kept inside the existing Fx class (shared AudioContext, one gesture
+    story) rather than a separate module; conventions in the new
+    audio-chiptune skill.

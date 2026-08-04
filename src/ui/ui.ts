@@ -575,6 +575,7 @@ export class UI {
   private showStoryModal(beatId: string): void {
     const zone = document.getElementById('modal-zone');
     if (!zone) return;
+    this.fx.storyChime();
     const pose: GabrielPose =
       beatId === 'agi-shipped' || beatId === 'dream-achieved' || beatId === 'new-venture'
         ? 'cheer'
@@ -2052,6 +2053,15 @@ export class UI {
             </button>
           </div>
           <div class="settings-row">
+            <button class="btn" data-action="toggle-music">
+              ${s.settings.music ? `🎵 ${t('ui.musicOn')}` : `🎵 ${t('ui.musicOff')}`}
+            </button>
+            <span class="settings-label">${t('ui.musicVolume')}</span>
+            <input type="range" min="0" max="100" step="5" class="music-volume"
+                   value="${Math.round(s.settings.musicVolume * 100)}"
+                   data-select="music-volume" ${s.settings.music ? '' : 'disabled'} />
+          </div>
+          <div class="settings-row">
             <span class="settings-label">${t('ui.language')}</span>
             ${(['auto', 'en', 'fr'] as const)
               .map(
@@ -2202,7 +2212,10 @@ export class UI {
       case 'claim-vscoin': {
         const coins = vsCoinPackById(arg).coins;
         error = claimVsCoinPack(s, arg);
-        if (!error) this.toast(`${t('ui.vscoinClaimed', { coins })}`, 'info');
+        if (!error) {
+          this.toast(`${t('ui.vscoinClaimed', { coins })}`, 'info');
+          this.fx.coinChime();
+        }
         break;
       }
       case 'buy-pack':
@@ -2250,7 +2263,10 @@ export class UI {
         break;
       case 'claim-mission':
         error = claimMission(s, arg);
-        if (!error) this.toast(`💎 ${t('ui.claimed')}`, 'info');
+        if (!error) {
+          this.toast(`💎 ${t('ui.claimed')}`, 'info');
+          this.fx.claimChime();
+        }
         break;
       case 'buy-vscoin-boost':
         error = buyVsCoinBoost(s);
@@ -2297,6 +2313,12 @@ export class UI {
       case 'toggle-sound':
         s.settings.sound = !s.settings.sound;
         this.fx.soundEnabled = s.settings.sound;
+        break;
+      case 'toggle-music':
+        // In a click handler = user gesture, so the AudioContext may start.
+        s.settings.music = !s.settings.music;
+        this.fx.setMusicVolume(s.settings.musicVolume);
+        this.fx.setMusic(s.settings.music);
         break;
       case 'toggle-particles':
         s.settings.particles = !s.settings.particles;
@@ -2451,6 +2473,12 @@ export class UI {
       this.officeDirty = true;
       this.rebuildTab();
     }
+    if (kind === 'music-volume') {
+      const volume = Math.max(0, Math.min(1, Number(el.value) / 100));
+      this.state.settings.musicVolume = volume;
+      this.fx.setMusicVolume(volume);
+      saveGame(this.state);
+    }
   }
 
   /** Force the office floor to rebuild (seating changed outside a click). */
@@ -2472,6 +2500,8 @@ export class UI {
     this.knownCompleted = null;
     this.fx.soundEnabled = next.settings.sound;
     this.fx.enabled = next.settings.particles;
+    this.fx.setMusicVolume(next.settings.musicVolume);
+    this.fx.setMusic(next.settings.music);
     setCurrentLang(resolveLang(next.settings.language, navigator.language));
     this.officeDirty = true;
     this.coachStep = '';
