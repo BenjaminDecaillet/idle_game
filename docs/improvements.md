@@ -1,25 +1,16 @@
 # Improvement backlog — curated & prioritized
 
-Re-baselined 2026-08-03 against master after the v9 workforce/shop update
-(PR #6) and the beta force-refresh fix (PR #7). Ordered globally by
-impact ÷ effort with dependencies respected; the top tier is what I'd build
-next, in order. Roadmap TODOs that need external accounts or SDKs
-(analytics, ads, real IAP, Capacitor) live in `plan.md`/`monetization.md`
-and are not repeated here.
-
-**Shipped 2026-08-03** (PRs #7–#15): beta force-refresh + build stamp,
-backlog re-baseline, prestige ("IPO & open-source the dream", no save
-wipe), goal-hint chip, offline-earnings doubler (ad-ready placement),
-story journal, FR locale number formatting, builders-guild beat +
-mission chain, and CI on PRs (vitest + build + Chromium smoke test).
-
-**Why this top tier:** with the retention loop (prestige) and first-hour
-guidance shipped, the biggest gaps are now the comeback trigger (daily
-contracts feed both retention and the VsCoin economy), full FR coverage
-(the i18n sweep unblocks DE later and finishes what locale formatting
-started), and cheap gameplay variety (traits, events) that keeps mid-game
-sessions fresh. The vault is the strongest monetization mechanic still
-missing and reuses existing plumbing.
+Re-baselined 2026-08-04 after the autonomous backlog run (PRs #17–#30):
+save v10 (per-floor projects + company-tier cost scaling + beta shop),
+the Office-first tab layout, the chiptune + chimes, daily contracts,
+the full i18n sweep, worker traits, random events, the piggy vault,
+site specialization, office pets, builder-chip + confetti polish, the
+construction art pass, the balance harness, and the first wave of
+bespoke city scenes. Everything actionable without external
+accounts/SDKs is shipped; what remains below is either external-infra
+(push, ads, IAP, analytics — see plan.md/monetization.md), the
+deliberately-untouched beta exit checklist, or same-pattern content
+follow-ups (more bespoke scenes, more pets/cosmetic waves).
 
 ## Top tier (next session, in this order)
 
