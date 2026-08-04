@@ -301,6 +301,96 @@ function forSaleSign(x: number, y: number, P: ThemePalette): string {
   );
 }
 
+// --- construction works (company build in flight) --------------------------
+
+// ui.ts marks a free site whose company is being built by prefixing the
+// site label with the crane emoji; the map turns that flag into drawn art.
+function underConstruction(s: SiteView): boolean {
+  return s.status === 'free' && s.label.startsWith('🏗️');
+}
+
+// Neutral safety colours — identical on every theme / country palette.
+const C_ORANGE = '#ff8a2a';
+const C_YELLOW = '#ffb02e';
+const C_WOOD = '#d9a05b';
+const C_STEEL = '#b9c4d2';
+const C_GREY = '#8f97a3';
+
+/**
+ * Construction works over a plot while its company is being built: a tower
+ * crane lowering a wooden beam, an orange scaffolding frame, a hazard
+ * barrier and a traffic cone. (x, y) anchors the crane base on the ground,
+ * h is the mast height, dir points the jib left (-1) or right (+1).
+ */
+function constructionWorks(x: number, y: number, h: number, dir: 1 | -1): string {
+  const j = (v: number) => (dir * v).toFixed(1); // jib-side coordinate
+  const top = -h;
+  let g = `<g transform="translate(${x} ${y})">`;
+  // shadow + concrete base pad
+  g += `<ellipse cx="0" cy="1" rx="15" ry="4" fill="${INK}" opacity=".12" stroke="none"/>`;
+  g += `<rect x="-9" y="-6" width="18" height="6" rx="1.5" fill="${C_STEEL}"/>`;
+  // lattice mast
+  g += `<rect x="-4" y="${top}" width="8" height="${h - 6}" fill="${C_ORANGE}"/>`;
+  let lattice = `<g stroke-width="1.2" opacity=".55">`;
+  for (let k = 10; k + 10 < h; k += 20) {
+    lattice += `<line x1="-4" y1="${-k}" x2="4" y2="${-(k + 10)}"/>`;
+    if (k + 20 < h) lattice += `<line x1="4" y1="${-(k + 10)}" x2="-4" y2="${-(k + 20)}"/>`;
+  }
+  g += lattice + `</g>`;
+  // slewing cab + apex
+  g += `<rect x="-6.5" y="${top - 11}" width="13" height="11" rx="2" fill="${C_YELLOW}"/>`;
+  g += `<rect x="${dir === 1 ? 0.5 : -5.5}" y="${top - 9}" width="5" height="5" rx="1" fill="#cfe9fb" stroke-width="1"/>`;
+  g += `<line x1="0" y1="${top - 11}" x2="0" y2="${top - 22}" stroke-width="2"/>`;
+  // jib + counter-jib + counterweight
+  g += `<rect x="${dir === 1 ? 6 : -62}" y="${top - 6}" width="56" height="5" rx="1.5" fill="${C_YELLOW}"/>`;
+  g += `<rect x="${dir === 1 ? -24 : 6}" y="${top - 6}" width="18" height="5" rx="1.5" fill="${C_YELLOW}"/>`;
+  g += `<rect x="${dir === 1 ? -26 : 17}" y="${top - 1}" width="9" height="10" rx="1" fill="${C_GREY}"/>`;
+  // tie cables
+  g +=
+    `<g stroke-width="1" opacity=".7">` +
+    `<line x1="0" y1="${top - 22}" x2="${j(58)}" y2="${top - 5}"/>` +
+    `<line x1="0" y1="${top - 22}" x2="${j(-20)}" y2="${top - 5}"/>` +
+    `</g>`;
+  // trolley cable, sling and the hanging beam
+  g += `<line x1="${j(42)}" y1="${top - 1}" x2="${j(42)}" y2="${top + 24}" stroke-width="1.2"/>`;
+  g +=
+    `<g stroke-width="1">` +
+    `<line x1="${j(42)}" y1="${top + 24}" x2="${j(34)}" y2="${top + 32}"/>` +
+    `<line x1="${j(42)}" y1="${top + 24}" x2="${j(50)}" y2="${top + 32}"/>` +
+    `</g>`;
+  g +=
+    `<g transform="rotate(${-6 * dir} ${j(42)} ${top + 35})">` +
+    `<rect x="${(dir * 42 - 15).toFixed(1)}" y="${top + 32}" width="30" height="6" rx="1.5" fill="${C_WOOD}"/>` +
+    `<line x1="${(dir * 42 - 11).toFixed(1)}" y1="${top + 35}" x2="${(dir * 42 + 11).toFixed(1)}" y2="${top + 35}" stroke-width="1" opacity=".35"/>` +
+    `</g>`;
+  // scaffolding frame on the jib side
+  const sxA = dir * 20;
+  const sxB = dir * 46;
+  const sxMin = Math.min(sxA, sxB);
+  g += `<rect x="${sxA - 1.5}" y="-36" width="3" height="36" rx="1" fill="${C_ORANGE}"/>`;
+  g += `<rect x="${sxB - 1.5}" y="-36" width="3" height="36" rx="1" fill="${C_ORANGE}"/>`;
+  g += `<rect x="${sxMin - 3}" y="-32" width="32" height="4" rx="1" fill="${C_WOOD}"/>`;
+  g += `<rect x="${sxMin - 3}" y="-16" width="32" height="4" rx="1" fill="${C_WOOD}"/>`;
+  g += `<line x1="${sxA}" y1="-16" x2="${sxB}" y2="-30" stroke-width="1.2" opacity=".6"/>`;
+  // hazard-stripe barrier on the opposite side
+  g +=
+    `<g transform="translate(${dir * -26} 0)">` +
+    `<line x1="-7" y1="0" x2="-7" y2="-9" stroke-width="2"/>` +
+    `<line x1="7" y1="0" x2="7" y2="-9" stroke-width="2"/>` +
+    `<rect x="-11" y="-16" width="22" height="8" rx="1.5" fill="${C_YELLOW}"/>` +
+    `<path d="M-9,-9.4 l4.6,-5.2 h3.6 l-4.6,5.2 z M-1,-9.4 l4.6,-5.2 h3.6 l-4.6,5.2 z" fill="${INK}" opacity=".85" stroke="none"/>` +
+    `</g>`;
+  // traffic cone under the jib tip
+  const cx = dir * 58;
+  g +=
+    `<g>` +
+    `<rect x="${cx - 5.5}" y="-2.6" width="11" height="2.6" rx="1.3" fill="${C_ORANGE}"/>` +
+    `<path d="M${(cx - 3.4).toFixed(1)},-2.6 L${cx},-12 L${(cx + 3.4).toFixed(1)},-2.6 Z" fill="${C_ORANGE}"/>` +
+    `<line x1="${(cx - 2.2).toFixed(1)}" y1="-6.6" x2="${(cx + 2.2).toFixed(1)}" y2="-6.6" stroke="${CREAM}" stroke-width="1.8"/>` +
+    `</g>`;
+  return g + `</g>`;
+}
+
 /** Gold pennant above the active site (waved by CSS via .map-active-flag). */
 function activeFlag(x: number, y: number): string {
   return (
@@ -1293,7 +1383,8 @@ function siteGarage(P: ThemePalette, s: SiteView): string {
     `</g>`;
   g += bush(20, 438, 0.85, P);
   g += close; // building group
-  if (free) g += forSaleSign(40, 452, P);
+  if (free)
+    g += underConstruction(s) ? constructionWorks(108, 446, 78, -1) : forSaleSign(40, 452, P);
   else g += plaque(72, 438, s.label, active);
   if (active) g += activeFlag(56, 358);
   return g + close;
@@ -1376,7 +1467,8 @@ function siteLoft(P: ThemePalette, s: SiteView): string {
   // rooftop AC unit
   g += `<rect x="252" y="322" width="12" height="8" rx="1.5" fill="${D(P.sidewalk)}"/>`;
   g += close;
-  if (free) g += forSaleSign(234, 434, P);
+  if (free)
+    g += underConstruction(s) ? constructionWorks(226, 432, 100, 1) : forSaleSign(234, 434, P);
   else g += plaque(280, 424, s.label, active);
   if (active) g += activeFlag(258, 326);
   return g + close;
@@ -1447,7 +1539,8 @@ function sitePaloAlto(P: ThemePalette, s: SiteView): string {
   g += close;
   // palms frame the lot in full colour (site furniture, not the model)
   g += palm(22, 302, P) + palm(128, 302, P, true);
-  if (free) g += forSaleSign(34, 322, P);
+  if (free)
+    g += underConstruction(s) ? constructionWorks(120, 314, 82, -1) : forSaleSign(34, 322, P);
   else g += plaque(75, 312, s.label, active);
   if (active) g += activeFlag(92, 200);
   return g + close;
@@ -1522,7 +1615,8 @@ function siteCampus(P: ThemePalette, s: SiteView): string {
   // lawn trees
   g += bush(16, 72, 0.7, P) + bush(150, 96, 0.7, P);
   g += close;
-  if (free) g += forSaleSign(30, 196, P);
+  if (free)
+    g += underConstruction(s) ? constructionWorks(130, 182, 86, -1) : forSaleSign(30, 196, P);
   else g += plaque(82, 180, s.label, active);
   if (active) g += activeFlag(84, 86);
   return g + close;
@@ -1581,7 +1675,8 @@ function siteTower(P: ThemePalette, s: SiteView): string {
     `<circle cx="292" cy="50" r="9" fill="none" stroke="${GOLD}" stroke-width="1.4" opacity=".45"/>` +
     `<path d="M289.5,50 l2,2 3.5,-4" fill="none" stroke="${INK}" stroke-width="1.6"/>`;
   g += close;
-  if (free) g += forSaleSign(254, 262, P);
+  if (free)
+    g += underConstruction(s) ? constructionWorks(246, 252, 148, 1) : forSaleSign(254, 262, P);
   else g += plaque(292, 246, s.label, active);
   if (active) g += activeFlag(272, 28);
   return g + close;
@@ -1658,7 +1753,8 @@ function siteSeattle(P: ThemePalette, s: SiteView): string {
     `<line x1="168" y1="530" x2="165.5" y2="537"/>` +
     `<line x1="177" y1="531" x2="174.5" y2="538"/>` +
     `</g>`;
-  if (free) g += forSaleSign(100, 634, P);
+  if (free)
+    g += underConstruction(s) ? constructionWorks(184, 612, 96, -1) : forSaleSign(100, 634, P);
   else g += plaque(140, 610, s.label, active);
   if (active) g += activeFlag(102, 540);
   return g + close;
@@ -1745,7 +1841,8 @@ function siteNyc(P: ThemePalette, s: SiteView): string {
     `<rect x="281" y="637" width="6" height="4" rx="1.5" fill="${P.carC}" stroke-width="1"/>` +
     parkedCar(274, 640, P.carC, P) +
     `</g>`;
-  if (free) g += forSaleSign(246, 636, P);
+  if (free)
+    g += underConstruction(s) ? constructionWorks(244, 624, 112, 1) : forSaleSign(246, 636, P);
   else g += plaque(292, 620, s.label, active);
   if (active) g += activeFlag(300, 543);
   return g + close;
@@ -1816,7 +1913,8 @@ function siteOrbital(P: ThemePalette, s: SiteView): string {
     `<circle cx="248" cy="698" r="1.6" fill="${GOLD}"/>` +
     `</g>`;
   g += close;
-  if (free) g += forSaleSign(112, 736, P);
+  if (free)
+    g += underConstruction(s) ? constructionWorks(248, 714, 90, -1) : forSaleSign(112, 736, P);
   else g += plaque(188, 722, s.label, active);
   if (active) g += activeFlag(250, 688);
   return g + close;
