@@ -251,13 +251,13 @@ export const en = {
   'tutorial.name-company.text':
     'Beautiful. Now the company itself — pick a name worth printing on a rocket someday.',
   'tutorial.hire.text':
-    'A company is people. Open the Team tab and hire your first employee — an intern with big dreams will do just fine.',
+    'A company is people. Open the Office tab and tap Hire to meet your first candidates — an intern with big dreams will do just fine.',
   'tutorial.desk.text':
-    'Your new hire is standing around! Nobody codes standing in a garage. Go to the Office tab and buy them a desk.',
+    'Your new hire is standing around! Nobody codes standing in a garage. Tap the floor’s 🔍 Manage button and buy them a desk.',
   'tutorial.upgrade.text':
-    'Watch that progress bar go! Here — a little angel-investor gift of {gift}. Spend it in the Upgrades tab; an espresso machine works miracles on output.',
+    'Watch that progress bar go! Here — a little angel-investor gift of {gift}. Spend it in the Staff room at the top of your building; an espresso machine works miracles on output.',
   'tutorial.train.text':
-    'One more founder secret: people grow. In the Team tab, send someone to a training program — they’ll come back stronger.',
+    'One more founder secret: people grow. Tap 🔍 Manage on a floor and send someone to a training program from their card — they’ll come back stronger.',
   'tutorial.outro.text':
     'That’s everything you need. Ship projects, grow the team, found new companies across the map — and never lose sight of the dream. I’ll check in along the way!',
 

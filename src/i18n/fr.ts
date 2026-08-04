@@ -251,13 +251,13 @@ export const fr: Record<keyof typeof en, string> = {
   'tutorial.name-company.text':
     'Magnifique. Maintenant, la société elle-même — choisis un nom digne d’être peint sur une fusée un jour.',
   'tutorial.hire.text':
-    'Une entreprise, c’est des gens. Ouvre l’onglet Team et recrute ta première personne — un stagiaire avec de grands rêves fera parfaitement l’affaire.',
+    'Une entreprise, c’est des gens. Ouvre l’onglet Office et appuie sur « Recruter » pour rencontrer tes premiers candidats — un stagiaire avec de grands rêves fera parfaitement l’affaire.',
   'tutorial.desk.text':
-    'Ta nouvelle recrue attend debout ! Personne ne code debout dans un garage. Va dans l’onglet Office et achète-lui un bureau.',
+    'Ta nouvelle recrue attend debout ! Personne ne code debout dans un garage. Appuie sur le bouton 🔍 « Gérer » de l’étage et achète-lui un bureau.',
   'tutorial.upgrade.text':
-    'Regarde cette barre de progression avancer ! Tiens — un petit cadeau d’ange investisseur de {gift}. Dépense-le dans l’onglet Upgrades ; une machine à espresso fait des miracles.',
+    'Regarde cette barre de progression avancer ! Tiens — un petit cadeau d’ange investisseur de {gift}. Dépense-le dans la Salle de pause tout en haut de ton immeuble ; une machine à espresso fait des miracles.',
   'tutorial.train.text':
-    'Un dernier secret de fondateur : les gens grandissent. Dans l’onglet Team, envoie quelqu’un en formation — il reviendra plus fort.',
+    'Un dernier secret de fondateur : les gens grandissent. Appuie sur 🔍 « Gérer » sur un étage et envoie quelqu’un en formation depuis sa fiche — il reviendra plus fort.',
   'tutorial.outro.text':
     'Tu sais tout. Livre des projets, agrandis l’équipe, fonde de nouvelles sociétés sur la carte — et ne perds jamais le rêve de vue. Je repasserai te voir en chemin !',
 
