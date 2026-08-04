@@ -21,11 +21,11 @@ import {
   vaultCap,
 } from '../src/game/engine';
 import { migrate } from '../src/game/save';
-import type { GameState } from '../src/game/types';
+import type { GameState, WorkerState } from '../src/game/types';
 
 const NOW = 1_700_000_000_000;
 
-function makeWorkerState(overrides: any = {}) {
+function makeWorkerState(overrides: Partial<WorkerState> = {}) {
   return {
     id: 9999,
     name: 'Test Worker',
