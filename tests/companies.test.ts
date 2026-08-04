@@ -184,6 +184,7 @@ describe('parallel production — companies produce independently from shared wa
       name: 'Alice',
       tierId: 'junior',
       specialization: 'Frontend', // matches landing project
+      traits: [],
     });
     hireWorker(state, 3); // hire the pushed candidate (index 3 = beyond the initial 3)
     buyWorkstation(state, 'basic');
@@ -208,6 +209,7 @@ describe('parallel production — companies produce independently from shared wa
       name: 'Bob',
       tierId: 'junior',
       specialization: 'Frontend',
+      traits: [],
     });
     hireWorker(state, 3);
     buyWorkstation(state, 'basic');

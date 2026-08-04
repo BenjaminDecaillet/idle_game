@@ -444,6 +444,40 @@ export const UPGRADES: UpgradeDef[] = [
  * metric; the UI shows the first unclaimed mission of each chain. Progress
  * is always derived from durable state counters — no extra bookkeeping.
  */
+// Worker traits (docs/balance.md Phase T): rolled once at candidate
+// creation via the injectable rand. TRAIT_CHANCE of candidates carry one
+// trait; RARE_TRAIT_CHANCE additionally roll a second one and present as
+// "rare" (golden card). Multipliers are 1 = neutral and deliberately mild —
+// the point is hiring excitement, not a new growth axis: the expected
+// output bonus across all candidates is ≈ +5%.
+export interface TraitDef {
+  id: string;
+  emoji: string;
+  /** Output multiplier on workerRate. */
+  output: number;
+  /** Salary multiplier on top of tierSalary. */
+  salary: number;
+  /** XP-gain multiplier. */
+  xp: number;
+  /** Relative draw weight within the pool. */
+  weight: number;
+}
+export const TRAITS: TraitDef[] = [
+  { id: 'night-owl', emoji: '🦉', output: 1.15, salary: 1, xp: 1, weight: 3 },
+  { id: 'coffee-addict', emoji: '☕', output: 1.25, salary: 1.1, xp: 1, weight: 3 },
+  { id: 'quick-study', emoji: '📚', output: 1, salary: 1, xp: 1.5, weight: 3 },
+  { id: 'frugal', emoji: '🧾', output: 1, salary: 0.85, xp: 1, weight: 3 },
+  { id: 'perfectionist', emoji: '🔍', output: 1.1, salary: 1, xp: 0.85, weight: 2 },
+  { id: 'rockstar', emoji: '🎸', output: 1.4, salary: 1.25, xp: 1, weight: 1 },
+];
+export const TRAIT_CHANCE = 0.35;
+export const RARE_TRAIT_CHANCE = 0.06;
+export function traitById(id: string): TraitDef {
+  const t = TRAITS.find((t) => t.id === id);
+  if (!t) throw new Error(`Unknown trait: ${id}`);
+  return t;
+}
+
 // Daily contracts: 3 delta-progress missions rolled per UTC day from this
 // pool, seeded by the day number (docs/balance.md Phase D). totalEarned's
 // target is dynamic — DAILY_EARN_MINUTES of gross income at roll time.

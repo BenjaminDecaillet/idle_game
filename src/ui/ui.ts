@@ -8,6 +8,7 @@ import {
   MARKETING_DURATION_SEC,
   MARKETING_MULT,
   MAX_FLOORS,
+  traitById,
   PROJECTS,
   SHOP_CASH_PACKS,
   TIME_SCALES,
@@ -108,7 +109,9 @@ import {
   prestigeReset,
   totalWorkRate,
   tierSalary,
+  traitSalaryMult,
   trainCost,
+  workerSalary,
   trainLevels,
   trainWorker,
   unlockProject,
@@ -1100,6 +1103,18 @@ export class UI {
       ${cards}`;
   }
 
+  /** Trait badges (emoji + name, description in the tooltip). */
+  private traitBadges(traits: string[]): string {
+    return traits
+      .map(
+        (id) => `
+        <span class="trait-badge" title="${lookup(`trait.${id}.desc`)}">
+          ${traitById(id).emoji} ${lookup(`trait.${id}.name`)}
+        </span>`,
+      )
+      .join('');
+  }
+
   /** Hiring popup: candidate cards + reroll, as a bottom sheet. */
   private openHire(): void {
     this.hireOpen = true;
@@ -1128,13 +1143,16 @@ export class UI {
         const tier = tierById(cand.tierId);
         const price = hireCost(c, cand.tierId);
         const affordable = walletMoney(s) >= price;
+        const rare = cand.traits.length >= 2;
+        const salary = tierSalary(c, cand.tierId) * traitSalaryMult(cand.traits);
         return `
-        <div class="card candidate-card">
+        <div class="card candidate-card ${rare ? 'candidate-rare' : ''}">
           <span class="card-emoji persona-slot">${employeePortrait(`c:${cand.name}:${cand.tierId}`, cand.specialization, cand.tierId)}</span>
           <div class="card-main">
-            <h3>${cand.name}</h3>
-            <span class="muted">${tier.title} · ${formatRate(tier.baseRate)} · ${formatMoney(tierSalary(c, cand.tierId))}/s</span>
+            <h3>${cand.name}${rare ? ` <span class="rare-tag">★ ${t('ui.rareBadge')}</span>` : ''}</h3>
+            <span class="muted">${tier.title} · ${formatRate(tier.baseRate)} · ${formatMoney(salary)}/s</span>
             <span class="spec-badge spec-${cand.specialization.replace(' ', '')}">${cand.specialization}</span>
+            ${this.traitBadges(cand.traits)}
           </div>
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                   data-action="hire:${i}">
@@ -1221,10 +1239,11 @@ export class UI {
             <span class="spec-badge spec-${w.specialization.replace(' ', '')}">
               ${w.specialization}${specMatch ? ' ★1.5x' : ''}
             </span>
+            ${this.traitBadges(w.traits)}
           </div>
           <div class="card-right">
             <strong>${formatRate(rate)}</strong>
-            <span class="muted">-${formatMoney(tierSalary(c, w.tierId))}/s</span>
+            <span class="muted">-${formatMoney(workerSalary(c, w))}/s</span>
           </div>
         </div>
         ${progressBar}

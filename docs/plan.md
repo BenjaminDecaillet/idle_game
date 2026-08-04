@@ -55,7 +55,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [ ] **Statistics graphs** — money-over-time sparkline on the Stats tab
 - [ ] **Random events** — "Investor visit: 2× output for 60 s", outage debuffs
 - [x] **Multiple concurrent projects** — project slots unlocked by building height; upper floors assignable to their own projects (v8 expansion)
-- [ ] **Worker traits** — rare candidates with quirks (night owl, coffee addict)
+- [x] **Worker traits** (balance.md Phase T, decisions.md 29) — 6 deterministic traits (output/salary/XP multipliers) rolled at candidate creation, rare double-trait candidates with golden cards, badges + trait-aware salaries in the UI
 - [ ] **Cloud saves** — optional backend or Google Drive sync
 - [ ] **Capacitor wrapper** — App Store / Play Store with AdMob + RevenueCat (monetization Phase 4)
 - [x] **i18n** — EN/FR complete for the whole app (story/tutorial/missions/settings + full UI chrome + engine errors); remaining someday: DE

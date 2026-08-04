@@ -706,3 +706,27 @@ Watch metrics: if 30-day-retained players hoard >100 VsCoin, drop the earn
 reward to 1 (expected/day 4.0 → 3.5) before touching targets; if daily
 completion of `daily-ship` is <50% among day-2–7 players, lower its target
 to 12 — one knob per symptom.
+
+## Phase T — worker traits
+
+Rolled once per candidate through the injectable `rand`:
+`TRAIT_CHANCE = 0.35` of candidates carry one trait, and of those
+`RARE_TRAIT_CHANCE = 0.06` roll a second (distinct) trait — the "rare"
+candidate, ~2.1% of all candidates, golden card in the UI. Weighted pool
+(weight → share of single-trait draws): night-owl 3, coffee-addict 3,
+quick-study 3, frugal 3, perfectionist 2, rockstar 1 (the strongest trait
+is also the rarest).
+
+Expected value check (why this is excitement, not a growth axis): the
+mean output multiplier across ALL candidates is
+1 + 0.35 × Σ(weightᵢ/15 × (outputᵢ − 1)) ≈ 1 + 0.35 × 0.132 ≈ **+4.6%**
+— an order of magnitude below one coffee-machine upgrade level. Salary
+effects are net ≈ 0 (coffee-addict +10% and rockstar +25% offset frugal
+−15%), so the Phase S salary-to-income parity is undisturbed. XP traits
+(quick-study +50%, perfectionist −15%) only shift the training/promotion
+cadence, which the timed-action economy already prices.
+
+Steve Gates (the scripted tutorial hire) is deliberately traitless: the
+tutorial's cost/time script stays exact.
+
+Constants: `TRAITS`, `TRAIT_CHANCE`, `RARE_TRAIT_CHANCE` in data.ts.

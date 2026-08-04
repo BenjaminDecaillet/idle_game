@@ -196,3 +196,14 @@ be revisited cheaply.
     "SAT-VIEW") — it is diegetic set dressing like real-world English
     signage, and per art-svg conventions the art stays deterministic
     and language-free. "Lv"/"MAX"/"×" figure as universal notation.
+29. **Worker traits (D3)**: traits are rolled once at candidate creation
+    via the existing injectable-rand pattern and copied verbatim on hire
+    (durable state, additive fields — no save bump; migrate() drops
+    unknown ids). Effects are three pure multipliers (output, salary,
+    XP) applied at the ends of the existing chains: `workerRate`, the
+    new `workerSalary` (tierSalary × traits — companySalaries and the
+    cards use it), and the tick XP gain. Two traits = "rare" candidate
+    (golden card, ~2%). Magnitudes deliberately mild (balance.md Phase
+    T, expected +4.6% output across all hires) — the feature is hiring
+    excitement, not a growth axis. Steve Gates stays traitless so the
+    tutorial script stays exact.

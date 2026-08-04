@@ -1977,3 +1977,28 @@ input.music-volume {
   min-width: 90px;
   accent-color: var(--accent, #7c5cff);
 }
+
+/* Worker traits. */
+.trait-badge {
+  display: inline-block;
+  margin: 2px 4px 0 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  background: rgba(251, 191, 36, 0.18);
+  border: 1.5px solid rgba(217, 119, 6, 0.45);
+  color: var(--ink, #2d2440);
+}
+
+.candidate-rare {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35), 0 4px 14px rgba(245, 158, 11, 0.25);
+}
+
+.rare-tag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #b45309;
+}
