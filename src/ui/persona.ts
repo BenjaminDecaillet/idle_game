@@ -12,6 +12,7 @@ import type { Specialization } from '../game/types';
  * signed shift would go negative for roughly half of all seeds:
  *   h         % SKIN.length        -> skin tone
  *   h >>> 1   % 4                  -> rare-eye roll (0 => one of the new eye styles)
+ *   h >>> 2   % 110                -> seated head-bob phase (hundredths of a second)
  *   h >>> 3   % HAIR.length        -> hair color
  *   h >>> 4   % 2                  -> which new eye style (closed-content / wink)
  *   h >>> 5   % 2                  -> senior-tier grey-hair bias roll
@@ -19,15 +20,21 @@ import type { Specialization } from '../game/types';
  *   h >>> 7   % HAIRSTYLE_COUNT    -> hairstyle (8 styles)
  *   h >>> 8   % 2                  -> which new mouth style (tongue-smile / smirk)
  *   h >>> 9   % GREY_HAIR.length   -> which grey shade, when biased
+ *   h >>> 10  % 68                 -> typing-arms phase (hundredths of a second)
  *   h >>> 11  % 3                  -> base eye style (dots / happy arcs / wide)
  *   h >>> 12  % 8                  -> desk micro-prop (mug/stickies/plant/duck, 4..7 = none)
  *   h >>> 13  % 40                 -> blink animation phase (tenths of a second)
  *   h >>> 14  % 3                  -> eyebrow style
+ *   h >>> 15  % 34                 -> seated idle-bob phase (tenths of a second)
  *   h >>> 16  % pool               -> raster portrait slot (see portraits.ts)
  *   h >>> 17  % 4                  -> base mouth style
+ *   h >>> 18  % 26                 -> standing-sway phase (tenths of a second)
  *   h >>> 20  % 4                  -> facial hair (none/moustache/beard/goatee)
+ *   h >>> 21  % 23                 -> screen-glow phase (tenths of a second)
  *   h >>> 23  % 3                  -> cheek blemish (none/freckles/blush)
+ *   h >>> 24  % 50                 -> founder drone-float phase (player hash, tenths)
  *   h >>> 26  % 2                  -> whether a shirt detail is present (~50%)
+ *   h >>> 27  % 28                 -> founder core-pulse phase (player hash, tenths)
  *   h >>> 28  % 5                  -> which shirt detail (collar/tie/zip/pocket/hoodie)
  *
  * NOTE for future edits: never change an existing shift/modulo pair — that
@@ -541,7 +548,10 @@ const CHAIR = `
  * 64x56 seated coordinate space — used by both employee desks and the
  * founder office so the player is drawn in exactly the employee style.
  * The head nests a `.persona-bob` group inside `.persona-sit-head` so the
- * gentle idle bob composes with the existing typing head tilt.
+ * gentle idle bob composes with the existing typing head tilt. `phase` is
+ * the 32-bit persona hash: each looping animation gets a hash-derived
+ * negative animation-delay so a floor of workers types out of phase
+ * (and 2 Hz re-renders don't restart every loop in lockstep).
  */
 function seatedBody(
   look: PersonaLook,
@@ -550,8 +560,12 @@ function seatedBody(
   arm: string,
   handX: number,
   handY: number,
+  phase: number,
 ): string {
-  return `<g class="persona-sit-head"><g class="persona-bob">
+  const headD = ((phase >>> 2) % 110) / 100; // head-bob loops every 1.1s
+  const bobD = ((phase >>> 15) % 34) / 10; // idle bob loops every 3.4s
+  const armD = ((phase >>> 10) % 68) / 100; // typing alternates every 0.68s
+  return `<g class="persona-sit-head" style="animation-delay:-${headD}s"><g class="persona-bob" style="animation-delay:-${bobD}s">
       <circle cx="20" cy="16" r="6.4" fill="${look.skin}"/>
       <g transform="translate(4.8,2.6) scale(0.92)">${hairPath(look.hairstyle, look.hair)}</g>
       <g transform="translate(4.8,2.6) scale(0.92)">${facialFeatures(look)}</g>
@@ -559,7 +573,7 @@ function seatedBody(
     </g></g>
     <path d="M13 34 q0 -12 8 -11 q6 0.6 8 6 l3 5 z" fill="${look.shirt}"/>
     ${torsoExtra}
-    <g class="persona-sit-arms">
+    <g class="persona-sit-arms" style="animation-delay:-${armD}s">
       <path d="${arm}" stroke="${look.shirt}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
       <circle cx="${handX}" cy="${handY}" r="1.7" fill="${look.skin}"/>
     </g>`;
@@ -578,12 +592,20 @@ export function personaAtDesk(
 ): string {
   const look = personaLook(seed, specialization, tierId);
   const rig = deskRig(stationId);
+  const h = hashSeed(seed);
+  // Stagger this desk's screen glow too (rigs are shared, so the delay is
+  // injected here rather than baked into the station furniture).
+  const glowD = ((h >>> 21) % 23) / 10; // screen-glow loops every 2.3s
+  const furniture = rig.furniture.replaceAll(
+    'class="persona-screen"',
+    `class="persona-screen" style="animation-delay:-${glowD}s"`,
+  );
   const torsoExtra =
     shirtDetailPath(look.shirtDetail, 20, 27) + tierOutfitPath(tierId, 20, 27, 5, 34);
   return `<svg class="persona-desk" viewBox="0 0 64 56" aria-hidden="true">
     ${CHAIR}
-    ${seatedBody(look, accessory(tierId), torsoExtra, rig.arm, rig.handX, rig.handY)}
-    ${rig.furniture}
+    ${seatedBody(look, accessory(tierId), torsoExtra, rig.arm, rig.handX, rig.handY, h)}
+    ${furniture}
     ${deskPropPath(look.deskProp, rig.propX, rig.propY)}
   </svg>`;
 }
@@ -604,8 +626,9 @@ export function personaStanding(
   tierId: string,
 ): string {
   const look = personaLook(seed, specialization, tierId);
+  const swayD = ((hashSeed(seed) >>> 18) % 26) / 10; // sway loops every 2.6s
   return `<svg class="persona-stand" viewBox="0 0 32 56" aria-hidden="true">
-    <g class="persona-sway">
+    <g class="persona-sway" style="animation-delay:-${swayD}s">
       <circle cx="16" cy="12" r="6.6" fill="${look.skin}"/>
       <g transform="translate(0.6,-1.4) scale(0.96)">${hairPath(look.hairstyle, look.hair)}</g>
       <g transform="translate(0.6,-1.4) scale(0.96)">${facialFeatures(look)}</g>
@@ -756,14 +779,20 @@ export function playerAvatar(look: PlayerLookInput, size = 44): string {
 
 /* ---------- founder office scene ---------- */
 
-/** Small gold trophy, (x, y) = bottom-center of the base. */
-function trophyPath(x: number, y: number, s = 1): string {
-  return `<g transform="translate(${x},${y}) scale(${s})">
+/** Small gold trophy, defined once per scene as a <symbol> (overflow
+ * visible: the art sits in negative coords around its bottom-center
+ * origin) and stamped up to seven times per shelf wall via `trophyUse`.
+ * The founder office renders once per page, so the plain id is safe. */
+const TROPHY_SYMBOL = `<symbol id="fo-trophy" overflow="visible">
     <path d="M-3.2 -9 h6.4 l-0.5 3.4 a2.8 2.8 0 0 1 -5.4 0 z" fill="#ffc93c" stroke="${INK}" stroke-width="0.7"/>
     <path d="M-3.5 -8.2 q-2.3 0.5 -0.7 2.7 M3.5 -8.2 q2.3 0.5 0.7 2.7" fill="none" stroke="#d99a06" stroke-width="0.8"/>
     <rect x="-0.9" y="-5" width="1.8" height="2.2" fill="#d99a06" stroke="${INK}" stroke-width="0.5"/>
     <rect x="-2.6" y="-2.8" width="5.2" height="2.8" rx="0.6" fill="#8a5a2b" stroke="${INK}" stroke-width="0.6"/>
-  </g>`;
+  </symbol>`;
+
+/** One trophy stamp, (x, y) = bottom-center of the base. */
+function trophyUse(x: number, y: number, s = 1): string {
+  return `<use href="#fo-trophy" transform="translate(${x},${y}) scale(${s})"/>`;
 }
 
 /** Stage 1 brick texture: one path of mortar lines over the base fill. */
@@ -792,20 +821,21 @@ function starField(): string {
   return s;
 }
 
-/** Server rack unit rows (stages 2). */
+/** Server rack unit rows (stages 2). The unit is a <symbol> (y at 0,
+ * x baked in — one rack per scene) stamped four times down the chassis. */
 function serverRack(x: number, y: number, w: number, h: number): string {
-  let units = '';
   const uh = 11;
+  const unit = `<symbol id="fo-rack-unit" overflow="visible"><rect x="${x + 3}" y="0" width="${w - 6}" height="${uh}" rx="1" fill="#2b3648" stroke="#0f172a" stroke-width="0.8"/>
+      <line x1="${x + 6}" y1="3" x2="${x + 13}" y2="3" stroke="#475569" stroke-width="0.8"/>
+      <line x1="${x + 6}" y1="5.5" x2="${x + 13}" y2="5.5" stroke="#475569" stroke-width="0.8"/>
+      <line x1="${x + 6}" y1="8" x2="${x + 13}" y2="8" stroke="#475569" stroke-width="0.8"/>
+      <circle cx="${x + w - 8.5}" cy="5.5" r="1" fill="#2fbf6b"/>
+      <circle cx="${x + w - 5.5}" cy="5.5" r="1" fill="#22d3ee"/></symbol>`;
+  let units = '';
   for (let i = 0; i < 4; i++) {
-    const uy = y + 4 + i * (uh + 3.5);
-    units += `<rect x="${x + 3}" y="${uy}" width="${w - 6}" height="${uh}" rx="1" fill="#2b3648" stroke="#0f172a" stroke-width="0.8"/>
-      <line x1="${x + 6}" y1="${uy + 3}" x2="${x + 13}" y2="${uy + 3}" stroke="#475569" stroke-width="0.8"/>
-      <line x1="${x + 6}" y1="${uy + 5.5}" x2="${x + 13}" y2="${uy + 5.5}" stroke="#475569" stroke-width="0.8"/>
-      <line x1="${x + 6}" y1="${uy + 8}" x2="${x + 13}" y2="${uy + 8}" stroke="#475569" stroke-width="0.8"/>
-      <circle cx="${x + w - 8.5}" cy="${uy + 5.5}" r="1" fill="#2fbf6b"/>
-      <circle cx="${x + w - 5.5}" cy="${uy + 5.5}" r="1" fill="#22d3ee"/>`;
+    units += `<use href="#fo-rack-unit" y="${y + 4 + i * (uh + 3.5)}"/>`;
   }
-  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#1f2937" stroke="${INK}" stroke-width="1.2"/>${units}`;
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#1f2937" stroke="${INK}" stroke-width="1.2"/>${unit}${units}`;
 }
 
 /** Stage-specific backdrop: wall + floor + props (all behind the player). */
@@ -883,7 +913,7 @@ function officeBackdrop(stage: number): string {
         <rect x="30" y="48" width="18" height="2.4" rx="1.2" fill="#c7ccd4" stroke="${INK}" stroke-width="0.7"/>
         <rect x="92" y="26" width="44" height="3.4" rx="1.4" fill="#8a5a2b" stroke="${INK}" stroke-width="1"/>
         <path d="M96 29.4 l3 5 M132 29.4 l-3 5" stroke="${INK}" stroke-width="1" opacity="0.6"/>
-        ${trophyPath(114, 26)}`;
+        ${trophyUse(114, 26)}`;
     }
     case 2: {
       // Valley penthouse: dusk skyline, AGI blueprint, servers, trophies.
@@ -919,8 +949,8 @@ function officeBackdrop(stage: number): string {
         <circle cx="33" cy="39" r="0.8" fill="#93c5fd"/><circle cx="49" cy="39" r="0.8" fill="#93c5fd"/><circle cx="41" cy="39.6" r="0.8" fill="#93c5fd"/>
         ${serverRack(204, 42, 32, 62)}
         <rect x="56" y="24" width="30" height="3" rx="1.4" fill="#8a5a2b" stroke="${INK}" stroke-width="0.9"/>
-        ${trophyPath(65, 24, 0.9)}
-        ${trophyPath(78, 24, 0.9)}`;
+        ${trophyUse(65, 24, 0.9)}
+        ${trophyUse(78, 24, 0.9)}`;
     }
     default: {
       // Orbital study: stars, round Earth window, drone, AGI core.
@@ -962,36 +992,37 @@ function officeBackdrop(stage: number): string {
         <circle class="fo-core" cx="215" cy="76" r="7.5" fill="url(#lg-fo-core3)" stroke="#7dd3fc" stroke-width="1"/>
         <ellipse cx="215" cy="76" rx="10.6" ry="3.4" fill="none" stroke="#7dd3fc" stroke-width="0.9" opacity="0.8"/>
         <rect x="18" y="16" width="60" height="3" rx="1.4" fill="#454f66" stroke="${INK}" stroke-width="0.9"/>
-        ${trophyPath(27, 16, 0.85)}
-        ${trophyPath(43, 16, 0.85)}
-        ${trophyPath(59, 16, 0.85)}
-        ${trophyPath(73, 16, 0.85)}
+        ${trophyUse(27, 16, 0.85)}
+        ${trophyUse(43, 16, 0.85)}
+        ${trophyUse(59, 16, 0.85)}
+        ${trophyUse(73, 16, 0.85)}
         <rect x="18" y="38" width="44" height="3" rx="1.4" fill="#454f66" stroke="${INK}" stroke-width="0.9"/>
-        ${trophyPath(28, 38, 0.85)}
-        ${trophyPath(44, 38, 0.85)}
-        ${trophyPath(57, 38, 0.85)}`;
+        ${trophyUse(28, 38, 0.85)}
+        ${trophyUse(44, 38, 0.85)}
+        ${trophyUse(57, 38, 0.85)}`;
     }
   }
 }
 
-/** Per-stage gradient defs (unique lg-fo-… ids, no filters). */
+/** Per-stage gradient + symbol defs (unique lg-fo-… ids, no filters).
+ * Stages 1+ all show trophies, so they carry the shared trophy symbol. */
 function officeDefs(stage: number): string {
   switch (stage) {
     case 1:
       return `<linearGradient id="lg-fo-city1" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#8fd4ff"/><stop offset="1" stop-color="#ffe3bd"/>
-        </linearGradient>`;
+        </linearGradient>${TROPHY_SYMBOL}`;
     case 2:
       return `<linearGradient id="lg-fo-dusk2" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#5b4a8f"/><stop offset="0.55" stop-color="#c25b7c"/><stop offset="1" stop-color="#ff9a5b"/>
-        </linearGradient>`;
+        </linearGradient>${TROPHY_SYMBOL}`;
     case 3:
       return `<radialGradient id="lg-fo-earth3" cx="0.38" cy="0.32" r="0.95">
           <stop offset="0" stop-color="#7dd3fc"/><stop offset="0.6" stop-color="#2e7cd6"/><stop offset="1" stop-color="#173a8a"/>
         </radialGradient>
         <radialGradient id="lg-fo-core3" cx="0.5" cy="0.4" r="0.75">
           <stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="#7ae6f5"/><stop offset="1" stop-color="#0ea5e9"/>
-        </radialGradient>`;
+        </radialGradient>${TROPHY_SYMBOL}`;
     default:
       return '';
   }
@@ -1056,15 +1087,29 @@ export function founderOffice(
 
   const height = Math.round((size * 140) / 240);
   const torsoExtra = shirtDetailPath(1, 20, 27);
+  // The player look is explicit state, but the loop phases still need a
+  // deterministic 32-bit seed — hash the resolved look key (same FNV-1a
+  // the workers use) so identical looks always render byte-identically.
+  const hp = hashSeed(key);
+  const glowD = ((hp >>> 21) % 23) / 10; // screen-glow loops every 2.3s
+  const droneD = ((hp >>> 24) % 50) / 10; // drone float loops every 5s
+  const coreD = ((hp >>> 27) % 28) / 10; // core pulse loops every 2.8s
+  const backdrop = officeBackdrop(s)
+    .replace('class="fo-drone"', `class="fo-drone" style="animation-delay:-${droneD}s"`)
+    .replace('class="fo-core"', `class="fo-core" style="animation-delay:-${coreD}s"`);
+  const desk = FOUNDER_DESK.replace(
+    'class="persona-screen"',
+    `class="persona-screen" style="animation-delay:-${glowD}s"`,
+  );
   const svg = `<svg class="founder-office" width="${size}" height="${height}" viewBox="0 0 240 140" aria-hidden="true">
     <defs>${officeDefs(s)}</defs>
-    ${officeBackdrop(s)}
+    ${backdrop}
     <ellipse cx="50" cy="106" rx="21" ry="3.6" fill="${INK}" opacity="0.12"/>
     <g transform="translate(26,36) scale(1.5)">
       ${FOUNDER_CHAIR}
-      ${seatedBody(l, playerAccessory(accessoryIdx), torsoExtra, 'M24 27 q5 2 8 4', 33, 31.4)}
+      ${seatedBody(l, playerAccessory(accessoryIdx), torsoExtra, 'M24 27 q5 2 8 4', 33, 31.4, hp)}
     </g>
-    ${FOUNDER_DESK}
+    ${desk}
   </svg>`;
   founderOfficeCache.set(cacheKey, svg);
   return svg;
