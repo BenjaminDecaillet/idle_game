@@ -233,10 +233,10 @@ describe('company-count upgrade unlocks', () => {
   it('mentorship shortens training programs', () => {
     const state = createInitialState(NOW);
     const company = activeCompany(state);
-    expect(trainDurationSec(company)).toBe(TRAIN_DURATION_SEC);
+    expect(trainDurationSec(state, company)).toBe(TRAIN_DURATION_SEC);
     company.upgrades['mentorship'] = 2;
     const expected = TRAIN_DURATION_SEC * MENTORSHIP_SPEED_FACTOR ** 2;
-    expect(trainDurationSec(company)).toBeCloseTo(expected, 10);
+    expect(trainDurationSec(state, company)).toBeCloseTo(expected, 10);
     activeCountry(state).money = 10_000;
     const worker = makeWorker(999);
     company.workers.push(worker);

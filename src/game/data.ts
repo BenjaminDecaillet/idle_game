@@ -789,6 +789,50 @@ export const PRESTIGE_OUTPUT_K = 0.5;
 export const PRESTIGE_OUTPUT_ALPHA = 0.5; // sqrt — heavy diminishing returns
 export const PRESTIGE_STORY_BEAT = 'dream-achieved'; // epilogue gate (story-seen survives prestige)
 
+// ---------------------------------------------------------------------------
+// Deep prestige — differentiated exits + Founder Points (docs/balance.md,
+// Phase F). Phase P above is untouched: the existing prestige IS the IPO
+// exit; Acquisition (early) and Spin-off (late) are additional gates on the
+// same reset. Every exit banks FP from ALL three high-water tracks
+// (delta form: fp = floor(K × metric^exp) − already banked), so patience is
+// rewarded but small resets stay viable.
+// ---------------------------------------------------------------------------
+
+export const ACQ_MIN_EARNED = 1_000_000_000; // acquisition gate: 1e9 lifetime
+export const SPINOFF_MIN_COUNTRIES = 3; // spin-off gate
+export const ACQ_FP_K = 3;
+export const ACQ_FP_EXP = 0.1; // on lifetime earnings
+export const IPO_FP_K = 1;
+export const IPO_FP_EXP = 0.6; // on peak concurrent headcount
+export const SPINOFF_FP_K = 8;
+export const SPINOFF_FP_EXP = 0.7; // on (max countries − 1)
+export const FOUNDER_RESPEC_FREE_PER_EXIT = 1;
+
+/** A Founder-Point perk: per-level FP costs (length = max level). */
+export interface FounderPerkDef {
+  id: string;
+  emoji: string;
+  costs: number[];
+}
+export const FOUNDER_PERKS: FounderPerkDef[] = [
+  { id: 'vision', emoji: '🔭', costs: [1, 2, 3, 4, 5] }, // +5% output / level
+  { id: 'alumni', emoji: '🎓', costs: [1, 2, 3, 4] }, // training ×0.90 / level
+  { id: 'lean-ops', emoji: '🧾', costs: [1, 2, 3, 4] }, // salaries ×0.95 / level
+  { id: 'cloud', emoji: '☁️', costs: [2, 3, 4] }, // offline cap +4 h / level
+  { id: 'war-chest', emoji: '💰', costs: [1, 2, 3] }, // restart cash 500/5k/50k
+];
+export const FOUNDER_VISION_OUTPUT = 0.05;
+export const FOUNDER_ALUMNI_FACTOR = 0.9;
+export const FOUNDER_LEANOPS_FACTOR = 0.95;
+export const FOUNDER_CLOUD_HOURS = 4;
+export const FOUNDER_WARCHEST_CASH = [500, 5_000, 50_000];
+
+export function founderPerkById(id: string): FounderPerkDef {
+  const p = FOUNDER_PERKS.find((p) => p.id === id);
+  if (!p) throw new Error(`Unknown founder perk: ${id}`);
+  return p;
+}
+
 export function siteById(id: string): CompanySiteDef {
   const s = COMPANY_SITES.find((s) => s.id === id);
   if (!s) throw new Error(`Unknown company site: ${id}`);

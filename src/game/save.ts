@@ -4,11 +4,12 @@ import {
   DEFAULT_COUNTRY,
   DEFAULT_PLAYER_LOOK,
   FLOOR_CAPACITY,
+  FOUNDER_PERKS,
+  founderPerkById,
   MAP_THEMES,
   MAX_FLOORS,
   MISSIONS,
   PLAYER_LOOK_OPTIONS,
-  OFFLINE_CAP_HOURS,
   RECRUITER_INTERVAL_SEC,
   RECRUITER_MAX_LEVEL,
   PROJECTS,
@@ -22,6 +23,7 @@ import {
 import {
   createInitialState,
   newProjectState,
+  offlineCapSec,
   SAVE_VERSION,
   simulateOfflineReport,
   type OfflineReport,
@@ -84,7 +86,8 @@ export function loadGame(storage: Storage = localStorage, now = Date.now()): Loa
     const offlineSec = Math.max(0, (now - state.lastSeen) / 1000);
     let offlineReport: OfflineReport | null = null;
     if (offlineSec > 5) {
-      offlineReport = simulateOfflineReport(state, offlineSec, OFFLINE_CAP_HOURS * 3600);
+      // The cap is perk-extendable (cloud-infrastructure founder perk).
+      offlineReport = simulateOfflineReport(state, offlineSec, offlineCapSec(state));
     }
     state.lastSeen = now;
     return {
@@ -118,6 +121,13 @@ function fresh(now: number, betaReset: boolean): LoadResult {
  * loadGame (beta reset), and future breaking changes decide their own
  * policy when they land.
  */
+/** Coerce to a non-negative integer, else the default. */
+function nonNegInt(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : fallback;
+}
+
 export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState {
   const fresh = createInitialState(now);
   const state: GameState = {
@@ -233,6 +243,35 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
       parsed.offlineDoublesClaimed >= 0
         ? Math.floor(parsed.offlineDoublesClaimed)
         : 0,
+    founder: {
+      points: nonNegInt(parsed.founder?.points),
+      banked: {
+        acq: nonNegInt(parsed.founder?.banked?.acq),
+        ipo: nonNegInt(parsed.founder?.banked?.ipo),
+        spinoff: nonNegInt(parsed.founder?.banked?.spinoff),
+      },
+      perks: Object.fromEntries(
+        Object.entries(
+          parsed.founder?.perks && typeof parsed.founder.perks === 'object'
+            ? parsed.founder.perks
+            : {},
+        )
+          .filter(([id]) => FOUNDER_PERKS.some((p) => p.id === id))
+          .map(([id, level]) => [
+            id,
+            Math.min(founderPerkById(id).costs.length, nonNegInt(level)),
+          ])
+          .filter(([, level]) => (level as number) > 0),
+      ),
+      peakHeadcount: nonNegInt(parsed.founder?.peakHeadcount),
+      maxCountries: Math.max(1, nonNegInt(parsed.founder?.maxCountries, 1)),
+      freeRespecs: nonNegInt(parsed.founder?.freeRespecs),
+      exits: {
+        acq: nonNegInt(parsed.founder?.exits?.acq),
+        ipo: nonNegInt(parsed.founder?.exits?.ipo),
+        spinoff: nonNegInt(parsed.founder?.exits?.spinoff),
+      },
+    },
     prestige: {
       count:
         typeof parsed.prestige?.count === 'number' &&
@@ -342,6 +381,15 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
     }
   }
   state.nextEntityId = Math.max(state.nextEntityId, maxId + 1);
+
+  // Founder high-water hygiene: the tracks can never sit below what the
+  // save demonstrably holds right now.
+  const liveHeadcount = state.countries.reduce(
+    (sum, country) => sum + country.companies.reduce((s, c) => s + c.workers.length, 0),
+    0,
+  );
+  state.founder.peakHeadcount = Math.max(state.founder.peakHeadcount, liveHeadcount);
+  state.founder.maxCountries = Math.max(state.founder.maxCountries, state.countries.length);
   return state;
 }
 

@@ -1,12 +1,13 @@
 import {
   BETA_FREE_IAP,
   COMPANY_SITES,
-  PRESTIGE_STORY_BEAT,
   COUNTRIES,
   FLOOR_CAPACITY,
-  OFFLINE_CAP_HOURS,
+  ACQ_MIN_EARNED,
   AUTOMATION_VSCOIN_COSTS,
   type AutomationKind,
+  FOUNDER_PERKS,
+  SPINOFF_MIN_COUNTRIES,
   COMPANY_MILESTONE_BONUS,
   COMPANY_MILESTONE_STEPS,
   EXPEDITION_OUTPUT_BONUS,
@@ -48,9 +49,17 @@ import {
   buyAutomation,
   buyRecruiter,
   candidateCapacity,
+  buyPerk,
   companyMilestoneMult,
   countryScouted,
   currentSeason,
+  executeExit,
+  exitGate,
+  founderPreview,
+  offlineCapSec,
+  perkCost,
+  perkLevel,
+  respecPerks,
   expeditionCost,
   expeditionDurationSec,
   expeditionInFlight,
@@ -138,7 +147,6 @@ import {
   offlineDoublerReady,
   prestigeMultiplier,
   prestigePreview,
-  prestigeReset,
   totalWorkRate,
   buyPet,
   openVault,
@@ -196,7 +204,7 @@ import {
   type TutorialStepDef,
 } from '../game/tutorial';
 import type { OfflineReport } from '../game/engine';
-import type { CompanyState, GameState, WorkerState } from '../game/types';
+import type { CompanyState, ExitType, GameState, WorkerState } from '../game/types';
 import { lookup, resolveLang, setCurrentLang, t } from '../i18n';
 import type { StringKey } from '../i18n';
 import { placeCoach } from './coachPlacement';
@@ -810,9 +818,9 @@ export class UI {
           <h2>👋 ${t('ui.welcomeBackTitle')}</h2>
           <p>${t('ui.welcomeBackAway', { time: formatDuration(offlineSec) })}</p>
           ${
-            offlineSec > OFFLINE_CAP_HOURS * 3600
+            offlineSec > offlineCapSec(this.state)
               ? `<p class="muted">⏳ ${t('ui.offlineCapNote', {
-                  cap: formatDuration(OFFLINE_CAP_HOURS * 3600),
+                  cap: formatDuration(offlineCapSec(this.state)),
                 })}</p>`
               : ''
           }
@@ -1478,7 +1486,7 @@ export class UI {
           ? `<span class="muted">🏔️ ${t('ui.maxGrade')}</span>`
           : `<button class="btn btn-small" ${walletMoney(s) >= cost ? '' : 'disabled'}
                      data-action="train:${w.id}"
-                     title="+${trainLevels(w)} levels, ${formatDuration(trainDurationSec(c, w))} off the floor">
+                     title="+${trainLevels(w)} levels, ${formatDuration(trainDurationSec(s, c, w))} off the floor">
                ${icon('train', 15)} ${t('ui.trainBtn', { price: formatMoney(cost) })}
              </button>`;
     return `
@@ -2552,29 +2560,7 @@ export class UI {
           </div>
         </div>
       </div>`;
-    const prestigeUnlocked = s.story.seen.includes(PRESTIGE_STORY_BEAT);
-    const prestigeGain = prestigePreview(s);
-    const prestigeCard = `
-      <div class="card">
-        <h2 class="card-title">${icon('boost', 18)} ${t('ui.prestigeTitle')}</h2>
-        ${
-          prestigeUnlocked
-            ? `
-        <table class="stats-table">
-          <tr><td><span class="stat-label">${icon('star', 16)}${t('ui.prestigeRep')}</span></td>
-              <td>${formatNumber(s.prestige.reputation)}</td></tr>
-          <tr><td><span class="stat-label">${icon('energy', 16)}${t('ui.prestigeMult')}</span></td>
-              <td>×${prestigeMultiplier(s).toFixed(2)}</td></tr>
-          <tr><td><span class="stat-label">${icon('coin', 16)}${t('ui.prestigeGain')}</span></td>
-              <td>+${formatNumber(prestigeGain)}</td></tr>
-        </table>
-        <button class="btn btn-primary" data-action="prestige" ${prestigeGain < 1 ? 'disabled' : ''}>
-          ${icon('boost', 16)} ${t('ui.prestigeButton')}
-        </button>
-        <p class="hint">${t('ui.prestigeHint')}</p>`
-            : `<p class="hint">${t('ui.prestigeLocked')}</p>`
-        }
-      </div>`;
+    const prestigeCard = this.renderExits();
     return `
       <div class="stack">
         ${founder}
@@ -2640,6 +2626,108 @@ export class UI {
           <p class="hint">${t('ui.autosaveHint')}</p>
           <p class="hint">${t('ui.build')} ${__BUILD_SHA__} · ${__BUILD_DATE__}</p>
         </div>
+      </div>`;
+  }
+
+  /**
+   * Exits & Founder Points (docs/balance.md Phase F): the classic IPO plus
+   * Acquisition (early) and Spin-off (late) gates on the same reset, the
+   * per-track FP preview, and the respec-able perk board.
+   */
+  private renderExits(): string {
+    const s = this.state;
+    const fp = founderPreview(s);
+    const rep = prestigePreview(s);
+    const EXITS: { type: ExitType; emoji: string; name: string; gateText: string }[] = [
+      {
+        type: 'acq',
+        emoji: '💼',
+        name: t('ui.exitAcq'),
+        gateText: t('ui.exitAcqGate', { amount: formatMoney(ACQ_MIN_EARNED) }),
+      },
+      { type: 'ipo', emoji: '🔔', name: t('ui.exitIpo'), gateText: t('ui.prestigeLocked') },
+      {
+        type: 'spinoff',
+        emoji: '🧬',
+        name: t('ui.exitSpinoff'),
+        gateText: t('ui.exitSpinoffGate', { count: SPINOFF_MIN_COUNTRIES }),
+      },
+    ];
+    const exitRows = EXITS.map(({ type, emoji, name, gateText }) => {
+      const open = exitGate(s, type) === null;
+      const worth = type === 'ipo' ? rep >= 1 : fp.total >= 1;
+      const gain =
+        type === 'ipo'
+          ? `+${formatNumber(fp.total)} FP · +${formatNumber(rep)} ${t('ui.prestigeRep')}`
+          : `+${formatNumber(fp.total)} FP`;
+      return `
+      <div class="card ${open ? '' : 'locked'}">
+        <div class="card-row">
+          <span class="card-emoji">${emoji}</span>
+          <div class="card-main">
+            <h3>${name}</h3>
+            <span class="muted">${open ? gain : gateText}</span>
+          </div>
+          <button class="btn ${open && worth ? 'btn-primary' : ''}" ${open && worth ? '' : 'disabled'}
+                  data-action="exit:${type}">
+            🚀 ${t('ui.exitBtn')}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+    const perkRows = FOUNDER_PERKS.map((def) => {
+      const level = perkLevel(s, def.id);
+      const cost = perkCost(s, def.id);
+      const affordable = cost !== null && s.founder.points >= cost;
+      const action =
+        cost === null
+          ? `<span class="muted">🏆 ${t('ui.maxLevel')}</span>`
+          : `<button class="btn btn-small ${affordable ? 'btn-primary' : ''}"
+                     ${affordable ? '' : 'disabled'} data-action="buy-perk:${def.id}">
+               ${cost} ⭐
+             </button>`;
+      return `
+      <div class="card">
+        <div class="card-row">
+          <span class="card-emoji">${def.emoji}</span>
+          <div class="card-main">
+            <h3>${lookup(`perk.${def.id}.name`)} ${level > 0 ? `<span class="lvl">Lv ${level}</span>` : ''}</h3>
+            <span class="muted">${lookup(`perk.${def.id}.desc`)}</span>
+          </div>
+          ${action}
+        </div>
+      </div>`;
+    }).join('');
+    const founderBoard =
+      s.founder.points > 0 || Object.keys(s.founder.perks).length > 0 || s.prestige.count > 0
+        ? `
+      <div class="section-head"><h2>⭐ ${t('ui.founderBoardTitle')}</h2>
+        <span class="muted">${t('ui.founderPoints', { points: formatNumber(s.founder.points) })}</span>
+      </div>
+      ${perkRows}
+      ${
+        Object.keys(s.founder.perks).length > 0
+          ? `<button class="btn btn-ghost" ${s.founder.freeRespecs > 0 ? '' : 'disabled'}
+                     data-action="respec-perks">
+               ♻️ ${t('ui.respecBtn', { count: s.founder.freeRespecs })}
+             </button>`
+          : ''
+      }`
+        : '';
+    return `
+      <div class="card">
+        <h2 class="card-title">${icon('boost', 18)} ${t('ui.exitsTitle')}</h2>
+        <table class="stats-table">
+          <tr><td><span class="stat-label">${icon('star', 16)}${t('ui.prestigeRep')}</span></td>
+              <td>${formatNumber(s.prestige.reputation)}</td></tr>
+          <tr><td><span class="stat-label">${icon('energy', 16)}${t('ui.prestigeMult')}</span></td>
+              <td>×${prestigeMultiplier(s).toFixed(2)}</td></tr>
+          <tr><td><span class="stat-label">⭐ ${t('ui.founderPointsLabel')}</span></td>
+              <td>${formatNumber(s.founder.points)}</td></tr>
+        </table>
+        <p class="hint">${t('ui.exitsHint')}</p>
+        ${exitRows}
+        ${founderBoard}
       </div>`;
   }
 
@@ -2989,13 +3077,27 @@ export class UI {
         }
         break;
       }
-      case 'prestige': {
+      case 'exit': {
         if (confirm(t('ui.prestigeConfirm'))) {
-          error = prestigeReset(s);
+          error = executeExit(s, arg as ExitType);
           if (!error) {
             this.officeNeedsRebuild();
             this.toast(`🚀 ${t('ui.prestigeDone')}`, 'info');
           }
+        }
+        break;
+      }
+      case 'buy-perk':
+        error = buyPerk(s, arg);
+        if (!error) {
+          this.toast(`⭐ ${t('ui.perkBought')}`, 'info');
+          this.fx.claimChime();
+        }
+        break;
+      case 'respec-perks': {
+        if (confirm(t('ui.respecConfirm'))) {
+          error = respecPerks(s);
+          if (!error) this.toast(`♻️ ${t('ui.respecDone')}`, 'info');
         }
         break;
       }

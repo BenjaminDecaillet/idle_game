@@ -1,6 +1,22 @@
 import {
+  ACQ_FP_EXP,
+  ACQ_FP_K,
+  ACQ_MIN_EARNED,
   AURA_OUTPUT_PER_LEVEL,
   AUTO_BUILDER_RESERVE,
+  FOUNDER_ALUMNI_FACTOR,
+  FOUNDER_CLOUD_HOURS,
+  FOUNDER_LEANOPS_FACTOR,
+  FOUNDER_RESPEC_FREE_PER_EXIT,
+  FOUNDER_VISION_OUTPUT,
+  FOUNDER_WARCHEST_CASH,
+  founderPerkById,
+  IPO_FP_EXP,
+  IPO_FP_K,
+  OFFLINE_CAP_HOURS,
+  SPINOFF_FP_EXP,
+  SPINOFF_FP_K,
+  SPINOFF_MIN_COUNTRIES,
   AUTO_CASH_RESERVE_FACTOR,
   AUTO_DESK_PAYBACK_MAX_SEC,
   AUTO_DESK_UNLOCK_DESKS,
@@ -128,6 +144,7 @@ import type {
   CompanyState,
   CountryId,
   CountryState,
+  ExitType,
   GameState,
   ProjectState,
   Specialization,
@@ -198,6 +215,15 @@ export function createInitialState(now = Date.now(), countryId: CountryId = DEFA
     scoutedCountries: [],
     viral: { catches: 0, jackpotDay: -1, jackpotsToday: 0 },
     prestige: { count: 0, reputation: 0 },
+    founder: {
+      points: 0,
+      banked: { acq: 0, ipo: 0, spinoff: 0 },
+      perks: {},
+      peakHeadcount: 0,
+      maxCountries: 1,
+      freeRespecs: 0,
+      exits: { acq: 0, ipo: 0, spinoff: 0 },
+    },
     doublerLastClaimedAt: 0,
     offlineDoublesClaimed: 0,
     nextEntityId: 1,
@@ -452,6 +478,7 @@ export function globalOutputMultiplier(state: GameState, company: CompanyState):
     world *
     scouting *
     prestigeMultiplier(state) *
+    founderVisionMult(state) *
     companyMilestoneMult(company) *
     boost *
     siteById(company.siteId).outputBonus
@@ -524,20 +551,146 @@ export function prestigeMultiplier(state: GameState): number {
  * reputation and never reset), Gabriel's gifts (floorGiftClaimed,
  * freeFastForwards) and the finished tutorial. Wipes countries, companies
  * and live boosts; restarts in the same starting country.
+ *
+ * Since Phase F this is the classic alias for `executeExit('ipo')` — every
+ * exit type shares this reset and also banks Founder Points.
  */
 export function prestigeReset(state: GameState, now = Date.now()): string | null {
-  if (!state.story.seen.includes(PRESTIGE_STORY_BEAT)) return 'ui.prestigeNeedStory';
-  const gained = prestigePreview(state);
-  if (gained < 1) return 'ui.prestigeNoRep';
-  const startCountryId = state.countries[0]?.id ?? state.activeCountryId;
+  return executeExit(state, 'ipo', now);
+}
+
+// ---------------------------------------------------------------------------
+// Deep prestige — differentiated exits + Founder Points (docs/balance.md
+// Phase F). Phase P reputation above is untouched; every exit banks BOTH.
+// ---------------------------------------------------------------------------
+
+function trackFp(k: number, exp: number, metric: number): number {
+  return Math.floor(k * Math.pow(Math.max(0, metric), exp));
+}
+
+/** Founder Points an exit right now would bank, per track (delta form). */
+export function founderPreview(state: GameState): {
+  acq: number;
+  ipo: number;
+  spinoff: number;
+  total: number;
+} {
+  const f = state.founder;
+  const acq = Math.max(0, trackFp(ACQ_FP_K, ACQ_FP_EXP, state.totalEarned) - f.banked.acq);
+  const ipo = Math.max(0, trackFp(IPO_FP_K, IPO_FP_EXP, f.peakHeadcount) - f.banked.ipo);
+  const spinoff = Math.max(
+    0,
+    trackFp(SPINOFF_FP_K, SPINOFF_FP_EXP, f.maxCountries - 1) - f.banked.spinoff,
+  );
+  return { acq, ipo, spinoff, total: acq + ipo + spinoff };
+}
+
+/**
+ * Whether an exit's gate is open right now (null) or why not (error id).
+ * Gates only — value checks (enough rep/FP to be worth it) live in
+ * executeExit.
+ */
+export function exitGate(state: GameState, type: ExitType): string | null {
+  switch (type) {
+    case 'acq':
+      return state.totalEarned >= ACQ_MIN_EARNED ? null : 'error.exitAcqLocked';
+    case 'ipo':
+      return state.story.seen.includes(PRESTIGE_STORY_BEAT) ? null : 'ui.prestigeNeedStory';
+    case 'spinoff':
+      return state.countries.length >= SPINOFF_MIN_COUNTRIES ? null : 'error.exitSpinoffLocked';
+  }
+}
+
+/**
+ * Execute an exit: bank Founder Points from ALL three tracks (+ classic
+ * reputation), then perform the shared reset. The IPO keeps its historical
+ * bar (reputation gain ≥ 1); Acquisition/Spin-off instead require at least
+ * 1 FP so an exit is never a pure loss.
+ */
+export function executeExit(state: GameState, type: ExitType, now = Date.now()): string | null {
+  const gate = exitGate(state, type);
+  if (gate) return gate;
+  const fp = founderPreview(state);
+  const rep = prestigePreview(state);
+  if (type === 'ipo' && rep < 1) return 'ui.prestigeNoRep';
+  if (type !== 'ipo' && fp.total < 1) return 'error.exitNothingToBank';
+  state.founder.banked.acq += fp.acq;
+  state.founder.banked.ipo += fp.ipo;
+  state.founder.banked.spinoff += fp.spinoff;
+  state.founder.points += fp.total;
+  state.founder.freeRespecs += FOUNDER_RESPEC_FREE_PER_EXIT;
+  state.founder.exits[type] += 1;
   state.prestige.count += 1;
-  state.prestige.reputation += gained;
+  state.prestige.reputation += rep;
+  const startCountryId = state.countries[0]?.id ?? state.activeCountryId;
   state.countries = [];
   state.boosts = [];
   state.activeCountryId = startCountryId;
-  createCountry(state, startCountryId, 'My Startup');
+  const country = createCountry(state, startCountryId, 'My Startup');
+  // War-chest perk: the restart garage opens with a cash cushion.
+  const warChest = perkLevel(state, 'war-chest');
+  if (warChest > 0) {
+    country.money += FOUNDER_WARCHEST_CASH[Math.min(warChest, FOUNDER_WARCHEST_CASH.length) - 1];
+  }
   state.lastSeen = now;
   return null;
+}
+
+/** Level owned of a founder perk. */
+export function perkLevel(state: GameState, perkId: string): number {
+  return state.founder.perks[perkId] ?? 0;
+}
+
+/** FP price of a perk's next level (null = maxed). */
+export function perkCost(state: GameState, perkId: string): number | null {
+  const def = founderPerkById(perkId);
+  const level = perkLevel(state, perkId);
+  return level >= def.costs.length ? null : def.costs[level];
+}
+
+/** Spend Founder Points on a perk's next level. */
+export function buyPerk(state: GameState, perkId: string): string | null {
+  const cost = perkCost(state, perkId);
+  if (cost === null) return 'error.maxLevel';
+  if (state.founder.points < cost) return 'error.notEnoughFp';
+  state.founder.points -= cost;
+  state.founder.perks[perkId] = perkLevel(state, perkId) + 1;
+  return null;
+}
+
+/** Respec: refund every perk (one free respec is granted per exit). */
+export function respecPerks(state: GameState): string | null {
+  if (Object.keys(state.founder.perks).length === 0) return 'error.noPerks';
+  if (state.founder.freeRespecs <= 0) return 'error.noRespec';
+  state.founder.freeRespecs -= 1;
+  let refund = 0;
+  for (const [id, level] of Object.entries(state.founder.perks)) {
+    const def = founderPerkById(id);
+    for (let l = 0; l < Math.min(level, def.costs.length); l++) refund += def.costs[l];
+  }
+  state.founder.perks = {};
+  state.founder.points += refund;
+  return null;
+}
+
+/** Vision perk: permanent global output multiplier. */
+export function founderVisionMult(state: GameState): number {
+  return 1 + FOUNDER_VISION_OUTPUT * perkLevel(state, 'vision');
+}
+
+/** Alumni-network perk: training duration factor (< 1 = faster). */
+export function founderTrainFactor(state: GameState): number {
+  return Math.pow(FOUNDER_ALUMNI_FACTOR, perkLevel(state, 'alumni'));
+}
+
+/** Lean-ops perk: salary factor (< 1 = cheaper wages). */
+export function founderSalaryMult(state: GameState): number {
+  return Math.pow(FOUNDER_LEANOPS_FACTOR, perkLevel(state, 'lean-ops'));
+}
+
+/** Offline-progress cap in seconds (cloud-infrastructure perk extends it). */
+export function offlineCapSec(state: GameState): number {
+  return (OFFLINE_CAP_HOURS + FOUNDER_CLOUD_HOURS * perkLevel(state, 'cloud')) * 3600;
 }
 
 /** Strongest currently-active boost, for HUD display. Null if none. */
@@ -802,7 +955,7 @@ export function countrySalaries(country: CountryState): number {
 
 /** Salaries of the active country in $/sec (what the HUD shows). */
 export function totalSalaries(state: GameState): number {
-  return countrySalaries(activeCountry(state)) * salaryBoostMult(state);
+  return countrySalaries(activeCountry(state)) * salaryBoostMult(state) * founderSalaryMult(state);
 }
 
 /** Net income of one company in $/sec (reward rate minus its salaries). */
@@ -816,7 +969,7 @@ export function companyIncome(state: GameState, company: CompanyState): number {
       rewardPerSec += (project.currentReward / project.currentWork) * rate * seasonMult;
     }
   }
-  return rewardPerSec - companySalaries(company);
+  return rewardPerSec - companySalaries(company) * founderSalaryMult(state);
 }
 
 /** Estimated net income in $/sec across the active country. */
@@ -888,7 +1041,7 @@ export function deskPaybackSec(
       workerRate(state, company, workers[i], slot.projectId, slot.mult) *
       (project.currentReward / project.currentWork);
   }
-  const before = companyIncome(state, company) + companySalaries(company);
+  const before = companyIncome(state, company) + companySalaries(company) * founderSalaryMult(state);
   const delta = after - before;
   if (delta <= 1e-9) return null;
   return cost / delta;
@@ -954,12 +1107,19 @@ export function trainLevels(worker: WorkerState): number {
 
 /**
  * Training duration for a worker: the company's base duration (Mentorship
- * Program speeds it up) ramped per program this worker already completed —
- * the first stays ~2 min, later ones drift toward idle/offline territory.
+ * Program and the alumni-network founder perk speed it up) ramped per
+ * program this worker already completed — the first stays ~2 min, later
+ * ones drift toward idle/offline territory.
  */
-export function trainDurationSec(company: CompanyState, worker?: WorkerState): number {
+export function trainDurationSec(
+  state: GameState,
+  company: CompanyState,
+  worker?: WorkerState,
+): number {
   const base =
-    TRAIN_DURATION_SEC * Math.pow(MENTORSHIP_SPEED_FACTOR, company.upgrades['mentorship'] ?? 0);
+    TRAIN_DURATION_SEC *
+    Math.pow(MENTORSHIP_SPEED_FACTOR, company.upgrades['mentorship'] ?? 0) *
+    founderTrainFactor(state);
   return base * Math.pow(TRAIN_DURATION_GROWTH, worker?.timesTrained ?? 0);
 }
 
@@ -1078,7 +1238,7 @@ function trainWorkerInto(
   const cost = trainCost(company, worker);
   if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
-  const duration = trainDurationSec(company, worker);
+  const duration = trainDurationSec(state, company, worker);
   company.timedActions.push({
     id: state.nextEntityId++,
     kind: 'training',
@@ -1668,8 +1828,9 @@ function tickCountry(
   autoDue: boolean,
 ): void {
   // 1. Pay salaries — the wallet CAN go below zero (debt). Event boosts can
-  // temporarily raise wages (salaryMult on Boost).
-  country.money -= countrySalaries(country) * salaryBoostMult(state) * dt;
+  // temporarily raise wages (salaryMult on Boost); the lean-ops founder
+  // perk trims them.
+  country.money -= countrySalaries(country) * salaryBoostMult(state) * founderSalaryMult(state) * dt;
 
   // 2. Debt: interest compounds while under water; past the crisis
   //    threshold one employee resigns per interval (never the last one —
@@ -1909,6 +2070,9 @@ function hireWorkerInto(
     traits: candidate.traits,
   });
   state.hiresDone += 1;
+  // High-water for the IPO founder track: peak concurrent headcount.
+  const headcount = allCompanies(state).reduce((sum, c) => sum + c.workers.length, 0);
+  if (headcount > state.founder.peakHeadcount) state.founder.peakHeadcount = headcount;
   company.candidates.splice(candidateIndex, 1);
   if (company.candidates.length === 0) {
     company.candidates = rollCandidates(state, rand, country);
@@ -2229,6 +2393,8 @@ export function unlockCountry(state: GameState, countryId: string): string | nul
   from.money -= cost;
   createCountry(state, countryId as CountryId);
   state.activeCountryId = countryId as CountryId;
+  // High-water for the spin-off founder track: most countries held at once.
+  state.founder.maxCountries = Math.max(state.founder.maxCountries, state.countries.length);
   return null;
 }
 

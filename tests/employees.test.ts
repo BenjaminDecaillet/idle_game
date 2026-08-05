@@ -57,7 +57,7 @@ describe('Training ramp: trainDurationSec formula', () => {
     const worker = makeWorker({ tierId: 'intern', timesTrained: 0 });
     c.workers.push(worker);
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     expect(duration).toBeCloseTo(TRAIN_DURATION_SEC, 10);
     expect(duration).toBeCloseTo(120, 10);
   });
@@ -68,7 +68,7 @@ describe('Training ramp: trainDurationSec formula', () => {
     const worker = makeWorker({ tierId: 'junior', timesTrained: 1 });
     c.workers.push(worker);
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     const expected = TRAIN_DURATION_SEC * Math.pow(TRAIN_DURATION_GROWTH, 1);
     expect(duration).toBeCloseTo(expected, 10);
     expect(duration).toBeCloseTo(120 * 1.6, 10);
@@ -80,7 +80,7 @@ describe('Training ramp: trainDurationSec formula', () => {
     const worker = makeWorker({ tierId: 'senior', timesTrained: 2 });
     c.workers.push(worker);
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     const expected = TRAIN_DURATION_SEC * Math.pow(TRAIN_DURATION_GROWTH, 2);
     expect(duration).toBeCloseTo(expected, 10);
     expect(duration).toBeCloseTo(120 * 1.6 * 1.6, 10);
@@ -93,7 +93,7 @@ describe('Training ramp: trainDurationSec formula', () => {
 
     const worker = makeWorker({ timesTrained: 1 });
     c.workers.push(worker);
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     const expected = TRAIN_DURATION_SEC * Math.pow(1.6, 1);
     expect(duration).toBeCloseTo(expected, 10);
   });
@@ -106,7 +106,7 @@ describe('Training ramp: trainDurationSec formula', () => {
 
     const worker = makeWorker({ timesTrained: 1 });
     c.workers.push(worker);
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     const baseWithMentorship = TRAIN_DURATION_SEC * Math.pow(0.85, 1);
     const expected = baseWithMentorship * Math.pow(TRAIN_DURATION_GROWTH, 1);
     expect(duration).toBeCloseTo(expected, 10);
@@ -572,7 +572,7 @@ describe('Training: completion flow', () => {
     trainWorker(state, worker.id);
     expect(c.timedActions).toHaveLength(1);
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     const events = tick(state, duration + 1);
 
     expect(worker.skillLevel).toBe(skillBefore + TRAIN_LEVELS);
@@ -597,7 +597,7 @@ describe('Training: completion flow', () => {
     autoSeat(c);
 
     const firstDuration = TRAIN_DURATION_SEC * Math.pow(1.6, 1);
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     expect(duration).toBeCloseTo(firstDuration, 10);
 
     trainWorker(state, worker.id);
@@ -611,7 +611,7 @@ describe('Training: completion flow', () => {
     autoSeat(c);
     trainWorker(state, worker2.id);
 
-    const thirdDuration = trainDurationSec(c, worker2);
+    const thirdDuration = trainDurationSec(state, c, worker2);
     const expectedThird = TRAIN_DURATION_SEC * Math.pow(1.6, 2);
     expect(thirdDuration).toBeCloseTo(expectedThird, 10);
   });
@@ -631,7 +631,7 @@ describe('Training: completion flow', () => {
     const action = c.timedActions[0];
     expect(action.levels).toBe(1); // clamped by trainLevels
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     tick(state, duration + 1);
 
     expect(worker.skillLevel).toBe(10); // capped
@@ -703,7 +703,7 @@ describe('workerBusy helper', () => {
     trainWorker(state, worker.id);
     expect(workerBusy(c, worker.id)).toBe(true);
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     tick(state, duration + 1);
     expect(workerBusy(c, worker.id)).toBe(false);
   });

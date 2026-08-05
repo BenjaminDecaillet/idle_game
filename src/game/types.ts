@@ -441,6 +441,33 @@ export interface PrestigeState {
   reputation: number;
 }
 
+/** The three differentiated exit types (docs/balance.md Phase F). */
+export type ExitType = 'acq' | 'ipo' | 'spinoff';
+
+/**
+ * Deep prestige (docs/balance.md Phase F): every exit — Acquisition, IPO,
+ * Spin-off — banks Founder Points from three high-water tracks (lifetime
+ * earnings, peak headcount, max countries), delta-form so waiting is
+ * strictly dominant while early resets stay viable. Points buy respec-able
+ * perks (FOUNDER_PERKS in data.ts). Survives prestige by definition.
+ */
+export interface FounderState {
+  /** Unspent Founder Points. */
+  points: number;
+  /** FP already banked per track (delta form, like reputation). */
+  banked: { acq: number; ipo: number; spinoff: number };
+  /** Perk levels bought (id → level). */
+  perks: Record<string, number>;
+  /** High-water: most employees ever on payroll at once (IPO track). */
+  peakHeadcount: number;
+  /** High-water: most countries ever held at once (spin-off track). */
+  maxCountries: number;
+  /** Free perk respecs in the bank (one granted per exit). */
+  freeRespecs: number;
+  /** Exits performed, per type (flavor + stats). */
+  exits: { acq: number; ipo: number; spinoff: number };
+}
+
 export interface GameState {
   version: number;
   countries: CountryState[];
@@ -508,6 +535,8 @@ export interface GameState {
   viral: { catches: number; jackpotDay: number; jackpotsToday: number };
   /** IPO resets & banked reputation (permanent output multiplier). */
   prestige: PrestigeState;
+  /** Deep prestige: Founder Points, perks and high-water tracks. */
+  founder: FounderState;
   /** Last claim of the offline-earnings doubler (wall-clock ms, 0 = never). */
   doublerLastClaimedAt: number;
   /** Lifetime doubler claims (analytics / future missions). */

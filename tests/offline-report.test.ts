@@ -118,7 +118,7 @@ describe('simulateOfflineReport', () => {
       company.workers.push(worker);
 
       // Start training
-      const trainingDuration = trainDurationSec(company, worker);
+      const trainingDuration = trainDurationSec(state, company, worker);
       expect(trainWorker(state, worker.id)).toBeNull();
 
       // Verify timed action exists
