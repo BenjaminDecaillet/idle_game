@@ -5,6 +5,12 @@ import {
   COUNTRIES,
   FLOOR_CAPACITY,
   OFFLINE_CAP_HOURS,
+  AUTOMATION_VSCOIN_COSTS,
+  type AutomationKind,
+  COMPANY_MILESTONE_BONUS,
+  COMPANY_MILESTONE_STEPS,
+  EXPEDITION_OUTPUT_BONUS,
+  RECRUITER_INTERVAL_SEC,
   missionById,
   MAP_THEMES,
   MARKETING_DURATION_SEC,
@@ -36,6 +42,22 @@ import {
 } from '../game/data';
 import {
   activeBoost,
+  automationCounter,
+  automationTarget,
+  automationUnlocked,
+  buyAutomation,
+  buyRecruiter,
+  candidateCapacity,
+  companyMilestoneMult,
+  countryScouted,
+  currentSeason,
+  expeditionCost,
+  expeditionDurationSec,
+  expeditionInFlight,
+  nextMilestoneStep,
+  recruiterCost,
+  setAutomation,
+  startExpedition,
   activeCompany,
   activeCountry,
   allCompanies,
@@ -296,6 +318,9 @@ export class UI {
                     title="${t('ui.vaultTitle')}">🐷<span id="hud-vault-text"></span></button>
             <button class="badge badge-builders" id="hud-builders" data-action="tab:office"
                     title="${t('ui.builders')}">👷<span id="hud-builders-text"></span></button>
+            <span class="badge badge-season" id="hud-season" title="">
+              <span id="hud-season-text"></span>
+            </span>
             <span class="badge badge-income" id="hud-income" title="${t('ui.netIncomeTitle')}"></span>
             <button class="badge badge-vscoin" id="hud-vscoin" data-action="tab:vscoin" title="VsCoin">
               ${icon('vscoin', 13)}<span id="hud-vscoin-text">0</span>
@@ -396,6 +421,22 @@ export class UI {
     if (vaultEl) {
       vaultEl.hidden = s.vault.amount <= 0;
       if (s.vault.amount > 0) this.text('hud-vault-text', formatMoney(s.vault.amount));
+    }
+    const seasonEl = document.getElementById('hud-season');
+    if (seasonEl) {
+      const season = currentSeason(s);
+      const SEASON_EMOJI: Record<typeof season.id, string> = {
+        stable: '⚖️',
+        boom: '📈',
+        crunch: '📉',
+        recovery: '🌱',
+      };
+      const label =
+        season.id === 'boom'
+          ? t('ui.season.boom', { spec: season.boomSpec })
+          : t(`ui.season.${season.id}`);
+      this.text('hud-season-text', `${SEASON_EMOJI[season.id]} ${label}`);
+      seasonEl.title = `${t('ui.seasonTitle', { time: formatDuration(season.remainingSec) })}`;
     }
     const boost = activeBoost(s);
     const boostEl = document.getElementById('hud-boost');
@@ -1078,19 +1119,58 @@ export class UI {
         </div>`;
       }
       const affordable = walletMoney(s) >= cost;
+      // Expansion is a chapter opening: scout the market first (timed
+      // expedition), then the unlock button unlocks.
+      const scouted = countryScouted(s, def.id);
+      const expedition = expeditionInFlight(s, def.id);
+      let scoutRow: string;
+      let subtitle = t('ui.freshEconomyHint');
+      if (scouted) {
+        scoutRow = '';
+        subtitle = `🧭 ${t('ui.marketReport', {
+          bonus: Math.round(EXPEDITION_OUTPUT_BONUS * 100),
+        })}`;
+      } else if (expedition) {
+        const pct = Math.min(100, (1 - expedition.remainingSec / expedition.totalSec) * 100);
+        scoutRow = `
+          <div class="card-sub">
+            <span class="muted">🧭 ${t('ui.scoutingUnderway')}</span>
+            <div class="progress mini"><div class="progress-fill" data-live-progress="${expedition.id}" style="width:${pct}%"></div></div>
+            <span class="muted" data-live-remaining="${expedition.id}">⏳ ${formatDuration(expedition.remainingSec)}</span>
+            <button class="btn btn-small" data-action="fast-forward:${expedition.id}">
+              ⏩ ${fastForwardCost(s, expedition)} ${icon('vscoin', 13)}
+            </button>
+          </div>`;
+      } else {
+        const scoutPrice = expeditionCost(s);
+        const scoutable = walletMoney(s) >= scoutPrice;
+        scoutRow = `
+          <div class="card-sub">
+            <span class="muted">🧭 ${t('ui.scoutHint', {
+              time: formatDuration(expeditionDurationSec(s)),
+            })}</span>
+            <button class="btn btn-small ${scoutable ? 'btn-primary' : ''}"
+                    ${scoutable ? '' : 'disabled'} data-action="scout-country:${def.id}">
+              ${t('ui.scoutBtn', { price: formatMoney(scoutPrice) })}
+            </button>
+          </div>`;
+      }
       return `
         <div class="card ${worldUnlocked(s) ? '' : 'locked'}">
           <div class="card-row">
             <span class="card-emoji">${def.emoji}</span>
             <div class="card-main">
               <h3>${lookup(`country.${def.id}.name`)}</h3>
-              <span class="muted">${t('ui.freshEconomyHint')}</span>
+              <span class="muted">${subtitle}</span>
             </div>
-            <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
+            <button class="btn ${affordable && scouted ? 'btn-primary' : ''}"
+                    ${affordable && scouted ? '' : 'disabled'}
+                    ${scouted ? '' : `title="${t('ui.scoutFirstTitle')}"`}
                     data-action="unlock-country:${def.id}">
               🌍 ${formatMoney(cost)}
             </button>
           </div>
+          ${scoutRow}
         </div>`;
     }).join('');
     return `
@@ -1664,9 +1744,96 @@ export class UI {
           <h2>☕ ${t('ui.staffRoom')}</h2>
         </div>
         <p class="hint">${t('ui.staffRoomHint')}</p>
+        ${this.renderAutomation()}
+        ${this.renderRecruiter()}
         ${this.renderUpgrades()}
         ${this.renderPetShop()}
         ${this.renderDecorShop()}
+      </div>`;
+  }
+
+  /** Earned automation: unlock states + per-company toggles (Phase A). */
+  private renderAutomation(): string {
+    const s = this.state;
+    const c = activeCompany(s);
+    const KINDS: { kind: AutomationKind; emoji: string; name: string; desc: string }[] = [
+      { kind: 'train', emoji: '🎓', name: t('ui.autoTrain'), desc: t('ui.autoTrainDesc') },
+      { kind: 'hire', emoji: '🤝', name: t('ui.autoHire'), desc: t('ui.autoHireDesc') },
+      { kind: 'desks', emoji: '🖥️', name: t('ui.autoDesks'), desc: t('ui.autoDesksDesc') },
+    ];
+    const rows = KINDS.map(({ kind, emoji, name, desc }) => {
+      const unlocked = automationUnlocked(s, kind);
+      const on = c.auto[kind];
+      let action: string;
+      if (unlocked) {
+        action = `
+          <button class="btn btn-small ${on ? 'btn-primary' : ''}"
+                  data-action="auto-toggle:${kind}">
+            ${on ? `✓ ${t('ui.autoOn')}` : t('ui.autoOff')}
+          </button>`;
+      } else {
+        const count = automationCounter(s, kind);
+        const target = automationTarget(kind);
+        const cost = AUTOMATION_VSCOIN_COSTS[kind];
+        const affordable = s.vsCoin >= cost;
+        action = `
+          <div class="card-right">
+            <span class="muted">🔒 ${formatNumber(count)}/${formatNumber(target)}</span>
+            <button class="btn btn-small ${affordable ? 'btn-primary' : ''}"
+                    ${affordable ? '' : 'disabled'} data-action="auto-buy:${kind}">
+              ${cost} ${icon('vscoin', 13)}
+            </button>
+          </div>`;
+      }
+      return `
+      <div class="card">
+        <div class="card-row">
+          <span class="card-emoji">${emoji}</span>
+          <div class="card-main">
+            <h3>${name}</h3>
+            <span class="muted">${desc}</span>
+          </div>
+          ${action}
+        </div>
+      </div>`;
+    }).join('');
+    return `
+      <div class="section-head"><h2>🤖 ${t('ui.automationTitle')}</h2></div>
+      <p class="hint">${t('ui.automationHint')}</p>
+      ${rows}`;
+  }
+
+  /** Recruiting desk: candidate-pool size + timed refills (Phase R). */
+  private renderRecruiter(): string {
+    const s = this.state;
+    const c = activeCompany(s);
+    const cost = recruiterCost(c);
+    const affordable = cost !== null && walletMoney(s) >= cost;
+    const status =
+      c.recruiterLevel > 0
+        ? t('ui.recruiterStatus', {
+            cap: candidateCapacity(c),
+            time: formatDuration(RECRUITER_INTERVAL_SEC / c.recruiterLevel),
+          })
+        : t('ui.recruiterIdle');
+    const button =
+      cost === null
+        ? `<span class="muted">🏆 ${t('ui.maxLevel')}</span>`
+        : `<button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
+                   data-action="buy-recruiter">
+             ${t('ui.buyBtn', { price: formatMoney(cost) })}
+           </button>`;
+    return `
+      <div class="section-head"><h2>🧲 ${t('ui.recruiterTitle')}</h2></div>
+      <div class="card">
+        <div class="card-row">
+          <span class="card-emoji">🧲</span>
+          <div class="card-main">
+            <h3>${t('ui.recruiterLevel', { level: c.recruiterLevel })}</h3>
+            <span class="muted">${status}</span>
+          </div>
+          ${button}
+        </div>
       </div>`;
   }
 
@@ -1941,10 +2108,40 @@ export class UI {
       : '';
     return `
       <div class="stack">
+        ${this.renderMilestones()}
         ${this.renderWorkstationShop()}
         ${this.renderDeskUpgrades()}
         ${benchedCards}
         ${this.renderContracts()}
+      </div>`;
+  }
+
+  /** Ownership milestone staircase: the company's next desk/team goals. */
+  private renderMilestones(): string {
+    const c = activeCompany(this.state);
+    const mult = companyMilestoneMult(c);
+    const row = (emoji: string, label: string, count: number): string => {
+      const next = nextMilestoneStep(count);
+      const goal =
+        next === null
+          ? `<span class="muted">🏆 ${t('ui.milestoneMaxed')}</span>`
+          : `<span class="muted">${t('ui.milestoneNext', {
+              bonus: Math.round(
+                COMPANY_MILESTONE_BONUS[COMPANY_MILESTONE_STEPS.indexOf(next)] * 100,
+              ),
+              step: next,
+            })}</span>`;
+      return `<div class="milestone-row"><span>${emoji} ${label} · ${count}</span>${goal}</div>`;
+    };
+    return `
+      <div class="card milestone-card" title="${t('ui.milestonesHint')}">
+        <div class="card-row">
+          <div class="card-main">
+            ${row('🖥️', t('ui.milestoneDesks'), c.workstations.length)}
+            ${row('👥', t('ui.milestoneTeam'), c.workers.length)}
+          </div>
+          <strong class="milestone-mult">×${mult.toFixed(2)}</strong>
+        </div>
       </div>`;
   }
 
@@ -2707,6 +2904,12 @@ export class UI {
           this.toast(`🌍 ${t('ui.countryUnlocked', { name: lookup(`country.${arg}.name`) })}`, 'info');
         }
         break;
+      case 'scout-country':
+        error = startExpedition(s, arg);
+        if (!error) {
+          this.toast(`🧭 ${t('ui.scoutStarted', { name: lookup(`country.${arg}.name`) })}`, 'info');
+        }
+        break;
       case 'buy-marketing':
         error = buyMarketingCampaign(s);
         if (!error) this.toast(`📣 ${t('ui.campaignLive')}`, 'info');
@@ -2729,6 +2932,22 @@ export class UI {
       case 'toggle-particles':
         s.settings.particles = !s.settings.particles;
         this.fx.enabled = s.settings.particles;
+        break;
+      case 'auto-toggle': {
+        const kind = arg as AutomationKind;
+        error = setAutomation(s, kind, !activeCompany(s).auto[kind]);
+        break;
+      }
+      case 'auto-buy':
+        error = buyAutomation(s, arg as AutomationKind);
+        if (!error) {
+          this.toast(`🤖 ${t('ui.autoUnlocked')}`, 'info');
+          this.fx.coinChime();
+        }
+        break;
+      case 'buy-recruiter':
+        error = buyRecruiter(s);
+        if (!error) this.toast(`🧲 ${t('ui.recruiterHired')}`, 'info');
         break;
       case 'toggle-animations':
         s.settings.animations = !s.settings.animations;

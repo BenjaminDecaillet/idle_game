@@ -1503,6 +1503,45 @@ body.scene-paused .os-anim-neon {
   justify-content: flex-end;
 }
 
+/* Market-season HUD badge (60 fps text writes, like the builder chip). */
+.badge-season {
+  opacity: 0.9;
+}
+
+/* Ownership milestone staircase card (office shop). */
+.milestone-card .card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.milestone-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.milestone-mult {
+  font-variant-numeric: tabular-nums;
+  color: var(--gold, #c99700);
+}
+
+/* Secondary row under a card's main row (scouting expeditions, ...). */
+.card-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.82rem;
+}
+
+.card-sub .progress.mini {
+  flex: 1;
+  min-width: 40px;
+}
+
 /* Welcome-back modal: itemized offline report. */
 .offline-report {
   margin: 10px 0;

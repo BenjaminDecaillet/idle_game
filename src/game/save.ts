@@ -9,6 +9,8 @@ import {
   MISSIONS,
   PLAYER_LOOK_OPTIONS,
   OFFLINE_CAP_HOURS,
+  RECRUITER_INTERVAL_SEC,
+  RECRUITER_MAX_LEVEL,
   PROJECTS,
   TIME_SCALES,
   PETS,
@@ -171,6 +173,32 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
       typeof parsed.promotionsDone === 'number' && parsed.promotionsDone >= 0
         ? parsed.promotionsDone
         : 0,
+    trainingsDone:
+      typeof parsed.trainingsDone === 'number' &&
+      Number.isFinite(parsed.trainingsDone) &&
+      parsed.trainingsDone >= 0
+        ? Math.floor(parsed.trainingsDone)
+        : 0,
+    hiresDone:
+      typeof parsed.hiresDone === 'number' &&
+      Number.isFinite(parsed.hiresDone) &&
+      parsed.hiresDone >= 0
+        ? Math.floor(parsed.hiresDone)
+        : 0,
+    automationBought: Array.isArray(parsed.automationBought)
+      ? parsed.automationBought.filter((k): k is string =>
+          ['train', 'hire', 'desks'].includes(k as string),
+        )
+      : [],
+    scoutedCountries: Array.isArray(parsed.scoutedCountries)
+      ? Array.from(
+          new Set(
+            parsed.scoutedCountries.filter((id): id is string =>
+              COUNTRIES.some((c) => c.id === id),
+            ),
+          ),
+        )
+      : [],
     freeFastForwards:
       typeof parsed.freeFastForwards === 'number' &&
       Number.isFinite(parsed.freeFastForwards) &&
@@ -337,6 +365,24 @@ function migrateCountry(saved: CountryState, template: CountryState): CountrySta
     if (typeof company.petId !== 'string' || !knownPets.has(company.petId)) {
       company.petId = null;
     }
+    // Automation flags & recruiters (added same-version): default OFF/0.
+    company.auto = {
+      train: c.auto?.train === true,
+      hire: c.auto?.hire === true,
+      desks: c.auto?.desks === true,
+    };
+    company.recruiterLevel =
+      typeof c.recruiterLevel === 'number' &&
+      Number.isFinite(c.recruiterLevel) &&
+      c.recruiterLevel >= 0
+        ? Math.min(RECRUITER_MAX_LEVEL, Math.floor(c.recruiterLevel))
+        : 0;
+    company.recruiterCooldownSec =
+      typeof c.recruiterCooldownSec === 'number' &&
+      Number.isFinite(c.recruiterCooldownSec) &&
+      c.recruiterCooldownSec >= 0
+        ? Math.min(RECRUITER_INTERVAL_SEC, c.recruiterCooldownSec)
+        : RECRUITER_INTERVAL_SEC;
     company.candidates = (company.candidates ?? []).map((cand) => ({
       ...cand,
       traits: Array.isArray(cand.traits) ? cand.traits.filter((id) => knownTraits.has(id)) : [],

@@ -8,7 +8,7 @@ import { rollEventOffer } from './game/events';
 import { EVENT_INTERVAL_MAX_SEC, EVENT_INTERVAL_MIN_SEC } from './game/data';
 import { loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
-import { resolveLang, setCurrentLang, t } from './i18n';
+import { lookup, resolveLang, setCurrentLang, t } from './i18n';
 import { Fx } from './ui/fx';
 import { UI } from './ui/ui';
 
@@ -90,6 +90,12 @@ function loop(now: number): void {
     if (done.companyId === shownCompanyId) {
       ui.toast(`🏗️ ${t('ui.floorBuilt')}`, 'info');
     }
+  }
+  for (const done of events.expeditionsDone) {
+    ui.toast(
+      `🧭 ${t('ui.marketReportBack', { name: lookup(`country.${done.countryId}.name`) })}`,
+      'info',
+    );
   }
   for (const done of events.companyBuildsDone) {
     const doneCountry = state.countries.find((c) => c.id === done.countryId);

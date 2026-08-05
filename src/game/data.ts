@@ -499,6 +499,70 @@ export function petById(id: string): PetDef {
   return p;
 }
 
+// Earned automation (docs/balance.md Phase A): auto-restart training,
+// auto-hire and auto-buy desks unlock at account-level milestone counters
+// (or a VsCoin early-unlock — convenience-speed, not power), then toggle
+// per company, default OFF. The pass runs inside tick() on a fixed cadence
+// so offline simulation automates identically. Promotions are deliberately
+// never automated (grade changes stay a player decision).
+export type AutomationKind = 'train' | 'hire' | 'desks';
+export const AUTOMATION_CHECK_INTERVAL_SEC = 5;
+export const AUTO_TRAIN_UNLOCK_TRAININGS = 25;
+export const AUTO_HIRE_UNLOCK_HIRES = 40;
+export const AUTO_DESK_UNLOCK_DESKS = 75;
+export const AUTOMATION_VSCOIN_COSTS: Record<AutomationKind, number> = {
+  train: 6,
+  hire: 8,
+  desks: 10,
+};
+/** Auto-hire only fires when cash covers this much of the hire's salary. */
+export const AUTO_HIRE_SALARY_COVER_SEC = 1_800;
+/** Auto-desks only buys desks that pay for themselves within this time. */
+export const AUTO_DESK_PAYBACK_MAX_SEC = 1_800;
+/** Automation never spends below cost × this reserve (debt protection). */
+export const AUTO_CASH_RESERVE_FACTOR = 2;
+/** Builders automation must leave free for manual actions. */
+export const AUTO_BUILDER_RESERVE = 1;
+
+// Recruiters (docs/balance.md Phase R): per-company recruiting capacity.
+// Each level widens the candidate pool to 3 + level (max 8) and delivers a
+// fresh candidate every RECRUITER_INTERVAL_SEC / level. Priced off
+// companyCostScale so it matters at 50+ employee scale and is irrelevant
+// early.
+export const RECRUITER_BASE_COST = 50_000;
+export const RECRUITER_COST_GROWTH = 3;
+export const RECRUITER_MAX_LEVEL = 5;
+export const RECRUITER_INTERVAL_SEC = 600;
+
+// Market-scouting expeditions (docs/balance.md Phase X): a timed action
+// that must precede every country unlock — expansion becomes an authored
+// chapter opening. Costs a small fraction of the unlock price, occupies a
+// builder, and the returned market report grants a permanent output bonus
+// per scouted market (surviving prestige — knowledge outlives the exit).
+export const EXPEDITION_COST_FRACTION = 0.02;
+export const EXPEDITION_DURATION_BASE_SEC = 14_400; // 4 h for the first
+export const EXPEDITION_DURATION_GROWTH = 1.3; // ^ (countries owned − 1)
+export const EXPEDITION_OUTPUT_BONUS = 0.05;
+
+// Ownership milestones (docs/balance.md Phase M): stepped per-company
+// output bonuses at desk/headcount counts, turning the soft-cap decay into
+// a goal staircase. Steps map onto the floor ladder (fill floor 2 / half
+// tower / full house — the 8×4 building caps both counts at 32). Bonuses
+// are additive within a track; the desks and workers tracks multiply.
+export const COMPANY_MILESTONE_STEPS = [8, 16, 32];
+export const COMPANY_MILESTONE_BONUS = [0.05, 0.1, 0.15];
+
+// Market seasons (docs/balance.md Phase K): a deterministic quarterly cycle
+// derived from playTimeSec inside tick() — no state, no randomness,
+// offline-exact. Boom favors one specialization per cycle (rotating), and
+// the cycle mean is exactly 1.0 at a ¼ spec share so long-run pacing (and
+// the Phase H guards) stay anchored.
+export const SEASON_LENGTH_SEC = 21_600; // 6 h per season, 24 h per cycle
+export const SEASON_ORDER = ['stable', 'boom', 'crunch', 'recovery'] as const;
+export const SEASON_BOOM_SPEC_MULT = 1.6; // boom, favored spec only
+export const SEASON_CRUNCH_MULT = 0.8;
+export const SEASON_RECOVERY_MULT = 1.05;
+
 // Piggy vault (docs/balance.md Phase V): VAULT_RATE of every project payout
 // accrues ON TOP into a global vault (a bonus pool, not a tax — skimming
 // from payouts would silently distort income, missions and the balance

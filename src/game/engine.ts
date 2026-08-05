@@ -1,6 +1,32 @@
 import {
   AURA_OUTPUT_PER_LEVEL,
+  AUTO_BUILDER_RESERVE,
+  AUTO_CASH_RESERVE_FACTOR,
+  AUTO_DESK_PAYBACK_MAX_SEC,
+  AUTO_DESK_UNLOCK_DESKS,
+  AUTO_HIRE_SALARY_COVER_SEC,
+  AUTO_HIRE_UNLOCK_HIRES,
+  AUTO_TRAIN_UNLOCK_TRAININGS,
+  AUTOMATION_CHECK_INTERVAL_SEC,
+  AUTOMATION_VSCOIN_COSTS,
+  type AutomationKind,
   BETA_FREE_IAP,
+  COMPANY_MILESTONE_BONUS,
+  COMPANY_MILESTONE_STEPS,
+  EXPEDITION_COST_FRACTION,
+  EXPEDITION_DURATION_BASE_SEC,
+  EXPEDITION_DURATION_GROWTH,
+  EXPEDITION_OUTPUT_BONUS,
+  RECRUITER_BASE_COST,
+  RECRUITER_COST_GROWTH,
+  RECRUITER_INTERVAL_SEC,
+  RECRUITER_MAX_LEVEL,
+  WORKSTATIONS,
+  SEASON_BOOM_SPEC_MULT,
+  SEASON_CRUNCH_MULT,
+  SEASON_LENGTH_SEC,
+  SEASON_ORDER,
+  SEASON_RECOVERY_MULT,
   BUILDER_CASH_COSTS,
   BUILDER_VSCOIN_BASE,
   BUILDER_VSCOIN_COSTS,
@@ -104,6 +130,7 @@ import type {
   CountryState,
   GameState,
   ProjectState,
+  Specialization,
   TickEvents,
   TimedAction,
   WorkerState,
@@ -165,6 +192,10 @@ export function createInitialState(now = Date.now(), countryId: CountryId = DEFA
     freeFastForwards: 0,
     floorGiftClaimed: false,
     promotionsDone: 0,
+    trainingsDone: 0,
+    hiresDone: 0,
+    automationBought: [],
+    scoutedCountries: [],
     prestige: { count: 0, reputation: 0 },
     doublerLastClaimedAt: 0,
     offlineDoublesClaimed: 0,
@@ -233,6 +264,9 @@ export function createCompany(
     renameCount: 0,
     petId: null,
     floorProjects: [],
+    auto: { train: false, hire: false, desks: false },
+    recruiterLevel: 0,
+    recruiterCooldownSec: RECRUITER_INTERVAL_SEC,
   };
   company.projects[0].unlocked = true;
   country.companies.push(company);
@@ -332,6 +366,70 @@ export function skillMultiplier(worker: WorkerState): number {
   return 1 + SKILL_OUTPUT_PER_LEVEL * (worker.skillLevel - 1);
 }
 
+/**
+ * Ownership milestone multiplier (docs/balance.md Phase M): stepped bonuses
+ * as a company's desk and headcount counts cross the milestone ladder.
+ * Additive within a track, the two tracks multiply.
+ */
+export function companyMilestoneMult(company: CompanyState): number {
+  const track = (count: number): number => {
+    let bonus = 0;
+    for (let i = 0; i < COMPANY_MILESTONE_STEPS.length; i++) {
+      if (count >= COMPANY_MILESTONE_STEPS[i]) bonus += COMPANY_MILESTONE_BONUS[i];
+    }
+    return 1 + bonus;
+  };
+  return track(company.workstations.length) * track(company.workers.length);
+}
+
+/** The next unreached milestone step for a count (null = ladder done). */
+export function nextMilestoneStep(count: number): number | null {
+  for (const step of COMPANY_MILESTONE_STEPS) if (count < step) return step;
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Market seasons (docs/balance.md Phase K) — a pure function of playTimeSec
+// ---------------------------------------------------------------------------
+
+export type SeasonId = (typeof SEASON_ORDER)[number];
+
+export interface SeasonInfo {
+  id: SeasonId;
+  /** Specialization the current cycle's boom favors (rotates per cycle). */
+  boomSpec: Specialization;
+  remainingSec: number;
+}
+
+export function currentSeason(state: GameState): SeasonInfo {
+  const idx = Math.floor(state.playTimeSec / SEASON_LENGTH_SEC);
+  const cycle = Math.floor(idx / SEASON_ORDER.length);
+  return {
+    id: SEASON_ORDER[idx % SEASON_ORDER.length],
+    boomSpec: SPECIALIZATIONS[cycle % SPECIALIZATIONS.length],
+    remainingSec: SEASON_LENGTH_SEC - (state.playTimeSec % SEASON_LENGTH_SEC),
+  };
+}
+
+/**
+ * Season multiplier on a project payout of the given specialization.
+ * Applied to the PAID amount only — stored currentReward and the soft-cap
+ * math never see it, so caps and growth stay season-independent.
+ */
+export function seasonPayoutMult(state: GameState, spec: Specialization): number {
+  const season = currentSeason(state);
+  switch (season.id) {
+    case 'boom':
+      return spec === season.boomSpec ? SEASON_BOOM_SPEC_MULT : 1;
+    case 'crunch':
+      return SEASON_CRUNCH_MULT;
+    case 'recovery':
+      return SEASON_RECOVERY_MULT;
+    default:
+      return 1;
+  }
+}
+
 export function globalOutputMultiplier(state: GameState, company: CompanyState): number {
   const country = countryOf(state, company);
   const coffee = 1 + 0.1 * (company.upgrades['coffee'] ?? 0);
@@ -341,6 +439,7 @@ export function globalOutputMultiplier(state: GameState, company: CompanyState):
   const moonshot = 1 + MOONSHOT_OUTPUT_PER_LEVEL * (company.upgrades['moonshot'] ?? 0);
   const aura = 1 + AURA_OUTPUT_PER_LEVEL * (state.globalUpgrades['aura'] ?? 0);
   const world = 1 + WORLD_OUTPUT_PER_COUNTRY * (state.countries.length - 1);
+  const scouting = 1 + EXPEDITION_OUTPUT_BONUS * state.scoutedCountries.length;
   let boost = 1;
   for (const b of state.boosts) boost *= b.mult;
   return (
@@ -350,7 +449,9 @@ export function globalOutputMultiplier(state: GameState, company: CompanyState):
     moonshot *
     aura *
     world *
+    scouting *
     prestigeMultiplier(state) *
+    companyMilestoneMult(company) *
     boost *
     siteById(company.siteId).outputBonus
   );
@@ -709,7 +810,10 @@ export function companyIncome(state: GameState, company: CompanyState): number {
   for (const projectId of assignedProjects(company)) {
     const project = getProject(company, projectId);
     const rate = companyProjectRate(state, company, projectId);
-    if (rate > 0) rewardPerSec += (project.currentReward / project.currentWork) * rate;
+    if (rate > 0) {
+      const seasonMult = seasonPayoutMult(state, projectDefById(projectId).specialization);
+      rewardPerSec += (project.currentReward / project.currentWork) * rate * seasonMult;
+    }
   }
   return rewardPerSec - companySalaries(company);
 }
@@ -953,8 +1057,16 @@ export function promoteDurationSec(worker: WorkerState): number | null {
  * nothing) for the ramped duration and come back trainLevels() stronger.
  */
 export function trainWorker(state: GameState, workerId: number): string | null {
-  const country = activeCountry(state);
-  const company = activeCompany(state);
+  return trainWorkerInto(state, activeCountry(state), activeCompany(state), workerId);
+}
+
+/** Core training start (explicit country/company for the automation pass). */
+function trainWorkerInto(
+  state: GameState,
+  country: CountryState,
+  company: CompanyState,
+  workerId: number,
+): string | null {
   const worker = company.workers.find((w) => w.id === workerId);
   if (!worker) return 'error.workerNotFound';
   if (workerBusy(company, workerId)) return 'error.workerBusy';
@@ -1129,6 +1241,7 @@ function completeTimedAction(
       worker.skillLevel = Math.min(cap, worker.skillLevel + (action.levels ?? 0));
       worker.experience = 0;
       worker.timesTrained += 1;
+      state.trainingsDone += 1;
       events.trainingsDone.push({
         companyId: company.id,
         workerId: worker.id,
@@ -1185,6 +1298,15 @@ function completeCountryTimedAction(
   action: TimedAction,
   events: TickEvents,
 ): void {
+  if (action.kind === 'expedition' && action.countryId) {
+    // The market report comes home: durable scouted flag (survives
+    // prestige) + a permanent output bonus per scouted market.
+    if (!state.scoutedCountries.includes(action.countryId)) {
+      state.scoutedCountries.push(action.countryId);
+    }
+    events.expeditionsDone.push({ countryId: action.countryId });
+    return;
+  }
   if (action.kind !== 'company-build' || !action.siteId) return;
   if (country.companies.some((c) => c.siteId === action.siteId)) return; // hygiene
   const company = createCompany(
@@ -1328,6 +1450,149 @@ function pickQuitter(country: CountryState): { company: CompanyState; worker: Wo
 }
 
 // ---------------------------------------------------------------------------
+// Earned automation & recruiters (docs/balance.md Phases A + R)
+// ---------------------------------------------------------------------------
+
+/** Current value of an automation's unlock counter. */
+export function automationCounter(state: GameState, kind: AutomationKind): number {
+  switch (kind) {
+    case 'train':
+      return state.trainingsDone;
+    case 'hire':
+      return state.hiresDone;
+    case 'desks':
+      return allCompanies(state).reduce((sum, c) => sum + c.workstations.length, 0);
+  }
+}
+
+/** The unlock counter's target for an automation. */
+export function automationTarget(kind: AutomationKind): number {
+  switch (kind) {
+    case 'train':
+      return AUTO_TRAIN_UNLOCK_TRAININGS;
+    case 'hire':
+      return AUTO_HIRE_UNLOCK_HIRES;
+    case 'desks':
+      return AUTO_DESK_UNLOCK_DESKS;
+  }
+}
+
+/** Whether an automation is available (milestone reached or VsCoin-bought). */
+export function automationUnlocked(state: GameState, kind: AutomationKind): boolean {
+  return (
+    state.automationBought.includes(kind) ||
+    automationCounter(state, kind) >= automationTarget(kind)
+  );
+}
+
+/** VsCoin early-unlock for an automation (convenience-speed, not power). */
+export function buyAutomation(state: GameState, kind: AutomationKind): string | null {
+  if (automationUnlocked(state, kind)) return 'error.alreadyUnlocked';
+  const err = spendVsCoin(state, AUTOMATION_VSCOIN_COSTS[kind], `shop:auto-${kind}`);
+  if (err) return err;
+  state.automationBought.push(kind);
+  return null;
+}
+
+/** Flip an automation toggle on the active company. */
+export function setAutomation(state: GameState, kind: AutomationKind, on: boolean): string | null {
+  if (on && !automationUnlocked(state, kind)) return 'error.autoLocked';
+  activeCompany(state).auto[kind] = on;
+  return null;
+}
+
+/** Price of the company's next recruiter level (null = maxed). */
+export function recruiterCost(company: CompanyState): number | null {
+  if (company.recruiterLevel >= RECRUITER_MAX_LEVEL) return null;
+  return Math.round(
+    RECRUITER_BASE_COST *
+      Math.pow(RECRUITER_COST_GROWTH, company.recruiterLevel) *
+      companyCostScale(company),
+  );
+}
+
+/** Candidate-pool capacity of a company (recruiters widen it). */
+export function candidateCapacity(company: CompanyState): number {
+  return 3 + company.recruiterLevel;
+}
+
+/** Buy the active company's next recruiter level. */
+export function buyRecruiter(state: GameState): string | null {
+  const country = activeCountry(state);
+  const company = activeCompany(state);
+  const cost = recruiterCost(company);
+  if (cost === null) return 'error.maxLevel';
+  if (country.money < cost) return 'error.notEnoughMoney';
+  country.money -= cost;
+  company.recruiterLevel += 1;
+  return null;
+}
+
+/**
+ * Deterministic PRNG for candidate rolls that happen INSIDE tick()
+ * (recruiter arrivals, auto-hire refills) — seeded from durable state so
+ * offline simulation and tests are reproducible. Player-initiated rolls
+ * keep ambient Math.random via the public actions.
+ */
+function tickRand(state: GameState): () => number {
+  let a = (Math.imul(state.nextEntityId, 2654435761) ^ Math.floor(state.playTimeSec * 7)) >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * One automation pass for a company (docs/balance.md Phase A): at most one
+ * action per automation per pass, each guarded by the cash reserve and the
+ * builder reserve so automation can never spend the player into debt or
+ * hog the construction pool.
+ */
+function runAutomation(state: GameState, country: CountryState, company: CompanyState): void {
+  if (company.auto.train && automationUnlocked(state, 'train')) {
+    if (freeBuilders(country) > AUTO_BUILDER_RESERVE) {
+      const worker = company.workers.find(
+        (w) =>
+          !workerBusy(company, w.id) &&
+          !atSkillCap(w) &&
+          country.money >= trainCost(company, w) * AUTO_CASH_RESERVE_FACTOR,
+      );
+      if (worker) trainWorkerInto(state, country, company, worker.id);
+    }
+  }
+  if (company.auto.hire && automationUnlocked(state, 'hire')) {
+    if (!atHeadcountCap(company) && company.workers.length < company.workstations.length) {
+      const index = company.candidates.findIndex((cand) => {
+        const cost = hireCost(company, cand.tierId);
+        const salary = tierSalary(company, cand.tierId) * traitSalaryMult(cand.traits);
+        return (
+          country.money >= cost * AUTO_CASH_RESERVE_FACTOR &&
+          country.money - cost >= salary * AUTO_HIRE_SALARY_COVER_SEC
+        );
+      });
+      if (index >= 0) hireWorkerInto(state, country, company, index, tickRand(state));
+    }
+  }
+  if (company.auto.desks && automationUnlocked(state, 'desks')) {
+    if (company.workstations.length < deskCapacity(company)) {
+      // Best tier first: buy the strongest desk that still pays for itself
+      // quickly enough.
+      for (let i = WORKSTATIONS.length - 1; i >= 0; i--) {
+        const def = WORKSTATIONS[i];
+        const cost = stationCost(company, def.id);
+        if (country.money < cost * AUTO_CASH_RESERVE_FACTOR) continue;
+        const payback = deskPaybackSec(state, company, def.id);
+        if (payback === null || payback > AUTO_DESK_PAYBACK_MAX_SEC) continue;
+        buyWorkstationsInto(state, country, company, def.id, 1);
+        break;
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Tick — the heart of the idle loop
 // ---------------------------------------------------------------------------
 
@@ -1340,6 +1605,7 @@ function emptyEvents(): TickEvents {
     deskUpgradesDone: [],
     floorBuildsDone: [],
     companyBuildsDone: [],
+    expeditionsDone: [],
     quits: [],
   };
 }
@@ -1356,6 +1622,13 @@ export function tick(state: GameState, dt: number): TickEvents {
 
   state.playTimeSec += dt;
 
+  // Earned automation runs on a fixed cadence, not per frame: fire when the
+  // playtime clock crosses an AUTOMATION_CHECK_INTERVAL_SEC boundary (long
+  // offline chunks fire one pass per chunk — greedy passes catch up fast).
+  const autoDue =
+    Math.floor(state.playTimeSec / AUTOMATION_CHECK_INTERVAL_SEC) !==
+    Math.floor((state.playTimeSec - dt) / AUTOMATION_CHECK_INTERVAL_SEC);
+
   // Boosts that expire mid-tick only cover part of dt: correct the full
   // multiplier baked into workerRate down to the covered fraction.
   let boostCorrection = 1;
@@ -1367,7 +1640,7 @@ export function tick(state: GameState, dt: number): TickEvents {
   }
 
   for (const country of state.countries) {
-    tickCountry(state, country, dt, boostCorrection, events);
+    tickCountry(state, country, dt, boostCorrection, events, autoDue);
   }
 
   // Count down and expire boosts (after they contributed to this tick).
@@ -1391,6 +1664,7 @@ function tickCountry(
   dt: number,
   boostCorrection: number,
   events: TickEvents,
+  autoDue: boolean,
 ): void {
   // 1. Pay salaries — the wallet CAN go below zero (debt). Event boosts can
   // temporarily raise wages (salaryMult on Boost).
@@ -1482,22 +1756,26 @@ function tickCountry(
       const project = getProject(company, projectId);
       const def = projectDefById(projectId);
       const cap = projectRewardCap(company, projectId);
+      // Market season: multiplies what is PAID, never the stored reward, so
+      // the soft-cap plateau and growth math stay season-independent.
+      const seasonMult = seasonPayoutMult(state, def.specialization);
       let guard = 0;
       while (project.progress >= project.currentWork && guard < 10_000) {
         project.progress -= project.currentWork;
-        country.money += project.currentReward;
+        const payout = project.currentReward * seasonMult;
+        country.money += payout;
         // Piggy vault: a bonus share accrues on top of the payout (clamped
         // once per tick — see VAULT_CAP_MINUTES).
-        state.vault.amount += project.currentReward * VAULT_RATE;
-        country.totalEarned += project.currentReward;
+        state.vault.amount += payout * VAULT_RATE;
+        country.totalEarned += payout;
         country.projectsCompleted += 1;
-        state.totalEarned += project.currentReward;
+        state.totalEarned += payout;
         state.projectsCompleted += 1;
         project.completions += 1;
         events.completions.push({
           companyId: company.id,
           projectId: project.defId,
-          reward: project.currentReward,
+          reward: payout,
         });
         if (project.currentReward < cap) {
           project.currentWork *= def.workGrowth;
@@ -1506,6 +1784,21 @@ function tickCountry(
         guard++;
       }
     }
+
+    // 5b. Recruiters deliver fresh candidates over time (pool capped at
+    //     candidateCapacity; deterministic rand — see tickRand).
+    if (company.recruiterLevel > 0) {
+      company.recruiterCooldownSec -= dt * company.recruiterLevel;
+      while (company.recruiterCooldownSec <= 0) {
+        company.recruiterCooldownSec += RECRUITER_INTERVAL_SEC;
+        if (company.candidates.length < candidateCapacity(company)) {
+          company.candidates.push(rollCandidate(state, tickRand(state), country));
+        }
+      }
+    }
+
+    // 5c. Earned automation (cadence-gated; see runAutomation's guards).
+    if (autoDue) runAutomation(state, country, company);
   }
 
   // 6. Country-level timed actions (company-build) run down the same way.
@@ -1585,8 +1878,17 @@ export function simulateOffline(state: GameState, elapsedSec: number, capSec: nu
 // ---------------------------------------------------------------------------
 
 export function hireWorker(state: GameState, candidateIndex: number): string | null {
-  const country = activeCountry(state);
-  const company = activeCompany(state);
+  return hireWorkerInto(state, activeCountry(state), activeCompany(state), candidateIndex);
+}
+
+/** Core hire (explicit country/company so the automation pass can use it). */
+function hireWorkerInto(
+  state: GameState,
+  country: CountryState,
+  company: CompanyState,
+  candidateIndex: number,
+  rand?: () => number,
+): string | null {
   const candidate = company.candidates[candidateIndex];
   if (!candidate) return 'error.candidateNotFound';
   if (atHeadcountCap(company)) return 'error.officeAtCapacity';
@@ -1605,8 +1907,11 @@ export function hireWorker(state: GameState, candidateIndex: number): string | n
     promotions: 0,
     traits: candidate.traits,
   });
+  state.hiresDone += 1;
   company.candidates.splice(candidateIndex, 1);
-  if (company.candidates.length === 0) company.candidates = rollCandidates(state);
+  if (company.candidates.length === 0) {
+    company.candidates = rollCandidates(state, rand, country);
+  }
   autoSeat(company);
   return null;
 }
@@ -1655,8 +1960,17 @@ export function maxAffordableStations(state: GameState, defId: string): number {
 
 /** Buy n workstations of a def at once — all-or-nothing, no partial buys. */
 export function buyWorkstations(state: GameState, defId: string, n: number): string | null {
-  const country = activeCountry(state);
-  const company = activeCompany(state);
+  return buyWorkstationsInto(state, activeCountry(state), activeCompany(state), defId, n);
+}
+
+/** Core desk purchase (explicit country/company for the automation pass). */
+function buyWorkstationsInto(
+  state: GameState,
+  country: CountryState,
+  company: CompanyState,
+  defId: string,
+  n: number,
+): string | null {
   if (n < 1) return 'error.officeFull';
   if (company.workstations.length + n > deskCapacity(company)) {
     return 'error.officeFull';
@@ -1823,6 +2137,67 @@ export function setActiveCompany(state: GameState, companyId: number): string | 
 }
 
 // ---------------------------------------------------------------------------
+// Market-scouting expeditions (docs/balance.md Phase X)
+// ---------------------------------------------------------------------------
+
+/** Whether a country's market report is already in hand. */
+export function countryScouted(state: GameState, countryId: string): boolean {
+  return state.scoutedCountries.includes(countryId);
+}
+
+/** The in-flight expedition to a country, if any (searches every country). */
+export function expeditionInFlight(state: GameState, countryId: string): TimedAction | null {
+  for (const country of state.countries) {
+    const found = country.timedActions.find(
+      (a) => a.kind === 'expedition' && a.countryId === countryId,
+    );
+    if (found) return found;
+  }
+  return null;
+}
+
+/** Cost of scouting a country: a fraction of the next unlock price. */
+export function expeditionCost(state: GameState): number {
+  return Math.round(countryUnlockCost(state) * EXPEDITION_COST_FRACTION);
+}
+
+/** Expedition duration: ramps with the countries already owned. */
+export function expeditionDurationSec(state: GameState): number {
+  return (
+    EXPEDITION_DURATION_BASE_SEC *
+    Math.pow(EXPEDITION_DURATION_GROWTH, Math.max(0, state.countries.length - 1))
+  );
+}
+
+/**
+ * Send a scouting expedition to a locked country. Paid from the active
+ * country's wallet, occupies one of its builders, and returns a market
+ * report on completion (scouted flag + permanent output bonus).
+ */
+export function startExpedition(state: GameState, countryId: string): string | null {
+  countryDefById(countryId);
+  if (countryById(state, countryId)) return 'error.countryUnlocked';
+  if (!worldUnlocked(state)) return 'error.ownCityFirst';
+  if (countryScouted(state, countryId)) return 'error.alreadyScouted';
+  if (expeditionInFlight(state, countryId)) return 'error.expeditionRunning';
+  const country = activeCountry(state);
+  if (freeBuilders(country) <= 0) return 'error.noFreeBuilders';
+  const cost = expeditionCost(state);
+  if (country.money < cost) return 'error.notEnoughMoney';
+  country.money -= cost;
+  const duration = expeditionDurationSec(state);
+  country.timedActions.push({
+    id: state.nextEntityId++,
+    kind: 'expedition',
+    targetId: 0,
+    remainingSec: duration,
+    totalSec: duration,
+    countryId,
+  });
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // International expansion
 // ---------------------------------------------------------------------------
 
@@ -1846,6 +2221,7 @@ export function unlockCountry(state: GameState, countryId: string): string | nul
   countryDefById(countryId);
   if (countryById(state, countryId)) return 'error.countryUnlocked';
   if (!worldUnlocked(state)) return 'error.ownCityFirst';
+  if (!countryScouted(state, countryId)) return 'error.scoutFirst';
   const from = activeCountry(state);
   const cost = countryUnlockCost(state);
   if (from.money < cost) return 'error.notEnoughMoney';
@@ -2013,7 +2389,10 @@ export function grossRewardRate(state: GameState): number {
     for (const projectId of assignedProjects(c)) {
       const project = getProject(c, projectId);
       const rate = companyProjectRate(state, c, projectId);
-      if (rate > 0) sum += (project.currentReward / project.currentWork) * rate;
+      if (rate > 0) {
+        const seasonMult = seasonPayoutMult(state, projectDefById(projectId).specialization);
+        sum += (project.currentReward / project.currentWork) * rate * seasonMult;
+      }
     }
   }
   return sum;
@@ -2248,26 +2627,35 @@ export function autoSeat(company: CompanyState): void {
  * candidate is always Steve Gates, an affordable intern (the scripted
  * first hire).
  */
+/** Roll a single hire candidate for a country (recruiter arrivals reuse it). */
+export function rollCandidate(
+  state: GameState,
+  rand: () => number = Math.random,
+  country?: CountryState,
+): Candidate {
+  const home = country ?? activeCountry(state);
+  const budget = Math.max(home.money, home.totalEarned * 0.25, 50);
+  const affordable = WORKER_TIERS.filter((t) => t.hireCost <= budget * 4);
+  const pool = affordable.length > 0 ? affordable : [WORKER_TIERS[0]];
+  // Bias toward the higher tiers in the affordable pool.
+  const idx = Math.min(pool.length - 1, Math.floor(Math.pow(rand(), 0.7) * pool.length));
+  const tier = pool[idx];
+  return {
+    name: `${pick(FIRST_NAMES, rand)} ${pick(LAST_NAMES, rand)}`,
+    tierId: tier.id,
+    specialization: pick(SPECIALIZATIONS, rand),
+    traits: rollTraits(rand),
+  };
+}
+
 export function rollCandidates(
   state: GameState,
   rand: () => number = Math.random,
   country?: CountryState,
 ): Candidate[] {
-  const home = country ?? activeCountry(state);
-  const budget = Math.max(home.money, home.totalEarned * 0.25, 50);
-  const affordable = WORKER_TIERS.filter((t) => t.hireCost <= budget * 4);
-  const pool = affordable.length > 0 ? affordable : [WORKER_TIERS[0]];
   const out: Candidate[] = [];
   for (let i = 0; i < 3; i++) {
-    // Bias toward the higher tiers in the affordable pool.
-    const idx = Math.min(pool.length - 1, Math.floor(Math.pow(rand(), 0.7) * pool.length));
-    const tier = pool[idx];
-    out.push({
-      name: `${pick(FIRST_NAMES, rand)} ${pick(LAST_NAMES, rand)}`,
-      tierId: tier.id,
-      specialization: pick(SPECIALIZATIONS, rand),
-      traits: rollTraits(rand),
-    });
+    out.push(rollCandidate(state, rand, country));
   }
   if (!state.tutorial.done && allCompanies(state).every((c) => c.workers.length === 0)) {
     out[0] = {

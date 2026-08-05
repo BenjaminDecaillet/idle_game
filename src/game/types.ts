@@ -203,7 +203,8 @@ export type TimedActionKind =
   | 'promotion'
   | 'desk-upgrade'
   | 'floor-build'
-  | 'company-build';
+  | 'company-build'
+  | 'expedition';
 
 export interface TimedAction {
   id: number;
@@ -226,6 +227,8 @@ export interface TimedAction {
   siteId?: string;
   /** company-build: what founding cost (floor for rename pricing later). */
   price?: number;
+  /** expedition: the country being scouted. */
+  countryId?: string;
 }
 
 export interface WorkerState {
@@ -365,6 +368,21 @@ export interface CompanyState {
    * desks on a floor work that floor's project.
    */
   floorProjects: (string | null)[];
+  /**
+   * Earned-automation toggles (docs/balance.md Phase A). Flags are
+   * per-company and default OFF; flipping one on requires the account-level
+   * unlock (milestone counter or VsCoin early-unlock). The automation pass
+   * runs inside tick() so offline simulation gets it for free.
+   */
+  auto: { train: boolean; hire: boolean; desks: boolean };
+  /**
+   * Recruiting capacity (docs/balance.md Phase R): each level widens the
+   * candidate pool (3 + level) and speeds up timed refills. 0 = today's
+   * manual behavior exactly.
+   */
+  recruiterLevel: number;
+  /** Seconds until the recruiter's next candidate arrives. */
+  recruiterCooldownSec: number;
 }
 
 /**
@@ -471,6 +489,18 @@ export interface GameState {
   floorGiftClaimed: boolean;
   /** Lifetime completed promotions (mission metric). */
   promotionsDone: number;
+  /** Lifetime completed training programs (automation unlock counter). */
+  trainingsDone: number;
+  /** Lifetime hires accepted (automation unlock counter). */
+  hiresDone: number;
+  /** Automations early-unlocked with VsCoin ('train' | 'hire' | 'desks'). */
+  automationBought: string[];
+  /**
+   * Countries whose market has been scouted by an expedition (docs/
+   * balance.md Phase X). Gates country unlocks, grants a small permanent
+   * output bonus per scouted market, and survives prestige.
+   */
+  scoutedCountries: string[];
   /** IPO resets & banked reputation (permanent output multiplier). */
   prestige: PrestigeState;
   /** Last claim of the offline-earnings doubler (wall-clock ms, 0 = never). */
@@ -497,6 +527,8 @@ export interface TickEvents {
   deskUpgradesDone: { companyId: number; stationId: number; newDefId: string }[];
   floorBuildsDone: { companyId: number; floors: number }[];
   companyBuildsDone: { countryId: CountryId; companyId: number; siteId: string }[];
+  /** Finished market-scouting expeditions (the UI shows the report). */
+  expeditionsDone: { countryId: string }[];
   /** Debt-crisis resignations (the UI toasts them). */
   quits: { companyId: number; workerId: number; name: string }[];
 }
