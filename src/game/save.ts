@@ -17,7 +17,13 @@ import {
   WALLPAPERS,
   siteById,
 } from './data';
-import { createInitialState, newProjectState, SAVE_VERSION, simulateOffline } from './engine';
+import {
+  createInitialState,
+  newProjectState,
+  SAVE_VERSION,
+  simulateOfflineReport,
+  type OfflineReport,
+} from './engine';
 import { STORY_BEATS } from './story';
 import { TUTORIAL_STEPS } from './tutorial';
 import type { CompanyState, CountryState, GameState, PlayerLook } from './types';
@@ -28,6 +34,8 @@ export interface LoadResult {
   state: GameState;
   offlineSec: number;
   offlineEarnings: number;
+  /** Itemized breakdown of the offline simulation (null when none ran). */
+  offlineReport: OfflineReport | null;
   isNewGame: boolean;
   /**
    * A pre-v8 save was found and discarded (approved beta reset). The UI
@@ -72,12 +80,19 @@ export function loadGame(storage: Storage = localStorage, now = Date.now()): Loa
     }
     const state = migrate(parsed, now);
     const offlineSec = Math.max(0, (now - state.lastSeen) / 1000);
-    let offlineEarnings = 0;
+    let offlineReport: OfflineReport | null = null;
     if (offlineSec > 5) {
-      offlineEarnings = simulateOffline(state, offlineSec, OFFLINE_CAP_HOURS * 3600);
+      offlineReport = simulateOfflineReport(state, offlineSec, OFFLINE_CAP_HOURS * 3600);
     }
     state.lastSeen = now;
-    return { state, offlineSec, offlineEarnings, isNewGame: false, betaReset: false };
+    return {
+      state,
+      offlineSec,
+      offlineEarnings: offlineReport?.earnings ?? 0,
+      offlineReport,
+      isNewGame: false,
+      betaReset: false,
+    };
   } catch {
     return fresh(now, false);
   }
@@ -88,6 +103,7 @@ function fresh(now: number, betaReset: boolean): LoadResult {
     state: createInitialState(now),
     offlineSec: 0,
     offlineEarnings: 0,
+    offlineReport: null,
     isNewGame: true,
     betaReset,
   };
