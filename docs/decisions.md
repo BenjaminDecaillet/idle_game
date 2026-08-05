@@ -286,3 +286,19 @@ be revisited cheaply.
     remaining five countries deliberately stay on the parameterized
     palette renderer — bespoke scenes for them are a pure content
     follow-up using the same hook.
+38. **Bespoke city scenes, second wave (#19, closes it)**: the remaining
+    four non-US countries get bespoke backdrops on the same hook —
+    Canada (cold Muskoka lakeshore: canoe, loon, pine islet, Muskoka
+    dock, log cabins + shared red maples), Italy (lagoon-green Venetian
+    canal: gondola, striped paline, terracotta villas + cypresses),
+    France (Seine quay: bateau-mouche, moored péniche, bouquiniste
+    boxes on a shared quayRail, Haussmann mansard row), Germany (Spree
+    quay: East-Side-style mural wall on the quay face, glass-roofed
+    tour boat, swans, stepped-gable brick townhouses). The US map
+    deliberately keeps the reference look — the game is set there, so
+    "no dressing" IS its identity. cn's inline railing was lifted to a
+    shared quayRail() and ca's maple to mapleTree(); all art stays
+    deterministic, filter-free, inside the documented free strips
+    (bottom strip y498–536, west cottage row, skyline band), clear of
+    the south-road crossing (x≈35–66) and the flatiron flagpole
+    (x268–282).
