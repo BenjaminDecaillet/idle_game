@@ -77,7 +77,9 @@ import {
   buyMarketingCampaign,
   buyUpgrade,
   buyWallpaper,
-  buyWorkstation,
+  buyWorkstations,
+  maxAffordableStations,
+  stationCostN,
   companyAtSite,
   companyIncome,
   companySalaries,
@@ -101,7 +103,6 @@ import {
   renameCompany,
   rerollCandidates,
   setActiveProject,
-  stationCost,
   buyVsCoinBoost,
   companyCost,
   hireCost,
@@ -230,6 +231,8 @@ export class UI {
   private officeFloorIdx = 0;
   /** Candidate popup (bottom sheet on the Office tab). */
   private hireOpen = false;
+  /** Desk-shop buy quantity (UI-only, resets each session — not saved). */
+  private buyQty: 1 | 10 | 'max' = 1;
   /** Live random-event offer awaiting a choice (modal on any tab). */
   private pendingEvent: EventOffer | null = null;
   /** Offline earnings shown by the current Welcome-back modal (doubler). */
@@ -1914,6 +1917,17 @@ export class UI {
       </div>`;
   }
 
+  /**
+   * How many desks of a def the current buy-quantity mode means right now.
+   * 0 = nothing possible (renders as a disabled ×1 button).
+   */
+  private effectiveBuyCount(defId: string): number {
+    const c = activeCompany(this.state);
+    const room = Math.max(0, deskCapacity(c) - c.workstations.length);
+    if (this.buyQty === 'max') return maxAffordableStations(this.state, defId);
+    return Math.min(this.buyQty, room);
+  }
+
   /** Workstation shop: buy the next desk (it lands on the lowest open slot). */
   private renderWorkstationShop(): string {
     const s = this.state;
@@ -1921,8 +1935,15 @@ export class UI {
     const full = c.workstations.length >= deskCapacity(c);
     const shop = WORKSTATIONS.map((def) => {
       const owned = c.workstations.filter((w) => w.defId === def.id).length;
-      const cost = stationCost(c, def.id);
-      const affordable = !full && walletMoney(s) >= cost;
+      // The button always shows the real aggregate for the selected
+      // quantity; Max falls back to a disabled ×1 when nothing is possible.
+      const n = Math.max(1, this.effectiveBuyCount(def.id));
+      const cost = stationCostN(c, def.id, n);
+      const affordable = !full && this.effectiveBuyCount(def.id) >= 1 && walletMoney(s) >= cost;
+      const label =
+        n > 1
+          ? t('ui.buyNBtn', { n, price: formatMoney(cost) })
+          : t('ui.buyBtn', { price: formatMoney(cost) });
       return `
       <div class="card">
         <div class="card-row">
@@ -1933,14 +1954,23 @@ export class UI {
           </div>
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                   data-action="buy-station:${def.id}">
-            ${t('ui.buyBtn', { price: formatMoney(cost) })}
+            ${label}
           </button>
         </div>
       </div>`;
     }).join('');
+    const qtyBtn = (mode: 1 | 10 | 'max', label: string) => `
+      <button class="btn btn-small ${this.buyQty === mode ? 'btn-primary' : ''}"
+              ${this.buyQty === mode ? 'disabled' : ''} data-action="buy-qty:${mode}">
+        ${label}
+      </button>`;
     return `
       <div class="section-head"><h2>${t('ui.buyWorkstations')}</h2>
-        ${full ? `<span class="muted">🈵 ${t('ui.officeFullBadge')}</span>` : ''}
+        ${
+          full
+            ? `<span class="muted">🈵 ${t('ui.officeFullBadge')}</span>`
+            : `<span class="qty-toggle">${qtyBtn(1, '×1')}${qtyBtn(10, '×10')}${qtyBtn('max', t('ui.qtyMax'))}</span>`
+        }
       </div>
       ${shop}`;
   }
@@ -2483,7 +2513,10 @@ export class UI {
         break;
       }
       case 'buy-station':
-        error = buyWorkstation(s, arg);
+        error = buyWorkstations(s, arg, Math.max(1, this.effectiveBuyCount(arg)));
+        break;
+      case 'buy-qty':
+        this.buyQty = arg === 'max' ? 'max' : (Number(arg) as 1 | 10);
         break;
       case 'upgrade-desk':
         error = upgradeDesk(s, Number(arg));

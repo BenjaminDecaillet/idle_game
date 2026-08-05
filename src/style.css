@@ -1485,6 +1485,9 @@ button.site-card {
   justify-content: flex-end;
 }
 
+.qty-toggle {
+  display: inline-flex;
+  gap: 4px;
 .over-capacity {
   color: var(--red-deep);
   font-weight: 800;

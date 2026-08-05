@@ -424,6 +424,8 @@ export const en = {
   'ui.buyWorkstations': 'Buy workstations',
   'ui.officeFullBadge': 'Office full — add a floor',
   'ui.buyBtn': 'Buy {price}',
+  'ui.buyNBtn': 'Buy ×{n} {price}',
+  'ui.qtyMax': 'Max',
   'ui.applied': 'Applied',
   'ui.applyHere': 'Apply here',
   'ui.isDefault': 'Default',
