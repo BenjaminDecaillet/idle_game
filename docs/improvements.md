@@ -98,6 +98,69 @@ follow-ups (more bespoke scenes, more pets/cosmetic waves).
     and re-decide the save-reset policy (CLAUDE.md beta clause). Keep this
     item at the top of any release-prep session.
 
+## From the 2026-08 state-of-the-art survey
+
+Source: [idle-game-state-of-the-art.md](idle-game-state-of-the-art.md)
+(licences checked there; adapt ideas, never copy code).
+
+23. **Earned automation** — auto-restart training, auto-hire, auto-buy
+    desks as mission/milestone rewards, VsCoin early-unlock tier that
+    sells convenience-speed, not power (Antimatter Dimensions pattern).
+    Engine flags live in `tick()` so offline simulation gets them free.
+
+24. **Ownership milestone multipliers** — stepped output bonuses at
+    25/50/100 desks/employees per company; converts the smooth decay
+    curve into a goal staircase and feeds missions durable counters
+    (Pecorella Part II). Needs balance-designer before numbers land.
+
+25. ~~**Payback-time on purchase buttons**~~ — promoted to an immediate
+    implementation pick of the survey (shipping as its own feat branch).
+
+26. **Quarterly market seasons** — deterministic boom/stable/crunch/
+    recovery cycle from elapsed game time inside `tick()`, multiplying
+    sector payouts; offline-safe, no randomness (Kittens Game seasons).
+
+27. **App badge for finished timers** — `navigator.setAppBadge(n)` with
+    completed-but-unseen timed actions + claimable missions on
+    visibilitychange; no permission prompt, no backend; clear on focus.
+
+28. **Recruiters tier** — producer-of-producers: recruiting capacity
+    generates candidates/junior hires over time for late-game bulk
+    (Swarm Simulator chain). Pairs with #23.
+
+29. **Market-scouting expeditions** — timed action before a country
+    unlock returning a "market report" (flavor + economy modifiers
+    preview); makes expansion an authored chapter opening (Level13).
+
+30. **Deep prestige: differentiated exits + founder points** —
+    Acquisition/IPO/spin-off exit types keyed to different durable
+    metrics, awarding allocatable respec-able perk points (Evolve +
+    Trimps). Post-1.0; current single prestige stays until then.
+
+31. **Viral-moment clickables** — presence-gated short-lived bonus
+    events (golden-cookie analog) via injectable rand, online-only by
+    design; durable catch counter so missions stay offline-safe.
+
+32. **Scene instancing pass** — `<symbol>`/`<use>` for repeated office
+    furniture + persona-seeded negative animation-delay so loops don't
+    reset phase across re-renders; do when scenes pass ~20 personas.
+
+33. **Floating "+$" overlay** — pooled spans, transform/opacity only,
+    coalesced bursts, big pops reserved for VsCoin/milestones, behind
+    prefers-reduced-motion + settings toggle (extends fx.ts bursts).
+
+34. **Reduced-motion & FX toggles** — honor `prefers-reduced-motion`,
+    add Animations/Floating-numbers settings, pause scene animation on
+    `document.hidden`.
+
+35. **Colorblind redundancy audit** — affordability/mission/rarity
+    states must not encode by hue alone (add icons/locks/labels);
+    Okabe-Ito palette for categorical accents.
+
+36. **Offline cap as content** — show the 24 h cap honestly in the
+    welcome-back modal; later sell/award cap extensions ("cloud
+    infrastructure upgrades", Cookie Clicker precedent).
+
 ## Dropped from the previous list
 
 - ~~VsCoin starter bundle as first IAP~~ — superseded: the VsCoin tab ships

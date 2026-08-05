@@ -25,6 +25,18 @@ export const en = {
   'ui.confirm': 'That’s it!',
   'ui.tutorialStep': 'Step {step} / {total}',
 
+  // --- Welcome back: itemized offline report --------------------------------
+  'ui.welcomeBackTitle': 'Welcome back!',
+  'ui.welcomeBackAway': 'While you were away for {time}, your team kept shipping:',
+  'ui.backToWork': 'Back to work',
+  'ui.awayProjects': 'Projects shipped',
+  'ui.awayTrainings': 'Trainings completed',
+  'ui.awayPromotions': 'Promotions earned',
+  'ui.awayDeskUpgrades': 'Desk renovations finished',
+  'ui.awayFloors': 'Floors built',
+  'ui.awayCompanies': 'Companies opened',
+  'ui.awayQuits': 'Employees quit',
+
   // --- Missions & VsCoin ---------------------------------------------------
   'ui.missions': 'Missions',
   'ui.claim': 'Claim',
@@ -408,6 +420,15 @@ export const en = {
   'ui.emptyDesk': 'empty',
   'ui.maxHeight': 'Max height reached',
   'ui.awayTraining': 'Away at training',
+  'ui.staffCount': '{count} / {cap} employees',
+  'ui.hireCapBanner':
+    'All {cap} desks are occupied — fire, train or promote someone first. A stronger team beats a bigger one!',
+  'ui.overCapacity': 'Over capacity: {count} employees for {cap} desk slots — nobody works without a desk.',
+  'error.officeAtCapacity': 'All desks are occupied — fire, train or promote someone first.',
+  'ui.badgeTraining': 'Training',
+  'ui.badgePromotion': 'Promotion',
+  'ui.standNeedsDesk': '{name} — needs a desk!',
+  'ui.standBackIn': '{name} — back in {time}',
   'ui.officeHint':
     'Tap your people to hear from them. Seating is automatic: strongest workers get the best desks. Each floor adds {slots} desk slots.',
   'ui.waitingDesk': 'Waiting for a desk (producing nothing):',
@@ -415,6 +436,9 @@ export const en = {
   'ui.buyWorkstations': 'Buy workstations',
   'ui.officeFullBadge': 'Office full — add a floor',
   'ui.buyBtn': 'Buy {price}',
+  'ui.paybackIn': 'Pays for itself in {time} (at current rates)',
+  'ui.buyNBtn': 'Buy ×{n} {price}',
+  'ui.qtyMax': 'Max',
   'ui.applied': 'Applied',
   'ui.applyHere': 'Apply here',
   'ui.isDefault': 'Default',

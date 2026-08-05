@@ -21,6 +21,18 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.confirm': 'C’est parti !',
   'ui.tutorialStep': 'Étape {step} / {total}',
 
+  // --- Bon retour : rapport hors-ligne détaillé ------------------------------
+  'ui.welcomeBackTitle': 'Bon retour !',
+  'ui.welcomeBackAway': 'Pendant votre absence de {time}, votre équipe a continué à livrer :',
+  'ui.backToWork': 'Au travail',
+  'ui.awayProjects': 'Projets livrés',
+  'ui.awayTrainings': 'Formations terminées',
+  'ui.awayPromotions': 'Promotions obtenues',
+  'ui.awayDeskUpgrades': 'Rénovations de bureaux terminées',
+  'ui.awayFloors': 'Étages construits',
+  'ui.awayCompanies': 'Sociétés ouvertes',
+  'ui.awayQuits': 'Employés démissionnaires',
+
   // --- Missions & VsCoin ---------------------------------------------------
   'ui.missions': 'Missions',
   'ui.claim': 'Réclamer',
@@ -409,6 +421,15 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.emptyDesk': 'vide',
   'ui.maxHeight': 'Hauteur maximale atteinte',
   'ui.awayTraining': 'En formation',
+  'ui.staffCount': '{count} / {cap} employés',
+  'ui.hireCapBanner':
+    'Les {cap} bureaux sont tous occupés — licenciez, formez ou promouvez quelqu’un d’abord. Une équipe plus forte vaut mieux qu’une équipe plus grande !',
+  'ui.overCapacity': 'Sur-effectif : {count} employés pour {cap} bureaux — personne ne travaille sans bureau.',
+  'error.officeAtCapacity': 'Tous les bureaux sont occupés — licenciez, formez ou promouvez quelqu’un d’abord.',
+  'ui.badgeTraining': 'Formation',
+  'ui.badgePromotion': 'Promotion',
+  'ui.standNeedsDesk': '{name} — attend un bureau !',
+  'ui.standBackIn': '{name} — de retour dans {time}',
   'ui.officeHint':
     'Touchez vos employés pour les entendre. Le placement est automatique : les meilleurs employés obtiennent les meilleurs bureaux. Chaque étage ajoute {slots} emplacements.',
   'ui.waitingDesk': 'En attente d’un bureau (aucune production) :',
@@ -416,6 +437,9 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.buyWorkstations': 'Acheter des postes de travail',
   'ui.officeFullBadge': 'Bureau complet — ajoutez un étage',
   'ui.buyBtn': 'Acheter {price}',
+  'ui.paybackIn': 'Rentabilisé en {time} (au rythme actuel)',
+  'ui.buyNBtn': 'Acheter ×{n} {price}',
+  'ui.qtyMax': 'Max',
   'ui.applied': 'Appliqué',
   'ui.applyHere': 'Appliquer ici',
   'ui.isDefault': 'Par défaut',

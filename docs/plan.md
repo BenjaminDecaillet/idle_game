@@ -22,6 +22,10 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 
 ## Roadmap / TODOs (in suggested order)
 
+- [x] **Payback-time on desk cards** — display-only "pays for itself in X" derived via `deskPaybackSec` (exact HUD-income delta of a ghost autoSeat pairing, docs/balance.md Phase Q); hidden when the desk wouldn't move income (nobody to seat, office full)
+- [x] **Itemized welcome-back report** — `simulateOfflineReport` aggregates tick events per offline chunk (projects, trainings, promotions, renovations, floors, companies, quits) and the welcome-back modal itemizes the non-zero lines under the earnings figure; previously hardcoded modal strings migrated to i18n (EN+FR); doubler untouched
+- [x] **Bulk desk buying** — ×1/×10/Max quantity toggle on the workstation shop; closed-form-equivalent aggregate pricing (`stationCostN`, per-step rounding identical to sequential buys), `maxAffordableStations` bounded by wallet and free slots, all-or-nothing `buyWorkstations`; quantity is UI-local (not saved)
+- [x] **Idle-genre state-of-the-art survey** — OSS repos (licences checked), design theory and QoL conventions distilled into [idle-game-state-of-the-art.md](idle-game-state-of-the-art.md); backlog items #23-#36 in [improvements.md](improvements.md); immediate picks: bulk buy, itemized welcome-back report, payback-time display (export/import turned out to be already shipped)
 - [ ] **Playtest & balance tuning** — adjust `data.ts` values after real play sessions
 - [x] **Monetization groundwork** — timed boosts (`grantBoost`), `timeSkip`, HUD boost badge, save migration (v2), dev console API (`isv.boost/skip`)
 - [x] **Personas & interactivity** — procedural SVG characters (deterministic per worker), animated office floor (typing at desks, standing when desk-less), tap-to-poke speech bubbles, golden briefcase tap bonus (2× 60s via `grantBoost` 'event'), money pop on payouts
@@ -54,6 +58,8 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 - [x] **Balance simulation harness** (balance.md Phase H, decisions.md 36) — greedy bot through tick(): CI pacing guards + `npm run balance:sim` milestone tables
 - [x] **Bespoke city scenes, first wave** (decisions.md 37) — Swiss lakeside, Saudi desert highway and Shanghai waterfront backdrops via a CountryTheme hook; plots and roads untouched; remaining countries = same-hook content follow-up
 - [x] **Bespoke city scenes, second wave** (decisions.md 38) — Canadian lakeshore, Venetian canal, Seine quay and Berlin Spree backdrops; every country except the US reference map is now bespoke
+- [x] **Desk-slot headcount cap** — hiring hard-blocked once every desk slot (filled or empty, `floors × FLOOR_CAPACITY`) has an employee (`atHeadcountCap` + `error.officeAtCapacity`); hire sheet shows a cap banner pointing at fire/train/promote and disables hire buttons; live `n / cap` counters in the building header and hire sheet; over-capacity saves tolerated (blocked hiring + warning banner, nobody fired)
+- [x] **Floor training visibility** — training/promoting employees surface on the enlarged floor view (and the building strip) as tiles with a state badge (gold Training vs blue Promotion), live progress bar and countdown, updated at 60 fps via targeted writes so the animated scene stays truthful without re-rendering
 - [ ] **Monetization Phase 0** — analytics (PostHog/Plausible) + privacy policy → see [monetization.md](monetization.md)
 - [x] **Shop/Boost tab** — closed by the workforce/shop update above: Shop + VsCoin tabs over `spendVsCoin`/`grantVsCoin`; the rewarded-ad boost offers still plug in via `grantBoost`/`timeSkip` when Phase 2 starts
 - [ ] **Rewarded ads** — portal SDK (CrazyGames/Poki) or H5 Games Ads + consent banner

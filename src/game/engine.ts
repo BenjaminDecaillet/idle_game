@@ -564,6 +564,16 @@ export function deskCapacity(company: CompanyState): number {
   return company.floors * FLOOR_CAPACITY;
 }
 
+/**
+ * Headcount is hard-capped by desk slots (filled or empty): one employee
+ * per slot the building offers, growing as floors complete. Over-capacity
+ * states (e.g. a save predating the cap) are tolerated — nobody is fired,
+ * hiring just stays blocked until room frees up.
+ */
+export function atHeadcountCap(company: CompanyState): boolean {
+  return company.workers.length >= deskCapacity(company);
+}
+
 /** The floor a workstation sits on (by purchase order). */
 export function stationFloor(company: CompanyState, stationInstanceId: number): number {
   const index = company.workstations.findIndex((w) => w.id === stationInstanceId);
@@ -625,6 +635,9 @@ export function workerRate(
   company: CompanyState,
   worker: WorkerState,
   projectId: string,
+  // What-if hook (desk payback preview): rate as if the worker sat at a
+  // desk with this multiplier instead of their real one.
+  stationMultOverride?: number,
 ): number {
   const tier = tierById(worker.tierId);
   const projectSpec = projectDefById(projectId).specialization;
@@ -635,7 +648,7 @@ export function workerRate(
   return (
     tier.baseRate *
     skillMultiplier(worker) *
-    stationMultiplier(company, worker.stationId) *
+    (stationMultOverride ?? stationMultiplier(company, worker.stationId)) *
     globalOutputMultiplier(state, company) *
     specBonus *
     siteBonus *
@@ -716,6 +729,62 @@ export function stationCost(company: CompanyState, defId: string): number {
   const def = stationDefById(defId);
   const owned = company.workstations.filter((w) => w.defId === defId).length;
   return Math.round(def.baseCost * Math.pow(def.costGrowth, owned) * companyCostScale(company));
+}
+
+/**
+ * Display-only: seconds for a new desk of defId to pay for itself at
+ * current rates (docs/balance.md Phase Q). Mirrors autoSeat's pairing with
+ * the hypothetical desk appended in purchase order (floors are positional)
+ * and compares the exact HUD income before/after — salaries cancel out.
+ * Returns null when the desk would not change income right now: no free
+ * worker and no reshuffle where it outranks an occupied desk.
+ */
+export function deskPaybackSec(
+  state: GameState,
+  company: CompanyState,
+  defId: string,
+): number | null {
+  if (company.workstations.length >= deskCapacity(company)) return null;
+  const cost = stationCost(company, defId);
+
+  // Desk slots as autoSeat ranks them (renovation sites excluded, def
+  // multiplier desc), each carrying its chair-adjusted output multiplier
+  // and its floor's project.
+  type Slot = { defMult: number; mult: number; projectId: string };
+  const slots: Slot[] = [];
+  company.workstations.forEach((st, i) => {
+    if (stationUnderUpgrade(company, st.id)) return;
+    slots.push({
+      defMult: stationDefById(st.defId).multiplier,
+      mult: stationMultiplier(company, st.id),
+      projectId: floorProject(company, Math.floor(i / FLOOR_CAPACITY)),
+    });
+  });
+  const ghostDef = stationDefById(defId);
+  const chairBonus = 1 + 0.1 * (company.upgrades['chairs'] ?? 0);
+  slots.push({
+    defMult: ghostDef.multiplier,
+    mult: 1 + (ghostDef.multiplier - 1) * chairBonus,
+    projectId: floorProject(company, Math.floor(company.workstations.length / FLOOR_CAPACITY)),
+  });
+  slots.sort((a, b) => b.defMult - a.defMult);
+
+  const workers = company.workers
+    .filter((w) => !workerBusy(company, w.id))
+    .sort((a, b) => seatPotential(company, b) - seatPotential(company, a));
+
+  let after = 0;
+  for (let i = 0; i < workers.length && i < slots.length; i++) {
+    const slot = slots[i];
+    const project = getProject(company, slot.projectId);
+    after +=
+      workerRate(state, company, workers[i], slot.projectId, slot.mult) *
+      (project.currentReward / project.currentWork);
+  }
+  const before = companyIncome(state, company) + companySalaries(company);
+  const delta = after - before;
+  if (delta <= 1e-9) return null;
+  return cost / delta;
 }
 
 export function upgradeCost(company: CompanyState, upgradeId: string): number {
@@ -1451,22 +1520,61 @@ function tickCountry(
   }
 }
 
+/** What happened while the player was away — fuels the welcome-back modal. */
+export interface OfflineReport {
+  earnings: number;
+  projectsCompleted: number;
+  trainingsDone: number;
+  promotionsDone: number;
+  deskUpgradesDone: number;
+  floorsBuilt: number;
+  companiesBuilt: number;
+  quits: number;
+}
+
 /**
  * Simulate offline time in coarse chunks using the same tick logic, so
- * offline progress obeys exactly the same rules as online play.
- * Returns total money earned while away.
+ * offline progress obeys exactly the same rules as online play. The
+ * per-chunk tick events are aggregated into an itemized report.
  */
-export function simulateOffline(state: GameState, elapsedSec: number, capSec: number): number {
+export function simulateOfflineReport(
+  state: GameState,
+  elapsedSec: number,
+  capSec: number,
+): OfflineReport {
   const simSec = Math.min(elapsedSec, capSec);
   const before = state.totalEarned;
+  const report: OfflineReport = {
+    earnings: 0,
+    projectsCompleted: 0,
+    trainingsDone: 0,
+    promotionsDone: 0,
+    deskUpgradesDone: 0,
+    floorsBuilt: 0,
+    companiesBuilt: 0,
+    quits: 0,
+  };
   const CHUNK = 60;
   let remaining = simSec;
   while (remaining > 0) {
     const dt = Math.min(CHUNK, remaining);
-    tick(state, dt);
+    const events = tick(state, dt);
+    report.projectsCompleted += events.completions.length;
+    report.trainingsDone += events.trainingsDone.length;
+    report.promotionsDone += events.promotionsDone.length;
+    report.deskUpgradesDone += events.deskUpgradesDone.length;
+    report.floorsBuilt += events.floorBuildsDone.length;
+    report.companiesBuilt += events.companyBuildsDone.length;
+    report.quits += events.quits.length;
     remaining -= dt;
   }
-  return state.totalEarned - before;
+  report.earnings = state.totalEarned - before;
+  return report;
+}
+
+/** Money-only variant, kept for callers that don't need the breakdown. */
+export function simulateOffline(state: GameState, elapsedSec: number, capSec: number): number {
+  return simulateOfflineReport(state, elapsedSec, capSec).earnings;
 }
 
 // ---------------------------------------------------------------------------
@@ -1479,6 +1587,7 @@ export function hireWorker(state: GameState, candidateIndex: number): string | n
   const company = activeCompany(state);
   const candidate = company.candidates[candidateIndex];
   if (!candidate) return 'error.candidateNotFound';
+  if (atHeadcountCap(company)) return 'error.officeAtCapacity';
   const cost = hireCost(company, candidate.tierId);
   if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
@@ -1514,15 +1623,48 @@ export function fireWorker(state: GameState, workerId: number): string | null {
 }
 
 export function buyWorkstation(state: GameState, defId: string): string | null {
+  return buyWorkstations(state, defId, 1);
+}
+
+/**
+ * Total cost of the next n workstations of a def. Summed buy-by-buy (each
+ * step rounds like stationCost) so bulk price === n sequential purchases.
+ */
+export function stationCostN(company: CompanyState, defId: string, n: number): number {
+  const def = stationDefById(defId);
+  const owned = company.workstations.filter((w) => w.defId === defId).length;
+  const scale = companyCostScale(company);
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    total += Math.round(def.baseCost * Math.pow(def.costGrowth, owned + i) * scale);
+  }
+  return total;
+}
+
+/** How many desks of a def the wallet and remaining slots allow right now. */
+export function maxAffordableStations(state: GameState, defId: string): number {
   const country = activeCountry(state);
   const company = activeCompany(state);
-  if (company.workstations.length >= deskCapacity(company)) {
+  const room = Math.max(0, deskCapacity(company) - company.workstations.length);
+  let n = 0;
+  while (n < room && country.money >= stationCostN(company, defId, n + 1)) n++;
+  return n;
+}
+
+/** Buy n workstations of a def at once — all-or-nothing, no partial buys. */
+export function buyWorkstations(state: GameState, defId: string, n: number): string | null {
+  const country = activeCountry(state);
+  const company = activeCompany(state);
+  if (n < 1) return 'error.officeFull';
+  if (company.workstations.length + n > deskCapacity(company)) {
     return 'error.officeFull';
   }
-  const cost = stationCost(company, defId);
+  const cost = stationCostN(company, defId, n);
   if (country.money < cost) return 'error.notEnoughMoney';
   country.money -= cost;
-  company.workstations.push({ id: state.nextEntityId++, defId });
+  for (let i = 0; i < n; i++) {
+    company.workstations.push({ id: state.nextEntityId++, defId });
+  }
   autoSeat(company);
   return null;
 }
@@ -2071,26 +2213,28 @@ const WORKSTATION_ORDER = ['basic', 'standing', 'dual', 'corner'];
  * workers (for the active project) get the best desks. Workers without a
  * desk produce nothing.
  */
+/** autoSeat's ranking — who deserves the best desk (spec vs main project). */
+export function seatPotential(company: CompanyState, w: WorkerState): number {
+  const tier = tierById(w.tierId);
+  const specBonus =
+    projectDefById(company.activeProjectId).specialization === w.specialization
+      ? SPEC_MATCH_BONUS
+      : 1;
+  return tier.baseRate * skillMultiplier(w) * specBonus;
+}
+
 export function autoSeat(company: CompanyState): void {
   // Desks under renovation are construction sites — nobody sits there.
   const stations = company.workstations
     .filter((w) => !stationUnderUpgrade(company, w.id))
     .sort((a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier);
-  const potential = (w: WorkerState) => {
-    const tier = tierById(w.tierId);
-    const specBonus =
-      projectDefById(company.activeProjectId).specialization === w.specialization
-        ? SPEC_MATCH_BONUS
-        : 1;
-    return tier.baseRate * skillMultiplier(w) * specBonus;
-  };
   // Workers in training or being promoted are off the floor: no desk.
   for (const w of company.workers) {
     if (workerBusy(company, w.id)) w.stationId = null;
   }
   const workers = company.workers
     .filter((w) => !workerBusy(company, w.id))
-    .sort((a, b) => potential(b) - potential(a));
+    .sort((a, b) => seatPotential(company, b) - seatPotential(company, a));
   for (let i = 0; i < workers.length; i++) {
     workers[i].stationId = i < stations.length ? stations[i].id : null;
   }
