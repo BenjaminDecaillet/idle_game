@@ -1957,14 +1957,13 @@ export class UI {
     const full = c.workstations.length >= deskCapacity(c);
     const shop = WORKSTATIONS.map((def) => {
       const owned = c.workstations.filter((w) => w.defId === def.id).length;
-      const cost = stationCost(c, def.id);
-      const affordable = !full && walletMoney(s) >= cost;
-      const payback = full ? null : deskPaybackSec(s, c, def.id);
       // The button always shows the real aggregate for the selected
       // quantity; Max falls back to a disabled ×1 when nothing is possible.
       const n = Math.max(1, this.effectiveBuyCount(def.id));
       const cost = stationCostN(c, def.id, n);
       const affordable = !full && this.effectiveBuyCount(def.id) >= 1 && walletMoney(s) >= cost;
+      // Payback models the NEXT single desk — only honest in ×1 mode.
+      const payback = full || n > 1 ? null : deskPaybackSec(s, c, def.id);
       const label =
         n > 1
           ? t('ui.buyNBtn', { n, price: formatMoney(cost) })

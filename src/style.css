@@ -1512,9 +1512,13 @@ button.site-card {
 .report-row.report-bad {
   background: #ffe3e1;
   color: var(--red-deep);
+}
+
 .qty-toggle {
   display: inline-flex;
   gap: 4px;
+}
+
 .over-capacity {
   color: var(--red-deep);
   font-weight: 800;
