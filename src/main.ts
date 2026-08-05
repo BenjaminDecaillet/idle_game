@@ -26,6 +26,9 @@ fx.enabled = state.settings.particles;
 // AudioContext (autoplay policy) — the first click does it.
 fx.setMusicVolume(state.settings.musicVolume);
 fx.setMusic(state.settings.music);
+fx.floatsEnabled = state.settings.floatingNumbers;
+// Ambient scene animation obeys the Animations toggle (CSS pauses it).
+document.body.classList.toggle('anim-off', !state.settings.animations);
 
 const ui = new UI(root, state, fx, (next) => {
   state = next;
@@ -62,10 +65,11 @@ function loop(now: number): void {
   // Payout FX only for the company currently on screen; money still counts.
   const visible = events.completions.filter((c) => c.companyId === shownCompanyId);
   if (visible.length > 0) {
+    // Coalesce a frame's payouts into ONE burst + float showing the sum —
+    // payout storms stay readable instead of stacking labels.
     const origin = ui.payoutOrigin();
-    for (const c of visible.slice(0, 3)) {
-      fx.payoutBurst(origin.x, origin.y, c.reward);
-    }
+    const total = visible.reduce((sum, c) => sum + c.reward, 0);
+    fx.payoutBurst(origin.x, origin.y, total);
     ui.moneyPulse();
   }
   for (const done of events.trainingsDone) {
@@ -127,6 +131,8 @@ function updateAppBadge(): void {
 // When the tab is hidden or the app is closed, persist immediately so
 // offline progress picks up from the right timestamp.
 document.addEventListener('visibilitychange', () => {
+  // Pause ambient scene animation while the document is hidden (battery).
+  document.body.classList.toggle('scene-paused', document.visibilityState === 'hidden');
   if (document.visibilityState === 'hidden') {
     saveGame(state);
     updateAppBadge();

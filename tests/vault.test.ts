@@ -408,7 +408,7 @@ describe('Vault migration', () => {
       ownedMapThemes: ['daylight'],
       mapThemeId: 'daylight',
       boosts: [],
-      settings: { sound: true, particles: true, music: false, musicVolume: 0.5, timeScale: 1, language: 'auto' },
+      settings: { sound: true, particles: true, animations: true, floatingNumbers: true, music: false, musicVolume: 0.5, timeScale: 1, language: 'auto' },
       story: { seen: [], queue: [] },
       tutorial: { step: 0, done: false, giftGiven: false },
       player: { name: 'Founder', look: { skin: 0, hair: 0, hairstyle: 0, eyeStyle: 0, mouthStyle: 0, facialHair: 0, outfit: 0, accessory: 0, portrait: 0 } },

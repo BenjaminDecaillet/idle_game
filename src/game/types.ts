@@ -261,6 +261,10 @@ export interface ProjectState {
 export interface Settings {
   sound: boolean;
   particles: boolean;
+  /** Ambient scene animation (bobbing personas, cars, pets). */
+  animations: boolean;
+  /** Floating "+$" numbers on payouts and claims. */
+  floatingNumbers: boolean;
   /** Chiptune theme loop — off by default; audio starts on a user gesture. */
   music: boolean;
   /** Music volume 0..1 (independent of sound effects). */

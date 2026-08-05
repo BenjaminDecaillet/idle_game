@@ -5,6 +5,7 @@ import {
   COUNTRIES,
   FLOOR_CAPACITY,
   OFFLINE_CAP_HOURS,
+  missionById,
   MAP_THEMES,
   MARKETING_DURATION_SEC,
   MARKETING_MULT,
@@ -2402,6 +2403,12 @@ export class UI {
             <button class="btn" data-action="toggle-particles">
               ${icon('sparkles', 16)} ${s.settings.particles ? t('ui.effectsOn') : t('ui.effectsOff')}
             </button>
+            <button class="btn" data-action="toggle-animations">
+              🎬 ${s.settings.animations ? t('ui.animationsOn') : t('ui.animationsOff')}
+            </button>
+            <button class="btn" data-action="toggle-floats">
+              💲 ${s.settings.floatingNumbers ? t('ui.floatsOn') : t('ui.floatsOff')}
+            </button>
             <button class="btn" data-action="cycle-speed" title="${t('ui.speedTitle')}">
               ${icon('speed', 16)} ${t('ui.speedBtn', { scale: s.settings.timeScale })}
             </button>
@@ -2447,6 +2454,12 @@ export class UI {
   private burstAt(el: HTMLElement): void {
     const r = el.getBoundingClientRect();
     this.fx.burst(r.left + r.width / 2, r.top + r.height / 2);
+  }
+
+  /** Big gold float above an element (VsCoin claims, premium moments). */
+  private bigFloatAt(el: HTMLElement, text: string): void {
+    const r = el.getBoundingClientRect();
+    this.fx.bigFloat(r.left + r.width / 2, r.top, text);
   }
 
   private handleClick(e: Event): void {
@@ -2587,14 +2600,17 @@ export class UI {
       case 'set-pet':
         error = setCompanyPet(s, arg === 'none' ? null : arg);
         break;
-      case 'open-vault':
+      case 'open-vault': {
+        const vaultPayout = s.vault.amount;
         error = openVault(s);
         if (!error) {
           this.toast(`🐷 ${t('ui.vaultOpened')}`, 'info');
           this.fx.coinChime();
           this.burstAt(target);
+          this.bigFloatAt(target, `+${formatMoney(vaultPayout)}`);
         }
         break;
+      }
       case 'buy-pack':
         error = buyShopPack(s, arg);
         if (!error) {
@@ -2644,16 +2660,20 @@ export class UI {
           this.toast(`💎 ${t('ui.claimed')}`, 'info');
           this.fx.claimChime();
           this.burstAt(target);
+          this.bigFloatAt(target, `+${missionById(arg).reward} 🪙`);
         }
         break;
-      case 'claim-daily':
+      case 'claim-daily': {
+        const contract = s.daily.contracts.find((c) => c.id === arg);
         error = claimDailyContract(s, arg);
         if (!error) {
           this.toast(`📅 ${t('ui.claimed')}`, 'info');
           this.fx.claimChime();
           this.burstAt(target);
+          if (contract) this.bigFloatAt(target, `+${contract.reward} 🪙`);
         }
         break;
+      }
       case 'buy-vscoin-boost':
         error = buyVsCoinBoost(s);
         if (!error) this.toast(`🚀 ${t('ui.vsCoinBoostBought')}`, 'info');
@@ -2709,6 +2729,14 @@ export class UI {
       case 'toggle-particles':
         s.settings.particles = !s.settings.particles;
         this.fx.enabled = s.settings.particles;
+        break;
+      case 'toggle-animations':
+        s.settings.animations = !s.settings.animations;
+        document.body.classList.toggle('anim-off', !s.settings.animations);
+        break;
+      case 'toggle-floats':
+        s.settings.floatingNumbers = !s.settings.floatingNumbers;
+        this.fx.floatsEnabled = s.settings.floatingNumbers;
         break;
       case 'export-save': {
         const code = exportSave(s);

@@ -280,6 +280,8 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
     state.settings.language = 'auto';
   }
   state.settings.music = state.settings.music === true;
+  state.settings.animations = state.settings.animations !== false;
+  state.settings.floatingNumbers = state.settings.floatingNumbers !== false;
   state.settings.musicVolume = Number.isFinite(state.settings.musicVolume)
     ? Math.max(0, Math.min(1, state.settings.musicVolume))
     : 0.5;

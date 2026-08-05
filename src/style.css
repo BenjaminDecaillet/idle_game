@@ -1478,6 +1478,24 @@ button.site-card {
   .os-anim-neon {
     animation: none;
   }
+  /* OS preference also stills the ambient scene art (cars, flags, personas). */
+  #tab-content :is(svg, svg *) {
+    animation-play-state: paused !important;
+  }
+}
+
+/* Ambient scene animation pauses: the Animations setting, or the document
+   being hidden (battery). Scoped to the tab content's scene art + bobbing
+   DOM sprites so entrance animations (toasts, sheets) keep working. */
+body.anim-off #tab-content :is(svg, svg *),
+body.anim-off .os-anim-bob,
+body.anim-off .os-anim-twinkle,
+body.anim-off .os-anim-neon,
+body.scene-paused #tab-content :is(svg, svg *),
+body.scene-paused .os-anim-bob,
+body.scene-paused .os-anim-twinkle,
+body.scene-paused .os-anim-neon {
+  animation-play-state: paused !important;
 }
 
 .floor-actions {

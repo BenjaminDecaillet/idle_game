@@ -145,6 +145,8 @@ export function createInitialState(now = Date.now(), countryId: CountryId = DEFA
     settings: {
       sound: true,
       particles: true,
+      animations: true,
+      floatingNumbers: true,
       music: false,
       musicVolume: 0.5,
       timeScale: 1,
