@@ -429,7 +429,7 @@ export class UI {
     this.rebuildTimer += dt;
     if (this.rebuildTimer >= 0.5) {
       this.rebuildTimer = 0;
-      this.rebuildTab();
+      this.rebuildTab(true);
       this.updateNarrative();
     }
   }
@@ -768,9 +768,15 @@ export class UI {
     chip.dataset.action = `goal:${hint.tab}`;
   }
 
-  private rebuildTab(): void {
+  private rebuildTab(periodic = false): void {
     const content = document.getElementById('tab-content');
     if (!content) return;
+    // The refresh replaces innerHTML wholesale, which tears down any form
+    // control mid-interaction — an open <select> popup, a slider mid-drag.
+    // Periodic (2 Hz) repaints are deferred while such a control has focus;
+    // explicit rebuilds (clicks, change events) still go through, by which
+    // point the interaction is over.
+    if (periodic && this.formControlEngaged()) return;
     this.updateGoalChip();
     for (const t of TABS) {
       document.getElementById(`tab-btn-${t.id}`)?.classList.toggle('active', t.id === this.tab);
@@ -814,6 +820,19 @@ export class UI {
     }
     // Tab content just changed under the coach popup — re-anchor it.
     this.positionCoach();
+  }
+
+  /**
+   * True while the player is engaged with a form control anywhere in the UI
+   * (tab content, sheets): replacing its DOM node would close a native
+   * <select> popup or cancel a drag. Buttons are deliberately excluded —
+   * they retain focus after clicks and must not stall the refresh.
+   */
+  private formControlEngaged(): boolean {
+    const el = document.activeElement;
+    return (
+      el instanceof HTMLElement && this.root.contains(el) && el.matches('select, input, textarea')
+    );
   }
 
   /** Shop tab: funding rounds — VsCoin in, progression-scaled cash out. */
