@@ -416,6 +416,7 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.buyWorkstations': 'Acheter des postes de travail',
   'ui.officeFullBadge': 'Bureau complet — ajoutez un étage',
   'ui.buyBtn': 'Acheter {price}',
+  'ui.paybackIn': 'Rentabilisé en {time} (au rythme actuel)',
   'ui.applied': 'Appliqué',
   'ui.applyHere': 'Appliquer ici',
   'ui.isDefault': 'Par défaut',

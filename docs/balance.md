@@ -796,3 +796,59 @@ table as a curve reading, not an exact number.
 
 When a deliberate rebalance shifts the curve, rerun the table and move
 the guard anchors in the same commit.
+
+## Phase Q — desk "pays for itself in X" hint (display-only)
+
+Shop workstation cards show the payback time of buying **one** desk of a
+def. No balance numbers change; one pure helper in `src/game`.
+
+### Formula (exact HUD delta, not an approximation)
+
+`deskPaybackSec(state, company, defId) = stationCost(company, defId) / Δ`
+with `Δ = incomeAfter − incomeBefore` (in $/s):
+
+- `incomeBefore` = `companyIncome(state, company)` (what the HUD sums).
+- `incomeAfter` = same math on a **ghost seating**: append one desk of
+  `defId` at array position `workstations.length` (so `stationFloor` →
+  `floorProject` give its project), then re-pair exactly like `autoSeat`:
+  stations not under upgrade sorted by def multiplier desc × workers not
+  busy sorted by `tier.baseRate × skillMultiplier × spec-match` desc.
+- Salaries don't change, so Δ is pure reward-rate delta:
+  `Σ_projects (currentReward / currentWork) × ΔworkRate(project)`.
+- Implementation: give `workerRate` an optional station-multiplier
+  override (default `stationMultiplier(company, worker.stationId)`), pass
+  the **real** company for every multiplier (global/spec/site/traits) and
+  only the ghost pairing for desk multiplier + floor project. Never
+  mutate state; never re-derive the rate formula.
+
+Because it is the exact `companyIncome` delta, the hint can never
+contradict the HUD: after buying, income rises by exactly Δ.
+
+### Edge rules (exact)
+
+- **Δ ≤ 0** (no workers, or all seated and the new desk beats no
+  occupied desk): show **no number** (UI may caption "seats your next
+  hire"). No hypothetical-average-worker math — it would promise income
+  the HUD won't show. Note Δ > 0 is common even with everyone seated:
+  a better desk reshuffles the best worker onto it (autoSeat re-sorts).
+- **Soft cap**: ratio uses `currentReward / currentWork`, frozen at the
+  plateau — capped companies automatically show honest (long) paybacks.
+- **Busy workers** (training/promotion) count as absent, matching the
+  income the HUD shows right now.
+- **Debt**: same formula; debt interest ignored (second-order, display
+  only). **Boosts**: included via `globalOutputMultiplier` — optimistic
+  during a boost, but consistent with the boosted HUD income, which wins.
+- Label as "at current rates": the ratio drifts down per completion
+  (rewardGrowth 1.1 < workGrowth 1.13) until the cap freezes it.
+
+### Worked examples (garage, costScale 1, no upgrades, G = 1)
+
+1. **Early**: 1 intern (rate 0.5, skill 1) unseated, first Basic Desk
+   ($20), Landing ratio 15/30 = 0.5 → Δ = 0.5·1·0.5 = 0.25 $/s →
+   **payback 80 s**. First-session purchase feels instantly right.
+2. **Reshuffle (all seated)**: junior skill 5 (pot. 1.4) + intern skill 8
+   (0.85) on two Basic Desks; first Standing Desk ($250) seats the junior
+   (1.25×), intern keeps a basic → Δ = 1.4·(1.25−1)·(70/120) ≈ 0.20 $/s →
+   **payback ≈ 20 min**. An earned early-mid goal, not a trap.
+3. **No value**: 1 seated intern, second Basic Desk ($24): pairing
+   unchanged, Δ = 0 → **no hint shown** (desk buys ahead of hiring).

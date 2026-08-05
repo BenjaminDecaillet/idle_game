@@ -625,6 +625,9 @@ export function workerRate(
   company: CompanyState,
   worker: WorkerState,
   projectId: string,
+  // What-if hook (desk payback preview): rate as if the worker sat at a
+  // desk with this multiplier instead of their real one.
+  stationMultOverride?: number,
 ): number {
   const tier = tierById(worker.tierId);
   const projectSpec = projectDefById(projectId).specialization;
@@ -635,7 +638,7 @@ export function workerRate(
   return (
     tier.baseRate *
     skillMultiplier(worker) *
-    stationMultiplier(company, worker.stationId) *
+    (stationMultOverride ?? stationMultiplier(company, worker.stationId)) *
     globalOutputMultiplier(state, company) *
     specBonus *
     siteBonus *
@@ -716,6 +719,62 @@ export function stationCost(company: CompanyState, defId: string): number {
   const def = stationDefById(defId);
   const owned = company.workstations.filter((w) => w.defId === defId).length;
   return Math.round(def.baseCost * Math.pow(def.costGrowth, owned) * companyCostScale(company));
+}
+
+/**
+ * Display-only: seconds for a new desk of defId to pay for itself at
+ * current rates (docs/balance.md Phase Q). Mirrors autoSeat's pairing with
+ * the hypothetical desk appended in purchase order (floors are positional)
+ * and compares the exact HUD income before/after — salaries cancel out.
+ * Returns null when the desk would not change income right now: no free
+ * worker and no reshuffle where it outranks an occupied desk.
+ */
+export function deskPaybackSec(
+  state: GameState,
+  company: CompanyState,
+  defId: string,
+): number | null {
+  if (company.workstations.length >= deskCapacity(company)) return null;
+  const cost = stationCost(company, defId);
+
+  // Desk slots as autoSeat ranks them (renovation sites excluded, def
+  // multiplier desc), each carrying its chair-adjusted output multiplier
+  // and its floor's project.
+  type Slot = { defMult: number; mult: number; projectId: string };
+  const slots: Slot[] = [];
+  company.workstations.forEach((st, i) => {
+    if (stationUnderUpgrade(company, st.id)) return;
+    slots.push({
+      defMult: stationDefById(st.defId).multiplier,
+      mult: stationMultiplier(company, st.id),
+      projectId: floorProject(company, Math.floor(i / FLOOR_CAPACITY)),
+    });
+  });
+  const ghostDef = stationDefById(defId);
+  const chairBonus = 1 + 0.1 * (company.upgrades['chairs'] ?? 0);
+  slots.push({
+    defMult: ghostDef.multiplier,
+    mult: 1 + (ghostDef.multiplier - 1) * chairBonus,
+    projectId: floorProject(company, Math.floor(company.workstations.length / FLOOR_CAPACITY)),
+  });
+  slots.sort((a, b) => b.defMult - a.defMult);
+
+  const workers = company.workers
+    .filter((w) => !workerBusy(company, w.id))
+    .sort((a, b) => seatPotential(company, b) - seatPotential(company, a));
+
+  let after = 0;
+  for (let i = 0; i < workers.length && i < slots.length; i++) {
+    const slot = slots[i];
+    const project = getProject(company, slot.projectId);
+    after +=
+      workerRate(state, company, workers[i], slot.projectId, slot.mult) *
+      (project.currentReward / project.currentWork);
+  }
+  const before = companyIncome(state, company) + companySalaries(company);
+  const delta = after - before;
+  if (delta <= 1e-9) return null;
+  return cost / delta;
 }
 
 export function upgradeCost(company: CompanyState, upgradeId: string): number {
@@ -2071,26 +2130,28 @@ const WORKSTATION_ORDER = ['basic', 'standing', 'dual', 'corner'];
  * workers (for the active project) get the best desks. Workers without a
  * desk produce nothing.
  */
+/** autoSeat's ranking — who deserves the best desk (spec vs main project). */
+export function seatPotential(company: CompanyState, w: WorkerState): number {
+  const tier = tierById(w.tierId);
+  const specBonus =
+    projectDefById(company.activeProjectId).specialization === w.specialization
+      ? SPEC_MATCH_BONUS
+      : 1;
+  return tier.baseRate * skillMultiplier(w) * specBonus;
+}
+
 export function autoSeat(company: CompanyState): void {
   // Desks under renovation are construction sites — nobody sits there.
   const stations = company.workstations
     .filter((w) => !stationUnderUpgrade(company, w.id))
     .sort((a, b) => stationDefById(b.defId).multiplier - stationDefById(a.defId).multiplier);
-  const potential = (w: WorkerState) => {
-    const tier = tierById(w.tierId);
-    const specBonus =
-      projectDefById(company.activeProjectId).specialization === w.specialization
-        ? SPEC_MATCH_BONUS
-        : 1;
-    return tier.baseRate * skillMultiplier(w) * specBonus;
-  };
   // Workers in training or being promoted are off the floor: no desk.
   for (const w of company.workers) {
     if (workerBusy(company, w.id)) w.stationId = null;
   }
   const workers = company.workers
     .filter((w) => !workerBusy(company, w.id))
-    .sort((a, b) => potential(b) - potential(a));
+    .sort((a, b) => seatPotential(company, b) - seatPotential(company, a));
   for (let i = 0; i < workers.length; i++) {
     workers[i].stationId = i < stations.length ? stations[i].id : null;
   }

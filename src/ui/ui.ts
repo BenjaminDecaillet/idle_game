@@ -82,6 +82,7 @@ import {
   companySalaries,
   companyWorkRate,
   deskCapacity,
+  deskPaybackSec,
   effectiveWallpaper,
   floorCost,
   floorProject,
@@ -1840,6 +1841,7 @@ export class UI {
       const owned = c.workstations.filter((w) => w.defId === def.id).length;
       const cost = stationCost(c, def.id);
       const affordable = !full && walletMoney(s) >= cost;
+      const payback = full ? null : deskPaybackSec(s, c, def.id);
       return `
       <div class="card">
         <div class="card-row">
@@ -1847,6 +1849,11 @@ export class UI {
           <div class="card-main">
             <h3>${def.name}</h3>
             <span class="muted">×${def.multiplier} output · owned ${owned}</span>
+            ${
+              payback !== null
+                ? `<span class="muted payback">⏱ ${t('ui.paybackIn', { time: formatDuration(payback) })}</span>`
+                : ''
+            }
           </div>
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                   data-action="buy-station:${def.id}">
