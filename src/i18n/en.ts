@@ -408,6 +408,11 @@ export const en = {
   'ui.emptyDesk': 'empty',
   'ui.maxHeight': 'Max height reached',
   'ui.awayTraining': 'Away at training',
+  'ui.staffCount': '{count} / {cap} employees',
+  'ui.hireCapBanner':
+    'All {cap} desks are occupied — fire, train or promote someone first. A stronger team beats a bigger one!',
+  'ui.overCapacity': 'Over capacity: {count} employees for {cap} desk slots — nobody works without a desk.',
+  'error.officeAtCapacity': 'All desks are occupied — fire, train or promote someone first.',
   'ui.badgeTraining': 'Training',
   'ui.badgePromotion': 'Promotion',
   'ui.standNeedsDesk': '{name} — needs a desk!',

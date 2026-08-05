@@ -1485,6 +1485,11 @@ button.site-card {
   justify-content: flex-end;
 }
 
+.over-capacity {
+  color: var(--red-deep);
+  font-weight: 800;
+}
+
 /* --- Training ------------------------------------------------------------- */
 
 .progress.training .progress-fill {
