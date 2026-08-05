@@ -282,7 +282,78 @@ be revisited cheaply.
     roads with their animated cars) keeps its exact geometry. Shipped
     bespoke: Switzerland (lakeside promenade, paddle steamer, chalets),
     Saudi Arabia (desert highway, dunes, heat-haze sun, adobe houses),
-    China (Bund/Pudong waterfront, junk boat, lantern railing). The
-    remaining five countries deliberately stay on the parameterized
-    palette renderer — bespoke scenes for them are a pure content
-    follow-up using the same hook.
+    China (Bund/Pudong waterfront, junk boat, lantern railing). Wave 2
+    (2026-08-05) finished the set on the same hook: US golden-hour bay
+    with a Golden-Gate span, Canadian lake with peaks/canoe/moose,
+    Italian riviera cove, Paris Seine quay, Rhine castle hill.
+38. **Merge repair (PRs #36/#38)**: the bulk-buy and payback-time
+    branches merged into a master that did not compile — duplicate
+    `cost`/`affordable` declarations calling un-imported `stationCost`
+    in ui.ts and three un-closed CSS blocks (tests stayed green because
+    they never import the UI). Resolution keeps the bulk-quantity cost
+    path and shows the single-desk payback estimate only in ×1 mode,
+    where it is honest; in ×10/Max it is omitted rather than shown for
+    a quantity it does not describe.
+39. **Milestones at 8/16/32, not 25/50/100 (#24)**: the survey's
+    steps are unreachable per company (MAX_FLOORS 8 × FLOOR_CAPACITY 4
+    caps both desks and headcount at 32), so the ladder maps onto the
+    floor ladder instead — fill floor 2 / half tower / full house —
+    with mild +5/10/15% per track (desks × employees multiply, ×1.69
+    full house) to respect the Phase H pacing guards (balance.md M).
+40. **Seasons multiply the paid amount only (#26)**: `tick()` derives
+    the quarter from playTimeSec (6 h each; the ×2/×4 speed toggle
+    legitimately speeds the market up) and multiplies payouts at the
+    moment of payment — stored `currentReward`, growth and the soft cap
+    never see the season, so plateau math stays stable and the cycle
+    mean is exactly 1.0. Boom favors one rotating specialization per
+    cycle; income estimators mirror the multiplier (balance.md K).
+41. **Automation is an account unlock + per-company toggle (#23)**:
+    unlocks come from lifetime counters (25 trainings / 40 hires / 75
+    desks — new `trainingsDone`/`hiresDone` counters) or VsCoin
+    early-unlocks (6/8/10 — convenience-speed), then each company
+    opts in per automation, default OFF. The pass runs inside tick()
+    every 5 s of playtime, capped at one action per automation per
+    pass, keeps a 2× cash reserve and one free builder, and never
+    promotes (grade changes stay a player decision). Deterministic
+    candidate refills use a tick-seeded PRNG (balance.md A).
+42. **Recruiters sell pool size + freshness, not raw supply (#28)**:
+    the engine already refills 3 candidates instantly on empty, so
+    levels widen the pool (3+level, max 8) and deliver a timed fresh
+    candidate every 600/level seconds instead (balance.md R).
+43. **Expeditions gate expansion and pay a permanent bonus (#29)**:
+    every country unlock now requires a completed market-scouting
+    expedition (country-level timed action, 2% of the unlock price,
+    4 h × 1.3^(countries−1), one builder). The report banks the country
+    into prestige-surviving `scoutedCountries` (+5% global output per
+    market — knowledge outlives the exit) (balance.md X).
+44. **Viral moments are online-only cash (#31)**: 🔥 bubbles spawn on a
+    wall-clock 8–15 min window with an 18 s lifetime; the catch pays
+    3 min of gross income (floor $250) into the wallet but NOT
+    totalEarned (missions must not feed on presence bonuses, matching
+    event cash), plus an 8% 1-VsCoin jackpot capped at 2/UTC-day so
+    dailies stay the premium faucet. Durable `viral.catches` counter
+    for future missions (balance.md B).
+45. **Deep prestige pulled forward; one reset, three gates (#30)**: on
+    explicit request the post-1.0 marker was overridden. The classic
+    IPO reset (Phase P reputation untouched) became `executeExit`:
+    Acquisition (1e9 lifetime earnings), IPO (unchanged gates) and
+    Spin-off (3 countries at once) all share the reset and ALL bank
+    Founder Points from three high-water tracks (lifetime earnings ^0.1
+    ×3, peak headcount ^0.6, (max countries−1)^0.7 ×8) in delta form —
+    waiting strictly dominates, early exits never lose. The perk board
+    shipped with five perks whose hooks stay clean (output, training
+    speed, salaries, offline cap, restart cash); the surveyed foreman/
+    hire-discount perks were dropped because their display helpers are
+    stateless and would have lied in the UI (balance.md F).
+46. **Same-version save evolution**: every new field this run
+    (automation flags, counters, recruiters, scoutedCountries, viral,
+    founder) is additive with migrate() hygiene — no SAVE_VERSION bump,
+    v10 saves keep working. High-water founder tracks are floored at
+    the live save's demonstrable values on load.
+47. **App badge & offline-cap honesty (#27/#36)**: the icon badge is a
+    hide-time snapshot of waiting claims (missions + dailies) — nothing
+    can update it while the page sleeps without push, so it shows what
+    the player left on the table; cleared on return. The welcome-back
+    modal names the offline cap only when the absence exceeded it, and
+    the cap itself became founder-perk content (Cloud Infrastructure,
+    +4 h/level) exactly as the survey predicted.
