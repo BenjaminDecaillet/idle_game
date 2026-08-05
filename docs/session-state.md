@@ -1,4 +1,4 @@
-# Session state — 2026-08-04 (bugfix + feature run, IN PROGRESS)
+# Session state — 2026-08-05 (bugfix + feature run, WRAPPED)
 
 Contract: `.claude/skills/session-handoff/SKILL.md`.
 
@@ -47,14 +47,21 @@ Contract: `.claude/skills/session-handoff/SKILL.md`.
    81e20fe). simulateOfflineReport aggregates tick events; modal
    itemizes; hardcoded modal strings migrated to i18n; 5 tests;
    Playwright-verified with screenshot.
+7. **feat/payback-time — DONE, PR #38 open** (commit 3164573).
+   deskPaybackSec (balance.md Phase Q, designed by balance-designer),
+   payback hints on desk cards, seatPotential extraction, 5 tests with
+   predict-vs-realize identities, Playwright-verified.
 
 ## Next concrete action
 
-feat/payback-time (last survey pick): a balance-designer agent was
-dispatched to decide the display metric (formula in terms of existing
-engine helpers + edge rules; it appends to docs/balance.md). If its
-result is lost, re-dispatch with: "decide the payback-time display
-metric for desk purchase cards using workerRate/autoSeat ordering/
-project reward-work ratio, cover no-unseated-worker / soft-cap / debt
-edge cases". Then implement: pure helper in src/game, muted line on
-workstation cards, i18n EN+FR, tests, screenshot, PR.
+All planned work items are DONE. Session wrap: PRs #32-#38 all open
+awaiting review/merge (fix/floor-project-selector #32,
+feat/floor-training-visibility #33, feat/desk-slot-employee-cap #34,
+docs/idle-game-state-of-the-art #35, feat/bulk-buy-desks #36,
+feat/welcome-back-report #37, feat/payback-time #38). Each is green
+(vitest + build; #32's smoke regression check runs in CI) and has
+screenshot evidence in the PR/session. Nothing in flight. Note:
+i18n keys added near 'ui.awayTraining'/'ui.buyBtn' on several branches
+will trivially conflict on merge — resolve by keeping all keys.
+On "continue": check PR review comments / CI on #32-#38 and address
+them; otherwise pick from docs/improvements.md #23-#36.
