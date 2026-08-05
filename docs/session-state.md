@@ -1,36 +1,64 @@
-# Session state — 2026-08-04 (autonomous backlog run, WRAPPED)
+# Session state — 2026-08-05 (survey-backlog run, WRAPPED)
 
 Contract: `.claude/skills/session-handoff/SKILL.md`.
 
-## Nothing in flight
+## Phase list — all done
 
-The 2026-08-04 run is complete: **14 slices merged as PRs #17–#30**,
-every one with green CI (vitest + build + Chromium smoke), no AI
-attribution in git history. Suite at the wrap: 708 tests / 33 files.
+On branch `claude/improvements-pr-verification-tho7xa` (PR to open/
+merge on master), 13 commits:
 
-Shipped, in order: save-v10 state slice (per-floor projects,
-company-tier cost scaling, beta shop), Office-first tab layout,
-chiptune + chimes, daily contracts, full i18n sweep (UI chrome +
-engine error ids), worker traits & rare candidates, random events with
-trade-offs, piggy vault, site specialization, office pets (push opt-in
-formally skipped — external infra, decisions.md #33), builder chip +
-claim confetti, construction art pass, balance harness (CI pacing
-guards + `npm run balance:sim`), bespoke city scenes first wave
-(CH/SA/CN).
+1. done — merge verification: PRs #36/#38 collided (ui.ts duplicate
+   declarations + unclosed CSS blocks) and master did not build; fixed
+   (decisions.md #38).
+2. done — offline-cap note in welcome-back + app badge (#27/#36).
+3. done — floating-number coalescing, big VsCoin pops, Animations/
+   Floating-numbers toggles, prefers-reduced-motion, hidden-tab pause
+   (#33/#34).
+4. done — bespoke city scenes wave 2: all 8 countries (#19 complete).
+5. done — engine batch (balance.md A/M/K/R/X): ownership milestones
+   8/16/32, market seasons, earned automation, recruiters, scouting
+   expeditions gating country unlocks.
+6. done — viral-moment clickables (#31, balance.md B).
+7. done — deep prestige: Acquisition/IPO/Spin-off exits + Founder-Point
+   perk board (#30, balance.md F) — pulled forward from post-1.0 by
+   explicit user request.
+8. done — pet wave 2 (4 more zero-power pets).
+9. done — colorblind audit (#35): Okabe-Ito spec accents, debt icon,
+   active-company tag.
+10. done — scene instancing + phase-stable loop animations (#32).
+11. done — tests: +141 new (milestones-seasons 36, automation 36,
+    founder 69); suite at 875 tests / 40 files.
+12. done — docs: improvements.md re-baselined, decisions.md #38–#47,
+    plan.md roadmap entry, balance.md Phases A/M/K/R/X/B/F.
 
-## What remains (nothing actionable without external accounts/SDKs)
+## In-progress unit
 
-- improvements.md is re-baselined: open items are external-infra
-  (push #12, plus plan.md's analytics/ads/IAP/Capacitor), the
-  deliberately-untouched beta exit checklist (#22 — `BETA_*` flags NOT
-  flipped, per instruction), and same-pattern content follow-ups
-  (bespoke scenes for the other 5 countries via the `backdrop` hook,
-  more cosmetic waves).
-- decisions.md #20–#37 log every design fork from this run for review
-  and veto.
+None. Everything committed and pushed.
 
-## Resume protocol
+## Decisions & assumptions
 
-On "continue": read CLAUDE.md → this file → `git log --oneline -15` +
-`git status`. There is no in-flight branch; start anything new from
-fresh `master`.
+- All GameState additions this run are ADDITIVE on save v10 with
+  migrate() hygiene — no SAVE_VERSION bump (decisions.md #46).
+- Milestones use 8/16/32 (32-slot building), not the survey's
+  25/50/100 (decisions.md #39).
+- prestigeReset now delegates to executeExit('ipo'); classic semantics
+  preserved, plus FP banking (decisions.md #45).
+- Viral cash and event cash stay out of totalEarned (missions can't be
+  fed by presence bonuses).
+- Colorblind #35 was ranked least important by the user and done last.
+- The beta exit checklist (improvements #22) remains deliberately
+  untouched: `BETA_FORCE_REFRESH`/`BETA_FREE_IAP` NOT flipped.
+
+## Next action
+
+Open/merge the PR for `claude/improvements-pr-verification-tho7xa`.
+After merge: remaining backlog is external-infra only (push/ads/IAP/
+analytics — monetization.md Phase 0) plus the beta exit checklist.
+A future balance session could re-anchor the Phase H pacing guards now
+that milestones/seasons/automation shift the measured curve (guards
+currently green within their ~2× slack).
+
+## Build health
+
+`npm test`: 875/875 green (40 files). `npm run build`: green
+(tsc + vite + PWA precache). Last verified at the wrap commit.
