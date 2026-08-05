@@ -409,6 +409,15 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.emptyDesk': 'vide',
   'ui.maxHeight': 'Hauteur maximale atteinte',
   'ui.awayTraining': 'En formation',
+  'ui.staffCount': '{count} / {cap} employés',
+  'ui.hireCapBanner':
+    'Les {cap} bureaux sont tous occupés — licenciez, formez ou promouvez quelqu’un d’abord. Une équipe plus forte vaut mieux qu’une équipe plus grande !',
+  'ui.overCapacity': 'Sur-effectif : {count} employés pour {cap} bureaux — personne ne travaille sans bureau.',
+  'error.officeAtCapacity': 'Tous les bureaux sont occupés — licenciez, formez ou promouvez quelqu’un d’abord.',
+  'ui.badgeTraining': 'Formation',
+  'ui.badgePromotion': 'Promotion',
+  'ui.standNeedsDesk': '{name} — attend un bureau !',
+  'ui.standBackIn': '{name} — de retour dans {time}',
   'ui.officeHint':
     'Touchez vos employés pour les entendre. Le placement est automatique : les meilleurs employés obtiennent les meilleurs bureaux. Chaque étage ajoute {slots} emplacements.',
   'ui.waitingDesk': 'En attente d’un bureau (aucune production) :',

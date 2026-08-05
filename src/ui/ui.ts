@@ -38,6 +38,7 @@ import {
   activeCountry,
   allCompanies,
   assignFloorProject,
+  atHeadcountCap,
   atSkillCap,
   builderCost,
   buyCompany,
@@ -427,12 +428,28 @@ export class UI {
     );
     this.text('hero-completions', `×${project.completions}`);
 
+    // Busy-worker tiles live inside the office scene, which is only rebuilt
+    // on structural changes — keep their countdowns and progress fills
+    // truthful with targeted writes, like the HUD above.
+    const liveRemaining = document.querySelectorAll<HTMLElement>('[data-live-remaining]');
+    if (liveRemaining.length > 0) {
+      const actions = new Map(company.timedActions.map((a) => [String(a.id), a]));
+      for (const el of liveRemaining) {
+        const a = actions.get(el.dataset.liveRemaining!);
+        if (a) el.textContent = `⏳ ${formatDuration(a.remainingSec)}`;
+      }
+      for (const fill of document.querySelectorAll<HTMLElement>('[data-live-progress]')) {
+        const a = actions.get(fill.dataset.liveProgress!);
+        if (a) fill.style.width = `${Math.min(100, (1 - a.remainingSec / a.totalSec) * 100)}%`;
+      }
+    }
+
     // Rebuild the active tab a couple of times per second to refresh costs,
     // affordability and progress details without redoing it every frame.
     this.rebuildTimer += dt;
     if (this.rebuildTimer >= 0.5) {
       this.rebuildTimer = 0;
-      this.rebuildTab();
+      this.rebuildTab(true);
       this.updateNarrative();
     }
   }
@@ -771,9 +788,15 @@ export class UI {
     chip.dataset.action = `goal:${hint.tab}`;
   }
 
-  private rebuildTab(): void {
+  private rebuildTab(periodic = false): void {
     const content = document.getElementById('tab-content');
     if (!content) return;
+    // The refresh replaces innerHTML wholesale, which tears down any form
+    // control mid-interaction — an open <select> popup, a slider mid-drag.
+    // Periodic (2 Hz) repaints are deferred while such a control has focus;
+    // explicit rebuilds (clicks, change events) still go through, by which
+    // point the interaction is over.
+    if (periodic && this.formControlEngaged()) return;
     this.updateGoalChip();
     for (const t of TABS) {
       document.getElementById(`tab-btn-${t.id}`)?.classList.toggle('active', t.id === this.tab);
@@ -817,6 +840,19 @@ export class UI {
     }
     // Tab content just changed under the coach popup — re-anchor it.
     this.positionCoach();
+  }
+
+  /**
+   * True while the player is engaged with a form control anywhere in the UI
+   * (tab content, sheets): replacing its DOM node would close a native
+   * <select> popup or cancel a drag. Buttons are deliberately excluded —
+   * they retain focus after clicks and must not stall the refresh.
+   */
+  private formControlEngaged(): boolean {
+    const el = document.activeElement;
+    return (
+      el instanceof HTMLElement && this.root.contains(el) && el.matches('select, input, textarea')
+    );
   }
 
   /** Shop tab: funding rounds — VsCoin in, progression-scaled cash out. */
@@ -1232,11 +1268,13 @@ export class UI {
   private renderHireSheet(): string {
     const s = this.state;
     const c = activeCompany(s);
+    const cap = deskCapacity(c);
+    const atCap = atHeadcountCap(c);
     const candidates = c.candidates
       .map((cand, i) => {
         const tier = tierById(cand.tierId);
         const price = hireCost(c, cand.tierId);
-        const affordable = walletMoney(s) >= price;
+        const affordable = !atCap && walletMoney(s) >= price;
         const rare = cand.traits.length >= 2;
         const salary = tierSalary(c, cand.tierId) * traitSalaryMult(cand.traits);
         return `
@@ -1255,14 +1293,23 @@ export class UI {
         </div>`;
       })
       .join('');
+    // The cap is the wall players hit — say it before they click, and point
+    // at the quality-over-quantity routes (fire / train / promote).
+    const capBanner = atCap
+      ? `<div class="warning-banner">🚫 ${t('ui.hireCapBanner', { cap })}</div>`
+      : '';
     return `
       <div class="section-head">
         <h2>🤝 ${t('ui.candidates')}</h2>
+        <span class="muted ${c.workers.length > cap ? 'over-capacity' : ''}">
+          👥 ${t('ui.staffCount', { count: c.workers.length, cap })}
+        </span>
         <button class="btn btn-ghost" data-action="reroll"
                 ${walletMoney(s) >= c.candidateRerollCost ? '' : 'disabled'}>
           ${icon('dice', 16)} ${t('ui.newBatch')} ${formatMoney(c.candidateRerollCost)}
         </button>
       </div>
+      ${capBanner}
       ${candidates}
       <button class="btn btn-ghost" data-action="close-sheet">${t('ui.close')}</button>`;
   }
@@ -1293,7 +1340,7 @@ export class UI {
         : `🎖️ ${t('ui.inPromotion', { title: tierById(action.toTierId!).title, time: formatDuration(action.remainingSec) })}`
       : `${tier.title} · ${deskLabel}`;
     const progressBar = action
-      ? `<div class="progress mini training" title="${action.kind}">
+      ? `<div class="progress mini ${action.kind === 'training' ? 'training' : 'promo'}" title="${action.kind}">
            <div class="progress-fill" style="width:${actionPct}%"></div>
          </div>`
       : `<div class="progress mini exp" title="${t('ui.expTitle')}">
@@ -1419,6 +1466,19 @@ export class UI {
       .join('');
     const wall = f === 0 && perks ? perks : wallDecor(wpId, f);
     const label = f === 0 ? t('ui.groundFloor') : t('ui.floorN', { floor: f + 1 });
+    // Training/promoting employees are unseated by the engine, so their desk
+    // shows empty — surface them on the floor itself so their state is
+    // legible without navigating back to the building.
+    const busy = c.workers
+      .filter((w) => workerBusy(c, w.id))
+      .map((w) => this.renderBusyWorkerTile(c, w))
+      .join('');
+    const busyStrip = busy
+      ? `<div class="floor-training-strip">
+           <span class="strip-label">🎓 ${t('ui.awayTraining')}</span>
+           <div class="stand-row">${busy}</div>
+         </div>`
+      : '';
     return `
       <div class="stack">
         <div class="section-head">
@@ -1438,6 +1498,7 @@ export class UI {
                 ${wall}
               </div>
               <div class="office-grid">${tiles}</div>
+              ${busyStrip}
             </div>
           </div>
         </div>
@@ -1649,6 +1710,32 @@ export class UI {
         </div>`;
   }
 
+  /**
+   * A worker away at training or being promoted: persona + state badge +
+   * progress bar + countdown, readable at a glance. The bar fill and the
+   * countdown carry data-live-* ids so frame() keeps them truthful inside
+   * the office scene, which is not re-rendered at 2 Hz.
+   */
+  private renderBusyWorkerTile(c: CompanyState, w: WorkerState): string {
+    const action = c.timedActions.find(
+      (a) => a.targetId === w.id && (a.kind === 'training' || a.kind === 'promotion'),
+    )!;
+    const isTraining = action.kind === 'training';
+    const pct = Math.min(100, (1 - action.remainingSec / action.totalSec) * 100);
+    return `
+        <button class="stand-slot busy ${isTraining ? 'is-training' : 'is-promotion'}"
+                data-action="poke:${w.id}"
+                title="${t('ui.standBackIn', { name: w.name, time: formatDuration(action.remainingSec) })}">
+          <span class="state-badge">${isTraining ? `🎓 ${t('ui.badgeTraining')}` : `🎖️ ${t('ui.badgePromotion')}`}</span>
+          ${personaStanding(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}
+          <span class="desk-name">${w.name.split(' ')[0]}</span>
+          <div class="progress mini ${isTraining ? 'training' : 'promo'}">
+            <div class="progress-fill" data-live-progress="${action.id}" style="width:${pct}%"></div>
+          </div>
+          <span class="desk-info" data-live-remaining="${action.id}">⏳ ${formatDuration(action.remainingSec)}</span>
+        </button>`;
+  }
+
   /** The building: floors top-down, each holding FLOOR_CAPACITY desk slots. */
   private renderOfficeFloor(): string {
     const s = this.state;
@@ -1754,7 +1841,7 @@ export class UI {
       .filter((w) => w.stationId === null && !workerBusy(c, w.id))
       .map(
         (w) => `
-        <button class="stand-slot" data-action="poke:${w.id}" title="${w.name} — needs a desk!">
+        <button class="stand-slot" data-action="poke:${w.id}" title="${t('ui.standNeedsDesk', { name: w.name })}">
           ${personaStanding(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}
           <span class="desk-name">${w.name.split(' ')[0]}</span>
         </button>`,
@@ -1763,17 +1850,7 @@ export class UI {
 
     const inTraining = c.workers
       .filter((w) => workerBusy(c, w.id))
-      .map((w) => {
-        const action = c.timedActions.find(
-          (a) => a.targetId === w.id && (a.kind === 'training' || a.kind === 'promotion'),
-        )!;
-        return `
-        <button class="stand-slot training" data-action="poke:${w.id}"
-                title="${w.name} — back in ${formatDuration(action.remainingSec)}">
-          ${personaStanding(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}
-          <span class="desk-name">${action.kind === 'training' ? '🎓' : '🎖️'} ${w.name.split(' ')[0]}</span>
-        </button>`;
-      })
+      .map((w) => this.renderBusyWorkerTile(c, w))
       .join('');
 
     const companyNav =
@@ -1792,8 +1869,14 @@ export class UI {
       </div>
       <div class="section-head">
         <span class="muted">${t('ui.desksUsed', { used: c.workstations.length, total: deskCapacity(c) })} ·
-          ${c.floors}/${MAX_FLOORS} 🏢</span>
+          ${c.floors}/${MAX_FLOORS} 🏢 ·
+          <span class="${c.workers.length > deskCapacity(c) ? 'over-capacity' : ''}">👥 ${t('ui.staffCount', { count: c.workers.length, cap: deskCapacity(c) })}</span></span>
       </div>
+      ${
+        c.workers.length > deskCapacity(c)
+          ? `<div class="warning-banner">⚠️ ${t('ui.overCapacity', { count: c.workers.length, cap: deskCapacity(c) })}</div>`
+          : ''
+      }
       ${builderBar}
       <div class="floor-actions">${floorBtn}</div>
       <div class="building card" style="${officeWallVars(wpId)}">
