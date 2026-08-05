@@ -190,6 +190,21 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
           ['train', 'hire', 'desks'].includes(k as string),
         )
       : [],
+    viral: {
+      catches:
+        typeof parsed.viral?.catches === 'number' &&
+        Number.isFinite(parsed.viral.catches) &&
+        parsed.viral.catches >= 0
+          ? Math.floor(parsed.viral.catches)
+          : 0,
+      jackpotDay: Number.isFinite(parsed.viral?.jackpotDay) ? parsed.viral!.jackpotDay : -1,
+      jackpotsToday:
+        typeof parsed.viral?.jackpotsToday === 'number' &&
+        Number.isFinite(parsed.viral.jackpotsToday) &&
+        parsed.viral.jackpotsToday >= 0
+          ? Math.floor(parsed.viral.jackpotsToday)
+          : 0,
+    },
     scoutedCountries: Array.isArray(parsed.scoutedCountries)
       ? Array.from(
           new Set(

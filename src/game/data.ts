@@ -478,6 +478,21 @@ export const EVENT_MIN_EARNED = 5_000;
 export const EVENT_INTERVAL_MIN_SEC = 360;
 export const EVENT_INTERVAL_MAX_SEC = 660;
 
+// Viral moments (docs/balance.md Phase B): presence-gated bonus clickables
+// (the golden-cookie analog). The UI spawns them on a wall-clock cadence —
+// online-only BY DESIGN, offline sim never compensates. Cash is minutes of
+// gross income; a small jackpot chance pays 1 VsCoin, capped per UTC day so
+// realized VsCoin (~0.6-0.8/day) stays below the daily contracts' 2.5-3.5.
+export const VIRAL_MIN_EARNED = 5_000;
+export const VIRAL_MIN_INTERVAL_SEC = 480;
+export const VIRAL_MAX_INTERVAL_SEC = 900;
+export const VIRAL_LIFETIME_SEC = 18;
+export const VIRAL_REWARD_MINUTES = 3;
+export const VIRAL_REWARD_FLOOR = 250;
+export const VIRAL_JACKPOT_CHANCE = 0.08;
+export const VIRAL_JACKPOT_VSCOIN = 1;
+export const VIRAL_JACKPOT_DAILY_CAP = 2;
+
 // Office pets: zero-power VsCoin cosmetics (the cosmetic-first premium
 // catalog). Bought once globally, then picked per company; the active pet
 // wanders the ground floor. Deliberately no gameplay effect.

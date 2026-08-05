@@ -196,6 +196,7 @@ export function createInitialState(now = Date.now(), countryId: CountryId = DEFA
     hiresDone: 0,
     automationBought: [],
     scoutedCountries: [],
+    viral: { catches: 0, jackpotDay: -1, jackpotsToday: 0 },
     prestige: { count: 0, reputation: 0 },
     doublerLastClaimedAt: 0,
     offlineDoublesClaimed: 0,

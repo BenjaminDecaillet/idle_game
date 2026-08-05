@@ -501,6 +501,11 @@ export interface GameState {
    * output bonus per scouted market, and survives prestige.
    */
   scoutedCountries: string[];
+  /**
+   * Viral moments (docs/balance.md Phase B): durable catch counter (future
+   * mission fuel) + the per-UTC-day jackpot cap bookkeeping.
+   */
+  viral: { catches: number; jackpotDay: number; jackpotsToday: number };
   /** IPO resets & banked reputation (permanent output multiplier). */
   prestige: PrestigeState;
   /** Last claim of the offline-earnings doubler (wall-clock ms, 0 = never). */

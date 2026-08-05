@@ -1,5 +1,20 @@
-import { EVENT_MIN_EARNED, RANDOM_EVENTS } from './data';
-import { activeCountry, grantBoost, grossRewardRate, walletMoney } from './engine';
+import {
+  EVENT_MIN_EARNED,
+  RANDOM_EVENTS,
+  VIRAL_JACKPOT_CHANCE,
+  VIRAL_JACKPOT_DAILY_CAP,
+  VIRAL_JACKPOT_VSCOIN,
+  VIRAL_MIN_EARNED,
+  VIRAL_REWARD_FLOOR,
+  VIRAL_REWARD_MINUTES,
+} from './data';
+import {
+  activeCountry,
+  grantBoost,
+  grantVsCoin,
+  grossRewardRate,
+  walletMoney,
+} from './engine';
 import type { GameState } from './types';
 
 /**
@@ -51,6 +66,47 @@ export function rollEventOffer(
     salaryMult: def.salaryMult,
     durationSec: def.durationSec,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Viral moments (docs/balance.md Phase B) — presence-gated bonus clickables.
+// The UI schedules WHEN a bubble appears (wall-clock, briefcase pattern,
+// never offline); this resolves a catch deterministically from state + rand.
+// ---------------------------------------------------------------------------
+
+/** Viral bubbles spawn once there's an audience worth going viral for. */
+export function viralUnlocked(state: GameState): boolean {
+  return state.tutorial.done && state.totalEarned >= VIRAL_MIN_EARNED;
+}
+
+/**
+ * Resolve a caught viral moment: income-scaled cash into the active wallet
+ * (deliberately NOT totalEarned — missions must not feed on presence
+ * bonuses, matching event cash), a durable catch counter, and a small
+ * VsCoin jackpot capped per UTC day (`day` comes from the UI layer).
+ */
+export function catchViral(
+  state: GameState,
+  day: number,
+  rand: () => number = Math.random,
+): { cash: number; jackpot: boolean } {
+  const cash = Math.max(
+    VIRAL_REWARD_FLOOR,
+    Math.round(grossRewardRate(state) * 60 * VIRAL_REWARD_MINUTES),
+  );
+  activeCountry(state).money += cash;
+  state.viral.catches += 1;
+  if (state.viral.jackpotDay !== day) {
+    state.viral.jackpotDay = day;
+    state.viral.jackpotsToday = 0;
+  }
+  let jackpot = false;
+  if (state.viral.jackpotsToday < VIRAL_JACKPOT_DAILY_CAP && rand() < VIRAL_JACKPOT_CHANCE) {
+    state.viral.jackpotsToday += 1;
+    grantVsCoin(state, VIRAL_JACKPOT_VSCOIN, 'viral:jackpot');
+    jackpot = true;
+  }
+  return { cash, jackpot };
 }
 
 /** Accept an offer: charge/grant the cash and start the timed modifier. */

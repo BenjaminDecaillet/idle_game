@@ -4,8 +4,15 @@ import { BETA_FORCE_REFRESH } from './game/data';
 import { activeCompany, grantBoost, tick, timeSkip } from './game/engine';
 import { claimableDailyContracts, ensureDaily } from './game/daily';
 import { claimableMissions } from './game/missions';
-import { rollEventOffer } from './game/events';
-import { EVENT_INTERVAL_MAX_SEC, EVENT_INTERVAL_MIN_SEC } from './game/data';
+import { catchViral, rollEventOffer, viralUnlocked } from './game/events';
+import {
+  EVENT_INTERVAL_MAX_SEC,
+  EVENT_INTERVAL_MIN_SEC,
+  VIRAL_LIFETIME_SEC,
+  VIRAL_MAX_INTERVAL_SEC,
+  VIRAL_MIN_INTERVAL_SEC,
+} from './game/data';
+import { formatMoney } from './ui/format';
 import { loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
 import { lookup, resolveLang, setCurrentLang, t } from './i18n';
@@ -261,6 +268,62 @@ function scheduleBriefcase(): void {
 }
 // First one shows up quickly so new players discover the mechanic.
 briefcaseTimer = setTimeout(spawnBriefcase, (45 + Math.random() * 60) * 1000);
+
+// ---------------------------------------------------------------------------
+// Viral moments — presence-gated cash clickables (docs/balance.md Phase B).
+// Online-only by design: the spawner is wall-clock, offline sim never
+// compensates a bubble nobody was there to tap. The engine resolves the
+// catch (cash, durable counter, day-capped VsCoin jackpot).
+// ---------------------------------------------------------------------------
+
+function spawnViral(): void {
+  if (
+    document.getElementById('viral-moment') ||
+    document.visibilityState === 'hidden' ||
+    !viralUnlocked(state)
+  ) {
+    scheduleViral();
+    return;
+  }
+  const el = document.createElement('button');
+  el.id = 'viral-moment';
+  el.className = 'briefcase viral';
+  el.textContent = '🔥';
+  el.title = t('ui.viralTitle');
+  el.style.left = `${8 + Math.random() * 76}vw`;
+  el.style.top = `${18 + Math.random() * 45}vh`;
+  el.addEventListener('click', () => {
+    const r = el.getBoundingClientRect();
+    el.remove();
+    const day = Math.floor(Date.now() / 86_400_000);
+    const result = catchViral(state, day);
+    fx.burst(r.left + r.width / 2, r.top + r.height / 2);
+    fx.bigFloat(r.left + r.width / 2, r.top, `+${formatMoney(result.cash)}`);
+    if (result.jackpot) {
+      fx.coinChime();
+      ui.toast(`🔥 ${t('ui.viralJackpot')}`, 'info');
+    } else {
+      ui.toast(`🔥 ${t('ui.viralCaught')}`, 'info');
+    }
+    scheduleViral();
+  });
+  document.body.appendChild(el);
+  setTimeout(() => {
+    if (el.isConnected) {
+      el.remove();
+      scheduleViral();
+    }
+  }, VIRAL_LIFETIME_SEC * 1000);
+}
+
+let viralTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleViral(): void {
+  clearTimeout(viralTimer);
+  const delay =
+    VIRAL_MIN_INTERVAL_SEC + Math.random() * (VIRAL_MAX_INTERVAL_SEC - VIRAL_MIN_INTERVAL_SEC);
+  viralTimer = setTimeout(spawnViral, delay * 1000);
+}
+scheduleViral();
 
 // Console API for demoing/integrating monetization rewards before any ad or
 // payment SDK is wired up (see docs/monetization.md). Example in DevTools:

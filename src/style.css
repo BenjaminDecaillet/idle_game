@@ -1844,6 +1844,11 @@ body.scene-paused .os-anim-neon {
   padding: 8px;
 }
 
+/* Viral-moment bubble: the briefcase's hotter cousin. */
+.briefcase.viral {
+  filter: drop-shadow(0 0 12px rgba(255, 94, 58, 0.9));
+}
+
 @keyframes briefcase-float {
   0%,
   100% {
