@@ -1504,6 +1504,65 @@ button.site-card {
   filter: saturate(0.8);
 }
 
+/* Promotion bars read blue so they never scan as training (gold). */
+.progress.promo .progress-fill {
+  background: linear-gradient(180deg, #9ad9ff, var(--blue) 60%, var(--blue-deep));
+}
+
+/* Busy-worker tiles: state badge + live progress + countdown. */
+.stand-slot.busy {
+  min-width: 76px;
+  max-width: 96px;
+}
+
+.stand-slot.busy .progress.mini {
+  width: 100%;
+  margin-top: 2px;
+}
+
+.stand-slot.busy .desk-info {
+  font-size: 0.66rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.state-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink-90);
+  white-space: nowrap;
+}
+
+.stand-slot.is-training .state-badge {
+  background: linear-gradient(180deg, #ffe9ad, var(--gold));
+}
+
+.stand-slot.is-promotion .state-badge {
+  background: linear-gradient(180deg, #b5e3ff, var(--blue));
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Trainees surfaced on the enlarged floor view, under the desk grid. */
+.floor-training-strip {
+  border-top: 2px dashed var(--ink-faint);
+  padding: 6px 10px 8px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.floor-training-strip .strip-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.floor-training-strip .stand-row {
+  padding: 4px 0 0;
+}
+
 /* --- Decor shop & map themes ---------------------------------------------- */
 
 .decor-swatch {
