@@ -357,23 +357,14 @@ be revisited cheaply.
     modal names the offline cap only when the absence exceeded it, and
     the cap itself became founder-perk content (Cloud Infrastructure,
     +4 h/level) exactly as the survey predicted.
-    China (Bund/Pudong waterfront, junk boat, lantern railing). The
-    remaining five countries deliberately stay on the parameterized
-    palette renderer — bespoke scenes for them are a pure content
-    follow-up using the same hook.
-38. **Bespoke city scenes, second wave (#19, closes it)**: the remaining
-    four non-US countries get bespoke backdrops on the same hook —
-    Canada (cold Muskoka lakeshore: canoe, loon, pine islet, Muskoka
-    dock, log cabins + shared red maples), Italy (lagoon-green Venetian
-    canal: gondola, striped paline, terracotta villas + cypresses),
-    France (Seine quay: bateau-mouche, moored péniche, bouquiniste
-    boxes on a shared quayRail, Haussmann mansard row), Germany (Spree
-    quay: East-Side-style mural wall on the quay face, glass-roofed
-    tour boat, swans, stepped-gable brick townhouses). The US map
-    deliberately keeps the reference look — the game is set there, so
-    "no dressing" IS its identity. cn's inline railing was lifted to a
-    shared quayRail() and ca's maple to mapleTree(); all art stays
-    deterministic, filter-free, inside the documented free strips
-    (bottom strip y498–536, west cottage row, skyline band), clear of
-    the south-road crossing (x≈35–66) and the flatiron flagpole
-    (x268–282).
+48. **Merge resolution vs PR #39 (city scenes)**: PR #39 independently
+    drew second-wave backdrops for the same four countries (ca Muskoka
+    lakeshore, it Venetian canal, fr Seine quay, de Spree quay) plus a
+    quayRail()/mapleTree() lift. Two art sets for one country cannot
+    coexist, and a keep-both merge left cityMap.ts unparseable, so the
+    conflicted files (cityMap.ts + the four docs) were resolved wholly
+    to this branch's wave-2 set (#37: us bay & Golden-Gate span, ca
+    lake & peaks, it riviera cove, fr Seine quay, de Rhine castle
+    hill), which also covers the US and carries the scene-instancing
+    perf pass. PR #39's scenes are superseded, not lost — they remain
+    in its branch history if ever wanted as alternates.

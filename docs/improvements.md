@@ -88,12 +88,6 @@ passes, balance harness, city scenes wave 1.
     decisions.md #37) + wave 2 (US bay & bridge, CA lake & peaks, IT
     riviera, FR Seine quay, DE Rhine & castle) — all eight countries
     now have bespoke backdrops on the same hook.
-19. ~~**Bespoke per-country city scenes**~~ — complete: every country
-    except the US reference map now has a bespoke scene via the
-    `backdrop` theme hook, interactive geometry untouched. First wave
-    (decisions.md #37): Swiss lakeside, Saudi desert highway, Shanghai
-    waterfront. Second wave (decisions.md #38): Canadian lakeshore,
-    Venetian canal, Seine quay, Berlin Spree with mural wall.
 
 ## Tech
 
