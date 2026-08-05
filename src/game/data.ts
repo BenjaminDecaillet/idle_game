@@ -507,6 +507,11 @@ export const PETS: PetDef[] = [
   { id: 'corgi', name: 'Standup Corgi', emoji: '🐕', vsCoinCost: 4 },
   { id: 'duck', name: 'Rubber-Duck Debugger', emoji: '🦆', vsCoinCost: 6 },
   { id: 'trex', name: 'Legacy T-Rex', emoji: '🦖', vsCoinCost: 10 },
+  // Wave 2 (same zero-power contract as the first four).
+  { id: 'goldfish', name: 'Scrum Goldfish', emoji: '🐠', vsCoinCost: 4 },
+  { id: 'parrot', name: 'Merge-Conflict Parrot', emoji: '🦜', vsCoinCost: 6 },
+  { id: 'hedgehog', name: 'Hotfix Hedgehog', emoji: '🦔', vsCoinCost: 8 },
+  { id: 'llama', name: 'Deploy-Day Llama', emoji: '🦙', vsCoinCost: 12 },
 ];
 export function petById(id: string): PetDef {
   const p = PETS.find((p) => p.id === id);
