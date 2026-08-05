@@ -85,6 +85,7 @@ import {
   companySalaries,
   companyWorkRate,
   deskCapacity,
+  deskPaybackSec,
   effectiveWallpaper,
   floorCost,
   floorProject,
@@ -1956,6 +1957,9 @@ export class UI {
     const full = c.workstations.length >= deskCapacity(c);
     const shop = WORKSTATIONS.map((def) => {
       const owned = c.workstations.filter((w) => w.defId === def.id).length;
+      const cost = stationCost(c, def.id);
+      const affordable = !full && walletMoney(s) >= cost;
+      const payback = full ? null : deskPaybackSec(s, c, def.id);
       // The button always shows the real aggregate for the selected
       // quantity; Max falls back to a disabled ×1 when nothing is possible.
       const n = Math.max(1, this.effectiveBuyCount(def.id));
@@ -1972,6 +1976,11 @@ export class UI {
           <div class="card-main">
             <h3>${def.name}</h3>
             <span class="muted">×${def.multiplier} output · owned ${owned}</span>
+            ${
+              payback !== null
+                ? `<span class="muted payback">⏱ ${t('ui.paybackIn', { time: formatDuration(payback) })}</span>`
+                : ''
+            }
           </div>
           <button class="btn ${affordable ? 'btn-primary' : ''}" ${affordable ? '' : 'disabled'}
                   data-action="buy-station:${def.id}">
