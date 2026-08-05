@@ -1485,6 +1485,33 @@ button.site-card {
   justify-content: flex-end;
 }
 
+/* Welcome-back modal: itemized offline report. */
+.offline-report {
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.report-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+
+.report-row strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.report-row.report-bad {
+  background: #ffe3e1;
+  color: var(--red-deep);
 .qty-toggle {
   display: inline-flex;
   gap: 4px;

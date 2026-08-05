@@ -170,6 +170,7 @@ import {
   skipTutorial,
   type TutorialStepDef,
 } from '../game/tutorial';
+import type { OfflineReport } from '../game/engine';
 import type { CompanyState, GameState, WorkerState } from '../game/types';
 import { lookup, resolveLang, setCurrentLang, t } from '../i18n';
 import type { StringKey } from '../i18n';
@@ -727,27 +728,47 @@ export class UI {
       </div>`;
   }
 
-  welcomeBack(offlineSec: number, earnings: number): void {
+  welcomeBack(offlineSec: number, report: OfflineReport): void {
     const zone = document.getElementById('modal-zone');
     if (!zone) return;
     // The doubler button is the future rewarded-ad slot (free while in
     // beta): remember what the modal showed so the claim doubles exactly it.
-    this.pendingOfflineEarnings = earnings;
+    this.pendingOfflineEarnings = report.earnings;
     const blessing =
-      earnings > 0 && offlineDoublerReady(this.state)
+      report.earnings > 0 && offlineDoublerReady(this.state)
         ? `<button class="btn btn-primary" data-action="double-offline">
              😇 ${t('ui.doublerButton')}
            </button>`
         : '';
+    // Itemize what the simulation produced — the return moment is the
+    // genre's biggest emotional beat, a bare cash number undersells it.
+    const rows: [string, number, boolean][] = [
+      [`✅ ${t('ui.awayProjects')}`, report.projectsCompleted, false],
+      [`🎓 ${t('ui.awayTrainings')}`, report.trainingsDone, false],
+      [`🎖️ ${t('ui.awayPromotions')}`, report.promotionsDone, false],
+      [`🛠️ ${t('ui.awayDeskUpgrades')}`, report.deskUpgradesDone, false],
+      [`🏗️ ${t('ui.awayFloors')}`, report.floorsBuilt, false],
+      [`🏢 ${t('ui.awayCompanies')}`, report.companiesBuilt, false],
+      [`😞 ${t('ui.awayQuits')}`, report.quits, true],
+    ];
+    const items = rows
+      .filter(([, count]) => count > 0)
+      .map(
+        ([label, count, bad]) => `
+        <div class="report-row ${bad ? 'report-bad' : ''}">
+          <span>${label}</span><strong>${formatNumber(count)}</strong>
+        </div>`,
+      )
+      .join('');
     zone.innerHTML = `
       <div class="modal-backdrop" data-action="close-modal">
         <div class="modal card">
-          <h2>👋 Welcome back!</h2>
-          <p>While you were away for <strong>${formatDuration(offlineSec)}</strong>,
-          your team kept shipping:</p>
-          <div class="modal-earnings">+${formatMoney(earnings)}</div>
+          <h2>👋 ${t('ui.welcomeBackTitle')}</h2>
+          <p>${t('ui.welcomeBackAway', { time: formatDuration(offlineSec) })}</p>
+          <div class="modal-earnings">+${formatMoney(report.earnings)}</div>
+          ${items ? `<div class="offline-report">${items}</div>` : ''}
           ${blessing}
-          <button class="btn ${blessing ? '' : 'btn-primary'}" data-action="close-modal">Back to work</button>
+          <button class="btn ${blessing ? '' : 'btn-primary'}" data-action="close-modal">${t('ui.backToWork')}</button>
         </div>
       </div>`;
   }

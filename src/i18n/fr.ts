@@ -21,6 +21,18 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.confirm': 'C’est parti !',
   'ui.tutorialStep': 'Étape {step} / {total}',
 
+  // --- Bon retour : rapport hors-ligne détaillé ------------------------------
+  'ui.welcomeBackTitle': 'Bon retour !',
+  'ui.welcomeBackAway': 'Pendant votre absence de {time}, votre équipe a continué à livrer :',
+  'ui.backToWork': 'Au travail',
+  'ui.awayProjects': 'Projets livrés',
+  'ui.awayTrainings': 'Formations terminées',
+  'ui.awayPromotions': 'Promotions obtenues',
+  'ui.awayDeskUpgrades': 'Rénovations de bureaux terminées',
+  'ui.awayFloors': 'Étages construits',
+  'ui.awayCompanies': 'Sociétés ouvertes',
+  'ui.awayQuits': 'Employés démissionnaires',
+
   // --- Missions & VsCoin ---------------------------------------------------
   'ui.missions': 'Missions',
   'ui.claim': 'Réclamer',

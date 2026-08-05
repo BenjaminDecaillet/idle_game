@@ -22,6 +22,7 @@ Start: $50 → Intern ($25) + Basic Desk ($20) ≈ 0.5 work/s → first payouts 
 
 ## Roadmap / TODOs (in suggested order)
 
+- [x] **Itemized welcome-back report** — `simulateOfflineReport` aggregates tick events per offline chunk (projects, trainings, promotions, renovations, floors, companies, quits) and the welcome-back modal itemizes the non-zero lines under the earnings figure; previously hardcoded modal strings migrated to i18n (EN+FR); doubler untouched
 - [x] **Bulk desk buying** — ×1/×10/Max quantity toggle on the workstation shop; closed-form-equivalent aggregate pricing (`stationCostN`, per-step rounding identical to sequential buys), `maxAffordableStations` bounded by wallet and free slots, all-or-nothing `buyWorkstations`; quantity is UI-local (not saved)
 - [x] **Idle-genre state-of-the-art survey** — OSS repos (licences checked), design theory and QoL conventions distilled into [idle-game-state-of-the-art.md](idle-game-state-of-the-art.md); backlog items #23-#36 in [improvements.md](improvements.md); immediate picks: bulk buy, itemized welcome-back report, payback-time display (export/import turned out to be already shipped)
 - [ ] **Playtest & balance tuning** — adjust `data.ts` values after real play sessions
