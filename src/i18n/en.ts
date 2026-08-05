@@ -408,6 +408,10 @@ export const en = {
   'ui.emptyDesk': 'empty',
   'ui.maxHeight': 'Max height reached',
   'ui.awayTraining': 'Away at training',
+  'ui.badgeTraining': 'Training',
+  'ui.badgePromotion': 'Promotion',
+  'ui.standNeedsDesk': '{name} — needs a desk!',
+  'ui.standBackIn': '{name} — back in {time}',
   'ui.officeHint':
     'Tap your people to hear from them. Seating is automatic: strongest workers get the best desks. Each floor adds {slots} desk slots.',
   'ui.waitingDesk': 'Waiting for a desk (producing nothing):',

@@ -424,6 +424,22 @@ export class UI {
     );
     this.text('hero-completions', `×${project.completions}`);
 
+    // Busy-worker tiles live inside the office scene, which is only rebuilt
+    // on structural changes — keep their countdowns and progress fills
+    // truthful with targeted writes, like the HUD above.
+    const liveRemaining = document.querySelectorAll<HTMLElement>('[data-live-remaining]');
+    if (liveRemaining.length > 0) {
+      const actions = new Map(company.timedActions.map((a) => [String(a.id), a]));
+      for (const el of liveRemaining) {
+        const a = actions.get(el.dataset.liveRemaining!);
+        if (a) el.textContent = `⏳ ${formatDuration(a.remainingSec)}`;
+      }
+      for (const fill of document.querySelectorAll<HTMLElement>('[data-live-progress]')) {
+        const a = actions.get(fill.dataset.liveProgress!);
+        if (a) fill.style.width = `${Math.min(100, (1 - a.remainingSec / a.totalSec) * 100)}%`;
+      }
+    }
+
     // Rebuild the active tab a couple of times per second to refresh costs,
     // affordability and progress details without redoing it every frame.
     this.rebuildTimer += dt;
@@ -1309,7 +1325,7 @@ export class UI {
         : `🎖️ ${t('ui.inPromotion', { title: tierById(action.toTierId!).title, time: formatDuration(action.remainingSec) })}`
       : `${tier.title} · ${deskLabel}`;
     const progressBar = action
-      ? `<div class="progress mini training" title="${action.kind}">
+      ? `<div class="progress mini ${action.kind === 'training' ? 'training' : 'promo'}" title="${action.kind}">
            <div class="progress-fill" style="width:${actionPct}%"></div>
          </div>`
       : `<div class="progress mini exp" title="${t('ui.expTitle')}">
@@ -1435,6 +1451,19 @@ export class UI {
       .join('');
     const wall = f === 0 && perks ? perks : wallDecor(wpId, f);
     const label = f === 0 ? t('ui.groundFloor') : t('ui.floorN', { floor: f + 1 });
+    // Training/promoting employees are unseated by the engine, so their desk
+    // shows empty — surface them on the floor itself so their state is
+    // legible without navigating back to the building.
+    const busy = c.workers
+      .filter((w) => workerBusy(c, w.id))
+      .map((w) => this.renderBusyWorkerTile(c, w))
+      .join('');
+    const busyStrip = busy
+      ? `<div class="floor-training-strip">
+           <span class="strip-label">🎓 ${t('ui.awayTraining')}</span>
+           <div class="stand-row">${busy}</div>
+         </div>`
+      : '';
     return `
       <div class="stack">
         <div class="section-head">
@@ -1454,6 +1483,7 @@ export class UI {
                 ${wall}
               </div>
               <div class="office-grid">${tiles}</div>
+              ${busyStrip}
             </div>
           </div>
         </div>
@@ -1665,6 +1695,32 @@ export class UI {
         </div>`;
   }
 
+  /**
+   * A worker away at training or being promoted: persona + state badge +
+   * progress bar + countdown, readable at a glance. The bar fill and the
+   * countdown carry data-live-* ids so frame() keeps them truthful inside
+   * the office scene, which is not re-rendered at 2 Hz.
+   */
+  private renderBusyWorkerTile(c: CompanyState, w: WorkerState): string {
+    const action = c.timedActions.find(
+      (a) => a.targetId === w.id && (a.kind === 'training' || a.kind === 'promotion'),
+    )!;
+    const isTraining = action.kind === 'training';
+    const pct = Math.min(100, (1 - action.remainingSec / action.totalSec) * 100);
+    return `
+        <button class="stand-slot busy ${isTraining ? 'is-training' : 'is-promotion'}"
+                data-action="poke:${w.id}"
+                title="${t('ui.standBackIn', { name: w.name, time: formatDuration(action.remainingSec) })}">
+          <span class="state-badge">${isTraining ? `🎓 ${t('ui.badgeTraining')}` : `🎖️ ${t('ui.badgePromotion')}`}</span>
+          ${personaStanding(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}
+          <span class="desk-name">${w.name.split(' ')[0]}</span>
+          <div class="progress mini ${isTraining ? 'training' : 'promo'}">
+            <div class="progress-fill" data-live-progress="${action.id}" style="width:${pct}%"></div>
+          </div>
+          <span class="desk-info" data-live-remaining="${action.id}">⏳ ${formatDuration(action.remainingSec)}</span>
+        </button>`;
+  }
+
   /** The building: floors top-down, each holding FLOOR_CAPACITY desk slots. */
   private renderOfficeFloor(): string {
     const s = this.state;
@@ -1770,7 +1826,7 @@ export class UI {
       .filter((w) => w.stationId === null && !workerBusy(c, w.id))
       .map(
         (w) => `
-        <button class="stand-slot" data-action="poke:${w.id}" title="${w.name} — needs a desk!">
+        <button class="stand-slot" data-action="poke:${w.id}" title="${t('ui.standNeedsDesk', { name: w.name })}">
           ${personaStanding(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}
           <span class="desk-name">${w.name.split(' ')[0]}</span>
         </button>`,
@@ -1779,17 +1835,7 @@ export class UI {
 
     const inTraining = c.workers
       .filter((w) => workerBusy(c, w.id))
-      .map((w) => {
-        const action = c.timedActions.find(
-          (a) => a.targetId === w.id && (a.kind === 'training' || a.kind === 'promotion'),
-        )!;
-        return `
-        <button class="stand-slot training" data-action="poke:${w.id}"
-                title="${w.name} — back in ${formatDuration(action.remainingSec)}">
-          ${personaStanding(`w:${w.id}:${w.name}`, w.specialization, w.tierId)}
-          <span class="desk-name">${action.kind === 'training' ? '🎓' : '🎖️'} ${w.name.split(' ')[0]}</span>
-        </button>`;
-      })
+      .map((w) => this.renderBusyWorkerTile(c, w))
       .join('');
 
     const companyNav =

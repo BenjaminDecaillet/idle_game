@@ -409,6 +409,10 @@ export const fr: Record<keyof typeof en, string> = {
   'ui.emptyDesk': 'vide',
   'ui.maxHeight': 'Hauteur maximale atteinte',
   'ui.awayTraining': 'En formation',
+  'ui.badgeTraining': 'Formation',
+  'ui.badgePromotion': 'Promotion',
+  'ui.standNeedsDesk': '{name} — attend un bureau !',
+  'ui.standBackIn': '{name} — de retour dans {time}',
   'ui.officeHint':
     'Touchez vos employés pour les entendre. Le placement est automatique : les meilleurs employés obtiennent les meilleurs bureaux. Chaque étage ajoute {slots} emplacements.',
   'ui.waitingDesk': 'En attente d’un bureau (aucune production) :',
