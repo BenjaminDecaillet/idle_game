@@ -4,6 +4,7 @@ import {
   PRESTIGE_STORY_BEAT,
   COUNTRIES,
   FLOOR_CAPACITY,
+  OFFLINE_CAP_HOURS,
   MAP_THEMES,
   MARKETING_DURATION_SEC,
   MARKETING_MULT,
@@ -766,6 +767,13 @@ export class UI {
         <div class="modal card">
           <h2>👋 ${t('ui.welcomeBackTitle')}</h2>
           <p>${t('ui.welcomeBackAway', { time: formatDuration(offlineSec) })}</p>
+          ${
+            offlineSec > OFFLINE_CAP_HOURS * 3600
+              ? `<p class="muted">⏳ ${t('ui.offlineCapNote', {
+                  cap: formatDuration(OFFLINE_CAP_HOURS * 3600),
+                })}</p>`
+              : ''
+          }
           <div class="modal-earnings">+${formatMoney(report.earnings)}</div>
           ${items ? `<div class="offline-report">${items}</div>` : ''}
           ${blessing}

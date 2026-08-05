@@ -24,6 +24,7 @@ export const fr: Record<keyof typeof en, string> = {
   // --- Bon retour : rapport hors-ligne détaillé ------------------------------
   'ui.welcomeBackTitle': 'Bon retour !',
   'ui.welcomeBackAway': 'Pendant votre absence de {time}, votre équipe a continué à livrer :',
+  'ui.offlineCapNote': 'La progression hors ligne couvre les premières {cap} d’une absence.',
   'ui.backToWork': 'Au travail',
   'ui.awayProjects': 'Projets livrés',
   'ui.awayTrainings': 'Formations terminées',

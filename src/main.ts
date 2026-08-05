@@ -2,7 +2,8 @@ import './style.css';
 import { registerSW } from 'virtual:pwa-register';
 import { BETA_FORCE_REFRESH } from './game/data';
 import { activeCompany, grantBoost, tick, timeSkip } from './game/engine';
-import { ensureDaily } from './game/daily';
+import { claimableDailyContracts, ensureDaily } from './game/daily';
+import { claimableMissions } from './game/missions';
 import { rollEventOffer } from './game/events';
 import { EVENT_INTERVAL_MAX_SEC, EVENT_INTERVAL_MIN_SEC } from './game/data';
 import { loadGame, saveGame } from './game/save';
@@ -108,12 +109,29 @@ function loop(now: number): void {
 }
 requestAnimationFrame(loop);
 
+// App badge (Badging API): when the player leaves, the installed-app icon
+// shows how many claims are waiting (missions + daily contracts) — no
+// permission prompt, no backend. Cleared on return; browsers without the
+// API just no-op.
+const badgeNav = navigator as Navigator & {
+  setAppBadge?: (count?: number) => Promise<void>;
+  clearAppBadge?: () => Promise<void>;
+};
+function updateAppBadge(): void {
+  if (!badgeNav.setAppBadge) return;
+  const count = claimableMissions(state).length + claimableDailyContracts(state).length;
+  if (count > 0) badgeNav.setAppBadge(count).catch(() => {});
+  else badgeNav.clearAppBadge?.().catch(() => {});
+}
+
 // When the tab is hidden or the app is closed, persist immediately so
 // offline progress picks up from the right timestamp.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     saveGame(state);
+    updateAppBadge();
   } else {
+    badgeNav.clearAppBadge?.().catch(() => {});
     // Returning to a backgrounded tab: fast-forward the missed time.
     const { state: reloaded, offlineReport: report, offlineSec: sec } = loadGame();
     state = reloaded;
@@ -122,7 +140,10 @@ document.addEventListener('visibilitychange', () => {
     if (report && report.earnings > 0 && sec > 60) ui.welcomeBack(sec, report);
   }
 });
-window.addEventListener('pagehide', () => saveGame(state));
+window.addEventListener('pagehide', () => {
+  saveGame(state);
+  updateAppBadge();
+});
 
 // ---------------------------------------------------------------------------
 // Service worker updates. The PWA precaches the whole shell, so without an

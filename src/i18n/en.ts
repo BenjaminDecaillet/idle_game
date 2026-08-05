@@ -28,6 +28,7 @@ export const en = {
   // --- Welcome back: itemized offline report --------------------------------
   'ui.welcomeBackTitle': 'Welcome back!',
   'ui.welcomeBackAway': 'While you were away for {time}, your team kept shipping:',
+  'ui.offlineCapNote': 'Offline progress covers the first {cap} of an absence.',
   'ui.backToWork': 'Back to work',
   'ui.awayProjects': 'Projects shipped',
   'ui.awayTrainings': 'Trainings completed',
