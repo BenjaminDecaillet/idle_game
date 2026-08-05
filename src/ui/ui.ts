@@ -386,8 +386,11 @@ export class UI {
 
   frame(dt: number): void {
     const s = this.state;
-    this.text('hud-money', formatMoney(walletMoney(s)));
-    document.getElementById('hud-money')?.classList.toggle('negative', walletMoney(s) < 0);
+    // Debt is marked with an icon on top of the red tint — color is never
+    // the only channel (colorblind redundancy, improvements #35).
+    const inTheRed = walletMoney(s) < 0;
+    this.text('hud-money', `${inTheRed ? '⚠️ ' : ''}${formatMoney(walletMoney(s))}`);
+    document.getElementById('hud-money')?.classList.toggle('negative', inTheRed);
     const income = estimatedIncome(s);
     const incomeEl = document.getElementById('hud-income');
     if (incomeEl) {
@@ -1554,6 +1557,7 @@ export class UI {
               <span class="muted">🖥️ ${c.workstations.length}</span>
             </div>
           </div>
+          ${active ? `<span class="active-tag">${t('ui.youAreHere')}</span>` : ''}
         </button>`;
       })
       .join('');

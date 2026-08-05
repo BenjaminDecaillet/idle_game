@@ -1010,24 +1010,27 @@ button.site-card {
   text-transform: uppercase;
 }
 
+/* Specialization accents follow the Okabe-Ito colorblind-safe palette
+   (vermillion / blue / bluish-green / orange, darkened for contrast).
+   Hue is never the only channel — every badge also carries its text. */
 .spec-Frontend {
-  background: #ffdeeb;
-  color: #d6336c;
+  background: #ffe0cd;
+  color: #b34b00;
 }
 
 .spec-Backend {
-  background: #dbeaff;
-  color: #1d5fd6;
+  background: #d5ecfa;
+  color: #005f96;
 }
 
 .spec-DevOps {
-  background: #d9f7e8;
-  color: #148a54;
+  background: #d2f3e8;
+  color: #007a59;
 }
 
 .spec-DataScience {
-  background: #fff0d2;
-  color: #c07c00;
+  background: #ffeeca;
+  color: #8f6400;
 }
 
 .lvl {
