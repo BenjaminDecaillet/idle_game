@@ -79,11 +79,12 @@ follow-ups (more bespoke scenes, more pets/cosmetic waves).
     vault claims burst confetti at the button position on top of their
     chimes (decisions.md #34).
 
-19. ~~**Bespoke per-country city scenes**~~ — first wave shipped: Swiss
-    lakeside, Saudi desert highway and Shanghai waterfront via a
-    `backdrop` theme hook, interactive geometry untouched (decisions.md
-    #37). The other five countries can follow with the same hook —
-    pure content work.
+19. ~~**Bespoke per-country city scenes**~~ — complete: every country
+    except the US reference map now has a bespoke scene via the
+    `backdrop` theme hook, interactive geometry untouched. First wave
+    (decisions.md #37): Swiss lakeside, Saudi desert highway, Shanghai
+    waterfront. Second wave (decisions.md #38): Canadian lakeshore,
+    Venetian canal, Seine quay, Berlin Spree with mural wall.
 
 ## Tech
 

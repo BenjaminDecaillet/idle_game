@@ -1,36 +1,29 @@
-# Session state — 2026-08-04 (autonomous backlog run, WRAPPED)
+# Session state — 2026-08-05 (bespoke scenes second wave)
 
 Contract: `.claude/skills/session-handoff/SKILL.md`.
 
 ## Nothing in flight
 
-The 2026-08-04 run is complete: **14 slices merged as PRs #17–#30**,
-every one with green CI (vitest + build + Chromium smoke), no AI
-attribution in git history. Suite at the wrap: 708 tests / 33 files.
-
-Shipped, in order: save-v10 state slice (per-floor projects,
-company-tier cost scaling, beta shop), Office-first tab layout,
-chiptune + chimes, daily contracts, full i18n sweep (UI chrome +
-engine error ids), worker traits & rare candidates, random events with
-trade-offs, piggy vault, site specialization, office pets (push opt-in
-formally skipped — external infra, decisions.md #33), builder chip +
-claim confetti, construction art pass, balance harness (CI pacing
-guards + `npm run balance:sim`), bespoke city scenes first wave
-(CH/SA/CN).
+This session shipped one slice on branch `claude/continue-m1veaw`:
+**bespoke city scenes, second wave** — backdrops for ca (Muskoka
+lakeshore), it (Venetian canal), fr (Seine quay) and de (Berlin Spree
+with mural wall), closing improvements.md #19. The US map deliberately
+keeps the reference look (decisions.md #38). Refactors: cn's inline
+railing → shared `quayRail()`, ca's maple → `mapleTree()`. All four
+scenes visually verified in Chromium (daylight, plus dusk-ca and
+satellite-de). Suite green: 708 tests / 33 files, build + tsc clean.
 
 ## What remains (nothing actionable without external accounts/SDKs)
 
-- improvements.md is re-baselined: open items are external-infra
-  (push #12, plus plan.md's analytics/ads/IAP/Capacitor), the
-  deliberately-untouched beta exit checklist (#22 — `BETA_*` flags NOT
-  flipped, per instruction), and same-pattern content follow-ups
-  (bespoke scenes for the other 5 countries via the `backdrop` hook,
-  more cosmetic waves).
-- decisions.md #20–#37 log every design fork from this run for review
-  and veto.
+- External-infra items only: push notifications (#12), plan.md's
+  analytics/ads/IAP/Capacitor (monetization.md).
+- Beta exit checklist (#22) deliberately untouched — `BETA_*` flags NOT
+  flipped, per standing instruction.
+- Possible future cosmetic waves (app icon colors, map weather) noted
+  in improvements.md #14 — no open top-tier items.
 
 ## Resume protocol
 
 On "continue": read CLAUDE.md → this file → `git log --oneline -15` +
-`git status`. There is no in-flight branch; start anything new from
+`git status`. If this branch's PR is merged, start anything new from
 fresh `master`.
