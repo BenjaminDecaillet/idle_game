@@ -649,6 +649,9 @@ describe('Debt: crisis quits across multiple companies', () => {
       renameCount: 0,
       petId: null,
       floorProjects: [],
+      auto: { train: false, hire: false, desks: false },
+      recruiterLevel: 0,
+      recruiterCooldownSec: 600,
     };
 
     country.companies.push(company2);

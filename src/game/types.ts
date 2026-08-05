@@ -203,7 +203,8 @@ export type TimedActionKind =
   | 'promotion'
   | 'desk-upgrade'
   | 'floor-build'
-  | 'company-build';
+  | 'company-build'
+  | 'expedition';
 
 export interface TimedAction {
   id: number;
@@ -226,6 +227,8 @@ export interface TimedAction {
   siteId?: string;
   /** company-build: what founding cost (floor for rename pricing later). */
   price?: number;
+  /** expedition: the country being scouted. */
+  countryId?: string;
 }
 
 export interface WorkerState {
@@ -261,6 +264,10 @@ export interface ProjectState {
 export interface Settings {
   sound: boolean;
   particles: boolean;
+  /** Ambient scene animation (bobbing personas, cars, pets). */
+  animations: boolean;
+  /** Floating "+$" numbers on payouts and claims. */
+  floatingNumbers: boolean;
   /** Chiptune theme loop — off by default; audio starts on a user gesture. */
   music: boolean;
   /** Music volume 0..1 (independent of sound effects). */
@@ -361,6 +368,21 @@ export interface CompanyState {
    * desks on a floor work that floor's project.
    */
   floorProjects: (string | null)[];
+  /**
+   * Earned-automation toggles (docs/balance.md Phase A). Flags are
+   * per-company and default OFF; flipping one on requires the account-level
+   * unlock (milestone counter or VsCoin early-unlock). The automation pass
+   * runs inside tick() so offline simulation gets it for free.
+   */
+  auto: { train: boolean; hire: boolean; desks: boolean };
+  /**
+   * Recruiting capacity (docs/balance.md Phase R): each level widens the
+   * candidate pool (3 + level) and speeds up timed refills. 0 = today's
+   * manual behavior exactly.
+   */
+  recruiterLevel: number;
+  /** Seconds until the recruiter's next candidate arrives. */
+  recruiterCooldownSec: number;
 }
 
 /**
@@ -419,6 +441,33 @@ export interface PrestigeState {
   reputation: number;
 }
 
+/** The three differentiated exit types (docs/balance.md Phase F). */
+export type ExitType = 'acq' | 'ipo' | 'spinoff';
+
+/**
+ * Deep prestige (docs/balance.md Phase F): every exit — Acquisition, IPO,
+ * Spin-off — banks Founder Points from three high-water tracks (lifetime
+ * earnings, peak headcount, max countries), delta-form so waiting is
+ * strictly dominant while early resets stay viable. Points buy respec-able
+ * perks (FOUNDER_PERKS in data.ts). Survives prestige by definition.
+ */
+export interface FounderState {
+  /** Unspent Founder Points. */
+  points: number;
+  /** FP already banked per track (delta form, like reputation). */
+  banked: { acq: number; ipo: number; spinoff: number };
+  /** Perk levels bought (id → level). */
+  perks: Record<string, number>;
+  /** High-water: most employees ever on payroll at once (IPO track). */
+  peakHeadcount: number;
+  /** High-water: most countries ever held at once (spin-off track). */
+  maxCountries: number;
+  /** Free perk respecs in the bank (one granted per exit). */
+  freeRespecs: number;
+  /** Exits performed, per type (flavor + stats). */
+  exits: { acq: number; ipo: number; spinoff: number };
+}
+
 export interface GameState {
   version: number;
   countries: CountryState[];
@@ -467,8 +516,27 @@ export interface GameState {
   floorGiftClaimed: boolean;
   /** Lifetime completed promotions (mission metric). */
   promotionsDone: number;
+  /** Lifetime completed training programs (automation unlock counter). */
+  trainingsDone: number;
+  /** Lifetime hires accepted (automation unlock counter). */
+  hiresDone: number;
+  /** Automations early-unlocked with VsCoin ('train' | 'hire' | 'desks'). */
+  automationBought: string[];
+  /**
+   * Countries whose market has been scouted by an expedition (docs/
+   * balance.md Phase X). Gates country unlocks, grants a small permanent
+   * output bonus per scouted market, and survives prestige.
+   */
+  scoutedCountries: string[];
+  /**
+   * Viral moments (docs/balance.md Phase B): durable catch counter (future
+   * mission fuel) + the per-UTC-day jackpot cap bookkeeping.
+   */
+  viral: { catches: number; jackpotDay: number; jackpotsToday: number };
   /** IPO resets & banked reputation (permanent output multiplier). */
   prestige: PrestigeState;
+  /** Deep prestige: Founder Points, perks and high-water tracks. */
+  founder: FounderState;
   /** Last claim of the offline-earnings doubler (wall-clock ms, 0 = never). */
   doublerLastClaimedAt: number;
   /** Lifetime doubler claims (analytics / future missions). */
@@ -493,6 +561,8 @@ export interface TickEvents {
   deskUpgradesDone: { companyId: number; stationId: number; newDefId: string }[];
   floorBuildsDone: { companyId: number; floors: number }[];
   companyBuildsDone: { countryId: CountryId; companyId: number; siteId: string }[];
+  /** Finished market-scouting expeditions (the UI shows the report). */
+  expeditionsDone: { countryId: string }[];
   /** Debt-crisis resignations (the UI toasts them). */
   quits: { companyId: number; workerId: number; name: string }[];
 }

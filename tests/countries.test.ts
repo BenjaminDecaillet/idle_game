@@ -27,9 +27,18 @@ import {
   setStartingCountry,
   worldUnlocked,
 } from '../src/game/engine';
-import type { CountryId, CountryState, WorkerState } from '../src/game/types';
+import type { CountryId, CountryState, GameState, WorkerState } from '../src/game/types';
 
 const NOW = 1_700_000_000_000;
+
+/**
+ * Unlocks now require a market-scouting expedition first (Phase X); these
+ * tests are about the unlock itself, so pre-seed the scouted flag.
+ */
+function unlockScouted(state: GameState, id: string): string | null {
+  if (!state.scoutedCountries.includes(id)) state.scoutedCountries.push(id);
+  return unlockCountry(state, id);
+}
 
 function makeWorker(overrides: Partial<WorkerState> = {}): WorkerState {
   return {
@@ -162,13 +171,13 @@ describe('worldUnlocked', () => {
 describe('unlockCountry', () => {
   it('returns error if world not unlocked', () => {
     const state = createInitialState(NOW);
-    const result = unlockCountry(state, 'ch');
+    const result = unlockScouted(state, 'ch');
     expect(result).toBe('error.ownCityFirst');
   });
 
   it('returns error if country already unlocked', () => {
     const state = createInitialState(NOW, 'us');
-    const result = unlockCountry(state, 'us');
+    const result = unlockScouted(state, 'us');
     expect(result).toBe('error.countryUnlocked');
   });
 
@@ -185,7 +194,7 @@ describe('unlockCountry', () => {
 
     // Set money to less than unlock cost
     country.money = countryUnlockCost(state) - 1;
-    const result = unlockCountry(state, 'ch');
+    const result = unlockScouted(state, 'ch');
     expect(result).toBe('error.notEnoughMoney');
   });
 
@@ -203,7 +212,7 @@ describe('unlockCountry', () => {
     const cost = countryUnlockCost(state);
     const moneyBefore = country.money;
 
-    const result = unlockCountry(state, 'ch');
+    const result = unlockScouted(state, 'ch');
     expect(result).toBeNull();
 
     // Active country's money decreased
@@ -230,7 +239,7 @@ describe('unlockCountry', () => {
       completeBuild(state, site.id);
     }
 
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
 
     const chCountry = activeCountry(state);
     const garageCompany = chCountry.companies[0];
@@ -252,7 +261,7 @@ describe('unlockCountry', () => {
     const firstCost = countryUnlockCost(state);
     expect(firstCost).toBe(COUNTRY_UNLOCK_BASE);
 
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
 
     // Switch back to US to unlock the next one
     setActiveCountry(state, 'us');
@@ -277,7 +286,7 @@ describe('setActiveCountry', () => {
     }
 
     // Unlock CH
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
     expect(state.activeCountryId).toBe('ch');
 
     // Travel back to US
@@ -314,7 +323,7 @@ describe('per-country isolation', () => {
 
     const moneyAfterCompanies = usCountry.money;
     const cost = countryUnlockCost(state);
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
 
     const chCountry = activeCountry(state);
     expect(chCountry.money).toBe(COUNTRY_STARTING_MONEY); // CH starts with 50
@@ -333,7 +342,7 @@ describe('per-country isolation', () => {
       completeBuild(state, site.id);
     }
 
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
     const chCountry = activeCountry(state);
 
     // CH has only garage company
@@ -354,7 +363,7 @@ describe('per-country isolation', () => {
       buyCompany(state, site.id);
       completeBuild(state, site.id);
     }
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
     const chCountry = countryById(state, 'ch')!;
 
     // Verify each country starts with 0 totalEarned
@@ -380,7 +389,7 @@ describe('per-country isolation', () => {
       buyCompany(state, site.id);
       completeBuild(state, site.id);
     }
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
     const chCountry = activeCountry(state);
     chCountry.money = 10_000_000;
 
@@ -484,7 +493,7 @@ describe('offline simulation across countries', () => {
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state, site.id);
     }
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
     const chCountry = activeCountry(state);
     const chCompany = activeCompany(state);
     chCountry.money = 50_000;
@@ -521,7 +530,7 @@ describe('offline simulation across countries', () => {
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state1, site.id);
     }
-    unlockCountry(state1, 'ch');
+    unlockScouted(state1, 'ch');
     const ch1 = activeCountry(state1);
     const chCompany1 = activeCompany(state1);
     ch1.money = 50_000;
@@ -547,7 +556,7 @@ describe('offline simulation across countries', () => {
     for (const site of COMPANY_SITES.slice(1)) {
       buyCompany(state2, site.id);
     }
-    unlockCountry(state2, 'ch');
+    unlockScouted(state2, 'ch');
     const ch2 = activeCountry(state2);
     const chCompany2 = activeCompany(state2);
     ch2.money = 50_000;
@@ -583,7 +592,7 @@ describe('VsCoin and missions are global', () => {
       buyCompany(state, site.id);
       completeBuild(state, site.id);
     }
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
 
     // VsCoin is still visible in CH (global)
     expect(state.vsCoin).toBe(10);
@@ -604,7 +613,7 @@ describe('VsCoin and missions are global', () => {
       buyCompany(state, site.id);
       completeBuild(state, site.id);
     }
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
 
     // Countries increased
     expect(state.countries).toHaveLength(2);
@@ -612,7 +621,7 @@ describe('VsCoin and missions are global', () => {
     // Setup to unlock CA
     const activeC = activeCountry(state);
     activeC.money = 200_000_000_000_000;
-    unlockCountry(state, 'ca');
+    unlockScouted(state, 'ca');
     expect(state.countries).toHaveLength(3);
   });
 
@@ -631,7 +640,7 @@ describe('VsCoin and missions are global', () => {
       buyCompany(state, site.id);
       completeBuild(state, site.id);
     }
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
 
     // Mission claim persists after unlock
     expect(state.missionsClaimed).toContain('test-mission');
@@ -699,7 +708,7 @@ describe('parody company name pools', () => {
     }
 
     // Unlock CH
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
     const chCountry = activeCountry(state);
 
     // CH's garage company takes the first CH parody name
@@ -741,7 +750,7 @@ describe('countries — integration with allCompanies', () => {
       buyCompany(state, site.id);
       completeBuild(state, site.id);
     }
-    unlockCountry(state, 'ch');
+    unlockScouted(state, 'ch');
     const chCountry = activeCountry(state);
     expect(chCountry.companies.length).toBe(1); // just garage
 

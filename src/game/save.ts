@@ -4,11 +4,14 @@ import {
   DEFAULT_COUNTRY,
   DEFAULT_PLAYER_LOOK,
   FLOOR_CAPACITY,
+  FOUNDER_PERKS,
+  founderPerkById,
   MAP_THEMES,
   MAX_FLOORS,
   MISSIONS,
   PLAYER_LOOK_OPTIONS,
-  OFFLINE_CAP_HOURS,
+  RECRUITER_INTERVAL_SEC,
+  RECRUITER_MAX_LEVEL,
   PROJECTS,
   TIME_SCALES,
   PETS,
@@ -20,6 +23,7 @@ import {
 import {
   createInitialState,
   newProjectState,
+  offlineCapSec,
   SAVE_VERSION,
   simulateOfflineReport,
   type OfflineReport,
@@ -82,7 +86,8 @@ export function loadGame(storage: Storage = localStorage, now = Date.now()): Loa
     const offlineSec = Math.max(0, (now - state.lastSeen) / 1000);
     let offlineReport: OfflineReport | null = null;
     if (offlineSec > 5) {
-      offlineReport = simulateOfflineReport(state, offlineSec, OFFLINE_CAP_HOURS * 3600);
+      // The cap is perk-extendable (cloud-infrastructure founder perk).
+      offlineReport = simulateOfflineReport(state, offlineSec, offlineCapSec(state));
     }
     state.lastSeen = now;
     return {
@@ -116,6 +121,13 @@ function fresh(now: number, betaReset: boolean): LoadResult {
  * loadGame (beta reset), and future breaking changes decide their own
  * policy when they land.
  */
+/** Coerce to a non-negative integer, else the default. */
+function nonNegInt(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : fallback;
+}
+
 export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState {
   const fresh = createInitialState(now);
   const state: GameState = {
@@ -171,6 +183,47 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
       typeof parsed.promotionsDone === 'number' && parsed.promotionsDone >= 0
         ? parsed.promotionsDone
         : 0,
+    trainingsDone:
+      typeof parsed.trainingsDone === 'number' &&
+      Number.isFinite(parsed.trainingsDone) &&
+      parsed.trainingsDone >= 0
+        ? Math.floor(parsed.trainingsDone)
+        : 0,
+    hiresDone:
+      typeof parsed.hiresDone === 'number' &&
+      Number.isFinite(parsed.hiresDone) &&
+      parsed.hiresDone >= 0
+        ? Math.floor(parsed.hiresDone)
+        : 0,
+    automationBought: Array.isArray(parsed.automationBought)
+      ? parsed.automationBought.filter((k): k is string =>
+          ['train', 'hire', 'desks'].includes(k as string),
+        )
+      : [],
+    viral: {
+      catches:
+        typeof parsed.viral?.catches === 'number' &&
+        Number.isFinite(parsed.viral.catches) &&
+        parsed.viral.catches >= 0
+          ? Math.floor(parsed.viral.catches)
+          : 0,
+      jackpotDay: Number.isFinite(parsed.viral?.jackpotDay) ? parsed.viral!.jackpotDay : -1,
+      jackpotsToday:
+        typeof parsed.viral?.jackpotsToday === 'number' &&
+        Number.isFinite(parsed.viral.jackpotsToday) &&
+        parsed.viral.jackpotsToday >= 0
+          ? Math.floor(parsed.viral.jackpotsToday)
+          : 0,
+    },
+    scoutedCountries: Array.isArray(parsed.scoutedCountries)
+      ? Array.from(
+          new Set(
+            parsed.scoutedCountries.filter((id): id is string =>
+              COUNTRIES.some((c) => c.id === id),
+            ),
+          ),
+        )
+      : [],
     freeFastForwards:
       typeof parsed.freeFastForwards === 'number' &&
       Number.isFinite(parsed.freeFastForwards) &&
@@ -190,6 +243,35 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
       parsed.offlineDoublesClaimed >= 0
         ? Math.floor(parsed.offlineDoublesClaimed)
         : 0,
+    founder: {
+      points: nonNegInt(parsed.founder?.points),
+      banked: {
+        acq: nonNegInt(parsed.founder?.banked?.acq),
+        ipo: nonNegInt(parsed.founder?.banked?.ipo),
+        spinoff: nonNegInt(parsed.founder?.banked?.spinoff),
+      },
+      perks: Object.fromEntries(
+        Object.entries(
+          parsed.founder?.perks && typeof parsed.founder.perks === 'object'
+            ? parsed.founder.perks
+            : {},
+        )
+          .filter(([id]) => FOUNDER_PERKS.some((p) => p.id === id))
+          .map(([id, level]) => [
+            id,
+            Math.min(founderPerkById(id).costs.length, nonNegInt(level)),
+          ])
+          .filter(([, level]) => (level as number) > 0),
+      ),
+      peakHeadcount: nonNegInt(parsed.founder?.peakHeadcount),
+      maxCountries: Math.max(1, nonNegInt(parsed.founder?.maxCountries, 1)),
+      freeRespecs: nonNegInt(parsed.founder?.freeRespecs),
+      exits: {
+        acq: nonNegInt(parsed.founder?.exits?.acq),
+        ipo: nonNegInt(parsed.founder?.exits?.ipo),
+        spinoff: nonNegInt(parsed.founder?.exits?.spinoff),
+      },
+    },
     prestige: {
       count:
         typeof parsed.prestige?.count === 'number' &&
@@ -280,6 +362,8 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
     state.settings.language = 'auto';
   }
   state.settings.music = state.settings.music === true;
+  state.settings.animations = state.settings.animations !== false;
+  state.settings.floatingNumbers = state.settings.floatingNumbers !== false;
   state.settings.musicVolume = Number.isFinite(state.settings.musicVolume)
     ? Math.max(0, Math.min(1, state.settings.musicVolume))
     : 0.5;
@@ -297,6 +381,15 @@ export function migrate(parsed: Partial<GameState>, now = Date.now()): GameState
     }
   }
   state.nextEntityId = Math.max(state.nextEntityId, maxId + 1);
+
+  // Founder high-water hygiene: the tracks can never sit below what the
+  // save demonstrably holds right now.
+  const liveHeadcount = state.countries.reduce(
+    (sum, country) => sum + country.companies.reduce((s, c) => s + c.workers.length, 0),
+    0,
+  );
+  state.founder.peakHeadcount = Math.max(state.founder.peakHeadcount, liveHeadcount);
+  state.founder.maxCountries = Math.max(state.founder.maxCountries, state.countries.length);
   return state;
 }
 
@@ -335,6 +428,24 @@ function migrateCountry(saved: CountryState, template: CountryState): CountrySta
     if (typeof company.petId !== 'string' || !knownPets.has(company.petId)) {
       company.petId = null;
     }
+    // Automation flags & recruiters (added same-version): default OFF/0.
+    company.auto = {
+      train: c.auto?.train === true,
+      hire: c.auto?.hire === true,
+      desks: c.auto?.desks === true,
+    };
+    company.recruiterLevel =
+      typeof c.recruiterLevel === 'number' &&
+      Number.isFinite(c.recruiterLevel) &&
+      c.recruiterLevel >= 0
+        ? Math.min(RECRUITER_MAX_LEVEL, Math.floor(c.recruiterLevel))
+        : 0;
+    company.recruiterCooldownSec =
+      typeof c.recruiterCooldownSec === 'number' &&
+      Number.isFinite(c.recruiterCooldownSec) &&
+      c.recruiterCooldownSec >= 0
+        ? Math.min(RECRUITER_INTERVAL_SEC, c.recruiterCooldownSec)
+        : RECRUITER_INTERVAL_SEC;
     company.candidates = (company.candidates ?? []).map((cand) => ({
       ...cand,
       traits: Array.isArray(cand.traits) ? cand.traits.filter((id) => knownTraits.has(id)) : [],

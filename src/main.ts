@@ -2,12 +2,20 @@ import './style.css';
 import { registerSW } from 'virtual:pwa-register';
 import { BETA_FORCE_REFRESH } from './game/data';
 import { activeCompany, grantBoost, tick, timeSkip } from './game/engine';
-import { ensureDaily } from './game/daily';
-import { rollEventOffer } from './game/events';
-import { EVENT_INTERVAL_MAX_SEC, EVENT_INTERVAL_MIN_SEC } from './game/data';
+import { claimableDailyContracts, ensureDaily } from './game/daily';
+import { claimableMissions } from './game/missions';
+import { catchViral, rollEventOffer, viralUnlocked } from './game/events';
+import {
+  EVENT_INTERVAL_MAX_SEC,
+  EVENT_INTERVAL_MIN_SEC,
+  VIRAL_LIFETIME_SEC,
+  VIRAL_MAX_INTERVAL_SEC,
+  VIRAL_MIN_INTERVAL_SEC,
+} from './game/data';
+import { formatMoney } from './ui/format';
 import { loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
-import { resolveLang, setCurrentLang, t } from './i18n';
+import { lookup, resolveLang, setCurrentLang, t } from './i18n';
 import { Fx } from './ui/fx';
 import { UI } from './ui/ui';
 
@@ -25,6 +33,9 @@ fx.enabled = state.settings.particles;
 // AudioContext (autoplay policy) — the first click does it.
 fx.setMusicVolume(state.settings.musicVolume);
 fx.setMusic(state.settings.music);
+fx.floatsEnabled = state.settings.floatingNumbers;
+// Ambient scene animation obeys the Animations toggle (CSS pauses it).
+document.body.classList.toggle('anim-off', !state.settings.animations);
 
 const ui = new UI(root, state, fx, (next) => {
   state = next;
@@ -61,10 +72,11 @@ function loop(now: number): void {
   // Payout FX only for the company currently on screen; money still counts.
   const visible = events.completions.filter((c) => c.companyId === shownCompanyId);
   if (visible.length > 0) {
+    // Coalesce a frame's payouts into ONE burst + float showing the sum —
+    // payout storms stay readable instead of stacking labels.
     const origin = ui.payoutOrigin();
-    for (const c of visible.slice(0, 3)) {
-      fx.payoutBurst(origin.x, origin.y, c.reward);
-    }
+    const total = visible.reduce((sum, c) => sum + c.reward, 0);
+    fx.payoutBurst(origin.x, origin.y, total);
     ui.moneyPulse();
   }
   for (const done of events.trainingsDone) {
@@ -85,6 +97,12 @@ function loop(now: number): void {
     if (done.companyId === shownCompanyId) {
       ui.toast(`🏗️ ${t('ui.floorBuilt')}`, 'info');
     }
+  }
+  for (const done of events.expeditionsDone) {
+    ui.toast(
+      `🧭 ${t('ui.marketReportBack', { name: lookup(`country.${done.countryId}.name`) })}`,
+      'info',
+    );
   }
   for (const done of events.companyBuildsDone) {
     const doneCountry = state.countries.find((c) => c.id === done.countryId);
@@ -108,12 +126,31 @@ function loop(now: number): void {
 }
 requestAnimationFrame(loop);
 
+// App badge (Badging API): when the player leaves, the installed-app icon
+// shows how many claims are waiting (missions + daily contracts) — no
+// permission prompt, no backend. Cleared on return; browsers without the
+// API just no-op.
+const badgeNav = navigator as Navigator & {
+  setAppBadge?: (count?: number) => Promise<void>;
+  clearAppBadge?: () => Promise<void>;
+};
+function updateAppBadge(): void {
+  if (!badgeNav.setAppBadge) return;
+  const count = claimableMissions(state).length + claimableDailyContracts(state).length;
+  if (count > 0) badgeNav.setAppBadge(count).catch(() => {});
+  else badgeNav.clearAppBadge?.().catch(() => {});
+}
+
 // When the tab is hidden or the app is closed, persist immediately so
 // offline progress picks up from the right timestamp.
 document.addEventListener('visibilitychange', () => {
+  // Pause ambient scene animation while the document is hidden (battery).
+  document.body.classList.toggle('scene-paused', document.visibilityState === 'hidden');
   if (document.visibilityState === 'hidden') {
     saveGame(state);
+    updateAppBadge();
   } else {
+    badgeNav.clearAppBadge?.().catch(() => {});
     // Returning to a backgrounded tab: fast-forward the missed time.
     const { state: reloaded, offlineReport: report, offlineSec: sec } = loadGame();
     state = reloaded;
@@ -122,7 +159,10 @@ document.addEventListener('visibilitychange', () => {
     if (report && report.earnings > 0 && sec > 60) ui.welcomeBack(sec, report);
   }
 });
-window.addEventListener('pagehide', () => saveGame(state));
+window.addEventListener('pagehide', () => {
+  saveGame(state);
+  updateAppBadge();
+});
 
 // ---------------------------------------------------------------------------
 // Service worker updates. The PWA precaches the whole shell, so without an
@@ -228,6 +268,62 @@ function scheduleBriefcase(): void {
 }
 // First one shows up quickly so new players discover the mechanic.
 briefcaseTimer = setTimeout(spawnBriefcase, (45 + Math.random() * 60) * 1000);
+
+// ---------------------------------------------------------------------------
+// Viral moments — presence-gated cash clickables (docs/balance.md Phase B).
+// Online-only by design: the spawner is wall-clock, offline sim never
+// compensates a bubble nobody was there to tap. The engine resolves the
+// catch (cash, durable counter, day-capped VsCoin jackpot).
+// ---------------------------------------------------------------------------
+
+function spawnViral(): void {
+  if (
+    document.getElementById('viral-moment') ||
+    document.visibilityState === 'hidden' ||
+    !viralUnlocked(state)
+  ) {
+    scheduleViral();
+    return;
+  }
+  const el = document.createElement('button');
+  el.id = 'viral-moment';
+  el.className = 'briefcase viral';
+  el.textContent = '🔥';
+  el.title = t('ui.viralTitle');
+  el.style.left = `${8 + Math.random() * 76}vw`;
+  el.style.top = `${18 + Math.random() * 45}vh`;
+  el.addEventListener('click', () => {
+    const r = el.getBoundingClientRect();
+    el.remove();
+    const day = Math.floor(Date.now() / 86_400_000);
+    const result = catchViral(state, day);
+    fx.burst(r.left + r.width / 2, r.top + r.height / 2);
+    fx.bigFloat(r.left + r.width / 2, r.top, `+${formatMoney(result.cash)}`);
+    if (result.jackpot) {
+      fx.coinChime();
+      ui.toast(`🔥 ${t('ui.viralJackpot')}`, 'info');
+    } else {
+      ui.toast(`🔥 ${t('ui.viralCaught')}`, 'info');
+    }
+    scheduleViral();
+  });
+  document.body.appendChild(el);
+  setTimeout(() => {
+    if (el.isConnected) {
+      el.remove();
+      scheduleViral();
+    }
+  }, VIRAL_LIFETIME_SEC * 1000);
+}
+
+let viralTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleViral(): void {
+  clearTimeout(viralTimer);
+  const delay =
+    VIRAL_MIN_INTERVAL_SEC + Math.random() * (VIRAL_MAX_INTERVAL_SEC - VIRAL_MIN_INTERVAL_SEC);
+  viralTimer = setTimeout(spawnViral, delay * 1000);
+}
+scheduleViral();
 
 // Console API for demoing/integrating monetization rewards before any ad or
 // payment SDK is wired up (see docs/monetization.md). Example in DevTools:

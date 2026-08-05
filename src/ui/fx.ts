@@ -22,6 +22,8 @@ interface FloatText {
   y: number;
   life: number;
   text: string;
+  /** Premium moments (VsCoin, milestones) pop bigger and hold longer. */
+  big?: boolean;
 }
 
 const COLORS = ['#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#a78bfa', '#22d3ee'];
@@ -70,6 +72,10 @@ export class Fx {
   private lastDing = 0;
   enabled = true;
   soundEnabled = true;
+  /** Floating "+$" labels (settings toggle, separate from confetti). */
+  floatsEnabled = true;
+  /** OS-level reduced-motion preference: no confetti, no floats. */
+  private reducedMotion = false;
   /** Music bus: master gain shared by every scheduled note, for volume + ducking. */
   private musicGain: GainNode | null = null;
   private musicOn = false;
@@ -83,6 +89,11 @@ export class Fx {
     this.ctx = canvas.getContext('2d')!;
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    if (typeof matchMedia === 'function') {
+      const query = matchMedia('(prefers-reduced-motion: reduce)');
+      this.reducedMotion = query.matches;
+      query.addEventListener?.('change', () => (this.reducedMotion = query.matches));
+    }
   }
 
   private resize(): void {
@@ -95,14 +106,24 @@ export class Fx {
   /** Confetti + floating reward text at the given viewport position. */
   payoutBurst(x: number, y: number, reward: number): void {
     if (!this.burst(x, y)) return;
-    this.texts.push({ x, y: y - 10, life: 0, text: `+${formatMoney(reward)}` });
+    if (this.floatsEnabled) {
+      this.texts.push({ x, y: y - 10, life: 0, text: `+${formatMoney(reward)}` });
+    }
     this.ding();
+  }
+
+  /** Big gold float for premium moments (VsCoin claims, milestones). */
+  bigFloat(x: number, y: number, text: string): void {
+    if (!this.enabled || this.reducedMotion || !this.floatsEnabled) return;
+    this.texts.push({ x, y: y - 14, life: 0, text, big: true });
   }
 
   /** Confetti only (no text) — returns false when throttled/disabled. */
   burst(x: number, y: number): boolean {
     const now = performance.now();
-    if (!this.enabled || now - this.lastBurst < 120) return false; // throttle heavy streams
+    if (!this.enabled || this.reducedMotion || now - this.lastBurst < 120) {
+      return false; // throttle heavy streams
+    }
     this.lastBurst = now;
     const count = 14;
     for (let i = 0; i < count; i++) {
@@ -151,18 +172,21 @@ export class Fx {
       }
       return true;
     });
+    if (!this.floatsEnabled) this.texts = [];
     this.texts = this.texts.filter((t) => {
       t.life += dt;
-      if (t.life >= 1.2) return false;
-      const alpha = 1 - t.life / 1.2;
+      const maxLife = t.big ? 1.7 : 1.2;
+      if (t.life >= maxLife) return false;
+      const alpha = 1 - t.life / maxLife;
       ctx.globalAlpha = alpha;
-      ctx.font = `800 16px 'Baloo 2', system-ui, sans-serif`;
-      ctx.fillStyle = '#1f9d55';
+      ctx.font = `800 ${t.big ? 24 : 16}px 'Baloo 2', system-ui, sans-serif`;
+      ctx.fillStyle = t.big ? '#c99700' : '#1f9d55';
       ctx.strokeStyle = 'rgba(255,255,255,0.85)';
       ctx.lineWidth = 3;
       ctx.textAlign = 'center';
-      ctx.strokeText(t.text, t.x, t.y - t.life * 50);
-      ctx.fillText(t.text, t.x, t.y - t.life * 50);
+      const rise = t.big ? 36 : 50;
+      ctx.strokeText(t.text, t.x, t.y - t.life * rise);
+      ctx.fillText(t.text, t.x, t.y - t.life * rise);
       return true;
     });
     ctx.globalAlpha = 1;

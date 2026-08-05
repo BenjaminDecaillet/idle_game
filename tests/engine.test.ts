@@ -420,7 +420,7 @@ describe('trainWorker (timed program)', () => {
     expect(worker.stationId).toBeNull(); // off the floor while training
     expect(worker.skillLevel).toBe(1); // not yet — program must finish
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     const events = tick(state, duration);
     expect(c.timedActions.some((a) => a.kind === 'training' && a.targetId === worker.id)).toBe(false);
     expect(worker.skillLevel).toBe(1 + TRAIN_LEVELS);

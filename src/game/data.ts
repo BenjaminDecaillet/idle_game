@@ -478,6 +478,21 @@ export const EVENT_MIN_EARNED = 5_000;
 export const EVENT_INTERVAL_MIN_SEC = 360;
 export const EVENT_INTERVAL_MAX_SEC = 660;
 
+// Viral moments (docs/balance.md Phase B): presence-gated bonus clickables
+// (the golden-cookie analog). The UI spawns them on a wall-clock cadence —
+// online-only BY DESIGN, offline sim never compensates. Cash is minutes of
+// gross income; a small jackpot chance pays 1 VsCoin, capped per UTC day so
+// realized VsCoin (~0.6-0.8/day) stays below the daily contracts' 2.5-3.5.
+export const VIRAL_MIN_EARNED = 5_000;
+export const VIRAL_MIN_INTERVAL_SEC = 480;
+export const VIRAL_MAX_INTERVAL_SEC = 900;
+export const VIRAL_LIFETIME_SEC = 18;
+export const VIRAL_REWARD_MINUTES = 3;
+export const VIRAL_REWARD_FLOOR = 250;
+export const VIRAL_JACKPOT_CHANCE = 0.08;
+export const VIRAL_JACKPOT_VSCOIN = 1;
+export const VIRAL_JACKPOT_DAILY_CAP = 2;
+
 // Office pets: zero-power VsCoin cosmetics (the cosmetic-first premium
 // catalog). Bought once globally, then picked per company; the active pet
 // wanders the ground floor. Deliberately no gameplay effect.
@@ -492,12 +507,81 @@ export const PETS: PetDef[] = [
   { id: 'corgi', name: 'Standup Corgi', emoji: '🐕', vsCoinCost: 4 },
   { id: 'duck', name: 'Rubber-Duck Debugger', emoji: '🦆', vsCoinCost: 6 },
   { id: 'trex', name: 'Legacy T-Rex', emoji: '🦖', vsCoinCost: 10 },
+  // Wave 2 (same zero-power contract as the first four).
+  { id: 'goldfish', name: 'Scrum Goldfish', emoji: '🐠', vsCoinCost: 4 },
+  { id: 'parrot', name: 'Merge-Conflict Parrot', emoji: '🦜', vsCoinCost: 6 },
+  { id: 'hedgehog', name: 'Hotfix Hedgehog', emoji: '🦔', vsCoinCost: 8 },
+  { id: 'llama', name: 'Deploy-Day Llama', emoji: '🦙', vsCoinCost: 12 },
 ];
 export function petById(id: string): PetDef {
   const p = PETS.find((p) => p.id === id);
   if (!p) throw new Error(`Unknown pet: ${id}`);
   return p;
 }
+
+// Earned automation (docs/balance.md Phase A): auto-restart training,
+// auto-hire and auto-buy desks unlock at account-level milestone counters
+// (or a VsCoin early-unlock — convenience-speed, not power), then toggle
+// per company, default OFF. The pass runs inside tick() on a fixed cadence
+// so offline simulation automates identically. Promotions are deliberately
+// never automated (grade changes stay a player decision).
+export type AutomationKind = 'train' | 'hire' | 'desks';
+export const AUTOMATION_CHECK_INTERVAL_SEC = 5;
+export const AUTO_TRAIN_UNLOCK_TRAININGS = 25;
+export const AUTO_HIRE_UNLOCK_HIRES = 40;
+export const AUTO_DESK_UNLOCK_DESKS = 75;
+export const AUTOMATION_VSCOIN_COSTS: Record<AutomationKind, number> = {
+  train: 6,
+  hire: 8,
+  desks: 10,
+};
+/** Auto-hire only fires when cash covers this much of the hire's salary. */
+export const AUTO_HIRE_SALARY_COVER_SEC = 1_800;
+/** Auto-desks only buys desks that pay for themselves within this time. */
+export const AUTO_DESK_PAYBACK_MAX_SEC = 1_800;
+/** Automation never spends below cost × this reserve (debt protection). */
+export const AUTO_CASH_RESERVE_FACTOR = 2;
+/** Builders automation must leave free for manual actions. */
+export const AUTO_BUILDER_RESERVE = 1;
+
+// Recruiters (docs/balance.md Phase R): per-company recruiting capacity.
+// Each level widens the candidate pool to 3 + level (max 8) and delivers a
+// fresh candidate every RECRUITER_INTERVAL_SEC / level. Priced off
+// companyCostScale so it matters at 50+ employee scale and is irrelevant
+// early.
+export const RECRUITER_BASE_COST = 50_000;
+export const RECRUITER_COST_GROWTH = 3;
+export const RECRUITER_MAX_LEVEL = 5;
+export const RECRUITER_INTERVAL_SEC = 600;
+
+// Market-scouting expeditions (docs/balance.md Phase X): a timed action
+// that must precede every country unlock — expansion becomes an authored
+// chapter opening. Costs a small fraction of the unlock price, occupies a
+// builder, and the returned market report grants a permanent output bonus
+// per scouted market (surviving prestige — knowledge outlives the exit).
+export const EXPEDITION_COST_FRACTION = 0.02;
+export const EXPEDITION_DURATION_BASE_SEC = 14_400; // 4 h for the first
+export const EXPEDITION_DURATION_GROWTH = 1.3; // ^ (countries owned − 1)
+export const EXPEDITION_OUTPUT_BONUS = 0.05;
+
+// Ownership milestones (docs/balance.md Phase M): stepped per-company
+// output bonuses at desk/headcount counts, turning the soft-cap decay into
+// a goal staircase. Steps map onto the floor ladder (fill floor 2 / half
+// tower / full house — the 8×4 building caps both counts at 32). Bonuses
+// are additive within a track; the desks and workers tracks multiply.
+export const COMPANY_MILESTONE_STEPS = [8, 16, 32];
+export const COMPANY_MILESTONE_BONUS = [0.05, 0.1, 0.15];
+
+// Market seasons (docs/balance.md Phase K): a deterministic quarterly cycle
+// derived from playTimeSec inside tick() — no state, no randomness,
+// offline-exact. Boom favors one specialization per cycle (rotating), and
+// the cycle mean is exactly 1.0 at a ¼ spec share so long-run pacing (and
+// the Phase H guards) stay anchored.
+export const SEASON_LENGTH_SEC = 21_600; // 6 h per season, 24 h per cycle
+export const SEASON_ORDER = ['stable', 'boom', 'crunch', 'recovery'] as const;
+export const SEASON_BOOM_SPEC_MULT = 1.6; // boom, favored spec only
+export const SEASON_CRUNCH_MULT = 0.8;
+export const SEASON_RECOVERY_MULT = 1.05;
 
 // Piggy vault (docs/balance.md Phase V): VAULT_RATE of every project payout
 // accrues ON TOP into a global vault (a bonus pool, not a tax — skimming
@@ -709,6 +793,50 @@ export const PRESTIGE_POINTS_PER_DECADE = 10; // rep per ×10 of all-time earnin
 export const PRESTIGE_OUTPUT_K = 0.5;
 export const PRESTIGE_OUTPUT_ALPHA = 0.5; // sqrt — heavy diminishing returns
 export const PRESTIGE_STORY_BEAT = 'dream-achieved'; // epilogue gate (story-seen survives prestige)
+
+// ---------------------------------------------------------------------------
+// Deep prestige — differentiated exits + Founder Points (docs/balance.md,
+// Phase F). Phase P above is untouched: the existing prestige IS the IPO
+// exit; Acquisition (early) and Spin-off (late) are additional gates on the
+// same reset. Every exit banks FP from ALL three high-water tracks
+// (delta form: fp = floor(K × metric^exp) − already banked), so patience is
+// rewarded but small resets stay viable.
+// ---------------------------------------------------------------------------
+
+export const ACQ_MIN_EARNED = 1_000_000_000; // acquisition gate: 1e9 lifetime
+export const SPINOFF_MIN_COUNTRIES = 3; // spin-off gate
+export const ACQ_FP_K = 3;
+export const ACQ_FP_EXP = 0.1; // on lifetime earnings
+export const IPO_FP_K = 1;
+export const IPO_FP_EXP = 0.6; // on peak concurrent headcount
+export const SPINOFF_FP_K = 8;
+export const SPINOFF_FP_EXP = 0.7; // on (max countries − 1)
+export const FOUNDER_RESPEC_FREE_PER_EXIT = 1;
+
+/** A Founder-Point perk: per-level FP costs (length = max level). */
+export interface FounderPerkDef {
+  id: string;
+  emoji: string;
+  costs: number[];
+}
+export const FOUNDER_PERKS: FounderPerkDef[] = [
+  { id: 'vision', emoji: '🔭', costs: [1, 2, 3, 4, 5] }, // +5% output / level
+  { id: 'alumni', emoji: '🎓', costs: [1, 2, 3, 4] }, // training ×0.90 / level
+  { id: 'lean-ops', emoji: '🧾', costs: [1, 2, 3, 4] }, // salaries ×0.95 / level
+  { id: 'cloud', emoji: '☁️', costs: [2, 3, 4] }, // offline cap +4 h / level
+  { id: 'war-chest', emoji: '💰', costs: [1, 2, 3] }, // restart cash 500/5k/50k
+];
+export const FOUNDER_VISION_OUTPUT = 0.05;
+export const FOUNDER_ALUMNI_FACTOR = 0.9;
+export const FOUNDER_LEANOPS_FACTOR = 0.95;
+export const FOUNDER_CLOUD_HOURS = 4;
+export const FOUNDER_WARCHEST_CASH = [500, 5_000, 50_000];
+
+export function founderPerkById(id: string): FounderPerkDef {
+  const p = FOUNDER_PERKS.find((p) => p.id === id);
+  if (!p) throw new Error(`Unknown founder perk: ${id}`);
+  return p;
+}
 
 export function siteById(id: string): CompanySiteDef {
   const s = COMPANY_SITES.find((s) => s.id === id);

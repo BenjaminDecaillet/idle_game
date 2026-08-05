@@ -1,16 +1,21 @@
 # Improvement backlog — curated & prioritized
 
-Re-baselined 2026-08-04 after the autonomous backlog run (PRs #17–#30):
-save v10 (per-floor projects + company-tier cost scaling + beta shop),
-the Office-first tab layout, the chiptune + chimes, daily contracts,
-the full i18n sweep, worker traits, random events, the piggy vault,
-site specialization, office pets, builder-chip + confetti polish, the
-construction art pass, the balance harness, and the first wave of
-bespoke city scenes. Everything actionable without external
-accounts/SDKs is shipped; what remains below is either external-infra
-(push, ads, IAP, analytics — see plan.md/monetization.md), the
-deliberately-untouched beta exit checklist, or same-pattern content
-follow-ups (more bespoke scenes, more pets/cosmetic waves).
+Re-baselined 2026-08-05 after the survey-backlog run: everything
+actionable from the 2026-08 state-of-the-art survey shipped in one
+branch — earned automation, ownership milestones, market seasons,
+recruiters, scouting expeditions, viral clickables, deep prestige
+(explicitly pulled forward from post-1.0), app badge, offline-cap
+honesty, floating-number/reduced-motion FX controls, scene instancing,
+the last five bespoke city scenes, pet wave 2 and the colorblind audit
+(plus repairing a semantic merge collision from PRs #36/#38 that broke
+the build on master). What remains below is external-infra (push, ads,
+IAP, analytics — see plan.md/monetization.md) and the
+deliberately-untouched beta exit checklist.
+
+Previous re-baseline (2026-08-04, PRs #17–#30): save v10, Office-first
+tabs, chiptune + chimes, daily contracts, i18n sweep, worker traits,
+random events, piggy vault, site specialization, office pets, polish
+passes, balance harness, city scenes wave 1.
 
 ## Top tier (next session, in this order)
 
@@ -55,10 +60,10 @@ follow-ups (more bespoke scenes, more pets/cosmetic waves).
     page-open Notification fallback can't re-engage. Revisit with
     monetization Phase 0.
 
-14. ~~**Cosmetic-first premium catalog**~~ — first wave shipped: four
-    zero-power office pets (VsCoin, global ownership, per-company pick,
-    staff-room pet corner + lobby companion — decisions.md #33). App
-    icon colors / map weather remain future waves.
+14. ~~**Cosmetic-first premium catalog**~~ — wave 1 (four zero-power
+    office pets — decisions.md #33) + wave 2 (goldfish, parrot,
+    hedgehog, llama). App icon colors / map weather remain future
+    waves.
 
 ## Polish
 
@@ -79,12 +84,10 @@ follow-ups (more bespoke scenes, more pets/cosmetic waves).
     vault claims burst confetti at the button position on top of their
     chimes (decisions.md #34).
 
-19. ~~**Bespoke per-country city scenes**~~ — complete: every country
-    except the US reference map now has a bespoke scene via the
-    `backdrop` theme hook, interactive geometry untouched. First wave
-    (decisions.md #37): Swiss lakeside, Saudi desert highway, Shanghai
-    waterfront. Second wave (decisions.md #38): Canadian lakeshore,
-    Venetian canal, Seine quay, Berlin Spree with mural wall.
+19. ~~**Bespoke per-country city scenes**~~ — COMPLETE: wave 1 (CH/SA/CN,
+    decisions.md #37) + wave 2 (US bay & bridge, CA lake & peaks, IT
+    riviera, FR Seine quay, DE Rhine & castle) — all eight countries
+    now have bespoke backdrops on the same hook.
 
 ## Tech
 
@@ -103,63 +106,65 @@ follow-ups (more bespoke scenes, more pets/cosmetic waves).
 Source: [idle-game-state-of-the-art.md](idle-game-state-of-the-art.md)
 (licences checked there; adapt ideas, never copy code).
 
-23. **Earned automation** — auto-restart training, auto-hire, auto-buy
-    desks as mission/milestone rewards, VsCoin early-unlock tier that
-    sells convenience-speed, not power (Antimatter Dimensions pattern).
-    Engine flags live in `tick()` so offline simulation gets them free.
+23. ~~**Earned automation**~~ — shipped: auto-training/auto-hiring/
+    auto-desks unlock at lifetime counters (25/40/75) or a VsCoin
+    early-unlock, toggle per company, run inside `tick()` on a 5 s
+    cadence with cash/builder reserves (balance.md Phase A).
 
-24. **Ownership milestone multipliers** — stepped output bonuses at
-    25/50/100 desks/employees per company; converts the smooth decay
-    curve into a goal staircase and feeds missions durable counters
-    (Pecorella Part II). Needs balance-designer before numbers land.
+24. ~~**Ownership milestone multipliers**~~ — shipped at 8/16/32 (the
+    32-slot building makes 25/50/100 unreachable): +5/10/15% per track,
+    desks × employees tracks multiply; staircase card in the office
+    shop (balance.md Phase M).
 
 25. ~~**Payback-time on purchase buttons**~~ — promoted to an immediate
     implementation pick of the survey (shipping as its own feat branch).
 
-26. **Quarterly market seasons** — deterministic boom/stable/crunch/
-    recovery cycle from elapsed game time inside `tick()`, multiplying
-    sector payouts; offline-safe, no randomness (Kittens Game seasons).
+26. ~~**Quarterly market seasons**~~ — shipped: 6 h
+    stable/boom/crunch/recovery quarters from playTimeSec inside
+    `tick()`, boom spec rotating per cycle, cycle mean exactly 1.0;
+    HUD season badge (balance.md Phase K).
 
-27. **App badge for finished timers** — `navigator.setAppBadge(n)` with
-    completed-but-unseen timed actions + claimable missions on
-    visibilitychange; no permission prompt, no backend; clear on focus.
+27. ~~**App badge for finished timers**~~ — shipped: waiting claims
+    (missions + dailies) set the icon badge on hide, cleared on return.
 
-28. **Recruiters tier** — producer-of-producers: recruiting capacity
-    generates candidates/junior hires over time for late-game bulk
-    (Swarm Simulator chain). Pairs with #23.
+28. ~~**Recruiters tier**~~ — shipped: per-company levels widen the
+    candidate pool (3+level) and deliver timed candidates
+    deterministically (balance.md Phase R).
 
-29. **Market-scouting expeditions** — timed action before a country
-    unlock returning a "market report" (flavor + economy modifiers
-    preview); makes expansion an authored chapter opening (Level13).
+29. ~~**Market-scouting expeditions**~~ — shipped: a timed action (2%
+    of the unlock price, 4 h base) gates every country unlock; the
+    market report banks +5% permanent output per scouted market
+    (balance.md Phase X).
 
-30. **Deep prestige: differentiated exits + founder points** —
-    Acquisition/IPO/spin-off exit types keyed to different durable
-    metrics, awarding allocatable respec-able perk points (Evolve +
-    Trimps). Post-1.0; current single prestige stays until then.
+30. ~~**Deep prestige: differentiated exits + founder points**~~ —
+    shipped (pulled forward from post-1.0 by explicit request):
+    Acquisition/IPO/Spin-off gates on one shared reset, FP from three
+    high-water tracks in delta form, 5-perk respec-able board
+    (balance.md Phase F).
 
-31. **Viral-moment clickables** — presence-gated short-lived bonus
-    events (golden-cookie analog) via injectable rand, online-only by
-    design; durable catch counter so missions stay offline-safe.
+31. ~~**Viral-moment clickables**~~ — shipped: wall-clock 🔥 bubbles
+    (online-only), income-scaled cash, durable catch counter,
+    day-capped VsCoin jackpot (balance.md Phase B).
 
-32. **Scene instancing pass** — `<symbol>`/`<use>` for repeated office
-    furniture + persona-seeded negative animation-delay so loops don't
-    reset phase across re-renders; do when scenes pass ~20 personas.
+32. ~~**Scene instancing pass**~~ — shipped: `<symbol>`/`<use>` for
+    repeated office furniture + persona-seeded negative
+    animation-delay so loops keep phase across 2 Hz re-renders.
 
-33. **Floating "+$" overlay** — pooled spans, transform/opacity only,
-    coalesced bursts, big pops reserved for VsCoin/milestones, behind
-    prefers-reduced-motion + settings toggle (extends fx.ts bursts).
+33. ~~**Floating "+$" overlay**~~ — shipped: coalesced per-frame payout
+    floats, big gold pops on VsCoin claims (missions/dailies/vault),
+    behind the new Floating-numbers toggle + prefers-reduced-motion.
 
-34. **Reduced-motion & FX toggles** — honor `prefers-reduced-motion`,
-    add Animations/Floating-numbers settings, pause scene animation on
-    `document.hidden`.
+34. ~~**Reduced-motion & FX toggles**~~ — shipped: Animations and
+    Floating-numbers settings, ambient scene art paused while hidden
+    and under `prefers-reduced-motion`.
 
-35. **Colorblind redundancy audit** — affordability/mission/rarity
-    states must not encode by hue alone (add icons/locks/labels);
-    Okabe-Ito palette for categorical accents.
+35. ~~**Colorblind redundancy audit**~~ — shipped: Okabe-Ito spec
+    accents, debt warning icon, active-company tag; audit confirmed the
+    other states already carry text/icon channels.
 
-36. **Offline cap as content** — show the 24 h cap honestly in the
-    welcome-back modal; later sell/award cap extensions ("cloud
-    infrastructure upgrades", Cookie Clicker precedent).
+36. ~~**Offline cap as content**~~ — shipped: the welcome-back modal
+    states the cap honestly, and the Cloud Infrastructure founder perk
+    now sells +4 h extensions exactly as this item predicted.
 
 ## Dropped from the previous list
 

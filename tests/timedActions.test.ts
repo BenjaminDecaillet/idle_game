@@ -59,7 +59,7 @@ describe('Timed action tick-down (training)', () => {
     c.workers.push(worker);
     country.money = 100_000;
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     expect(trainWorker(state, worker.id)).toBeNull();
 
     const action = c.timedActions.find((a) => a.kind === 'training' && a.targetId === worker.id);
@@ -76,7 +76,7 @@ describe('Timed action tick-down (training)', () => {
     c.workers.push(worker);
     country.money = 100_000;
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     trainWorker(state, worker.id);
     const actionBefore = c.timedActions[0];
     expect(actionBefore.remainingSec).toBe(duration);
@@ -100,7 +100,7 @@ describe('Timed action tick-down (training)', () => {
     c.workers.push(worker);
     country.money = 100_000;
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     const skillBefore = worker.skillLevel;
     const timestrainedBefore = worker.timesTrained;
     trainWorker(state, worker.id);
@@ -145,7 +145,7 @@ describe('Timed action tick-down (training)', () => {
     autoSeat(c);
     expect(worker.stationId).not.toBeNull();
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     trainWorker(state, worker.id);
     expect(worker.stationId).toBeNull();
 
@@ -162,7 +162,7 @@ describe('Timed action tick-down (training)', () => {
     country.money = 100_000;
 
     expect(workerBusy(c, worker.id)).toBe(false);
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     trainWorker(state, worker.id);
     expect(workerBusy(c, worker.id)).toBe(true);
 
@@ -258,7 +258,7 @@ describe('Offline parity for timed actions', () => {
     c.workers.push(worker);
     country.money = 100_000;
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(base, c, worker);
     trainWorker(base, worker.id);
 
     // Approach 1: many small ticks
@@ -551,7 +551,7 @@ describe('TickEvents: trainingsDone and promotionsDone', () => {
     c.workers.push(worker);
     country.money = 100_000;
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     trainWorker(state, worker.id);
     const newLevel = worker.skillLevel + TRAIN_LEVELS;
 
@@ -600,7 +600,7 @@ describe('TickEvents: trainingsDone and promotionsDone', () => {
     country.money = 100_000;
     country.builders.count = 2; // two concurrent trainings need two builders
 
-    const duration = trainDurationSec(c, worker1); // both workers same duration
+    const duration = trainDurationSec(state, c, worker1); // both workers same duration
     trainWorker(state, worker1.id);
     trainWorker(state, worker2.id);
     expect(c.timedActions).toHaveLength(2);
@@ -620,7 +620,7 @@ describe('TickEvents: trainingsDone and promotionsDone', () => {
     c.workers.push(worker);
     country.money = 100_000;
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     trainWorker(state, worker.id);
 
     const events = tick(state, duration - 1); // not quite done
@@ -714,7 +714,7 @@ describe('zero output while busy', () => {
     const rateBefore = companyWorkRate(state, c);
     expect(rateBefore).toBeGreaterThan(0);
 
-    const duration = trainDurationSec(c, worker);
+    const duration = trainDurationSec(state, c, worker);
     trainWorker(state, worker.id);
 
     // During training, worker is off the floor and contributes nothing

@@ -13,7 +13,10 @@
  * Pure string building — no DOM, no timers, no randomness. Everything is
  * memoised because the 2 Hz re-render asks for these on every rebuild.
  * Small animations are CSS-driven: this module only tags groups with
- * `os-anim-bob`, `os-anim-twinkle` and `os-anim-neon` classes.
+ * `os-anim-bob`, `os-anim-twinkle` and `os-anim-neon` classes, plus a
+ * hash-derived negative animation-delay per group so loops across items
+ * (and across 2 Hz re-renders) don't pulse in lockstep. Furniture that
+ * repeats identically inside one item is stamped via <symbol>/<use>.
  *
  * Design-system rules: ink outlines #2d2440, cel shading, ellipse drop
  * shadows under grounded objects, no SVG filters, gradient IDs prefixed
@@ -66,6 +69,30 @@ function neonPath(d: string, color: string, w = 2, fill = 'none'): string {
     `<path d="${d}" fill="none" stroke="${color}" stroke-width="${w + 4}" ${cap} opacity=".25"/>` +
     `<path d="${d}" fill="${fill}" stroke="${color}" stroke-width="${w}" ${cap}/>`
   );
+}
+
+/** <symbol> for furniture repeated inside one item (overflow visible so
+ * ink strokes never clip; ids follow the os-<wallpaper>-<item> rule —
+ * memoised items may repeat across floors, but every copy of an id
+ * carries the exact same definition, like the gradient ids already do). */
+function sym(id: string, body: string): string {
+  return `<symbol id="${id}" overflow="visible">${body}</symbol>`;
+}
+
+/** One stamp of a <symbol>; `extra` = attributes (e.g. ` color="#..."`). */
+function use(id: string, x: number, y: number, extra = ''): string {
+  return `<use href="#${id}" x="${x}" y="${y}"${extra}/>`;
+}
+
+/** Deterministic negative animation-delay from a key string (FNV-1a, the
+ * hashSeed pattern) so CSS loops start phase-shifted, not in lockstep. */
+function phase(key: string, hundredths = 340): string {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ` style="animation-delay:-${((h >>> 0) % hundredths) / 100}s"`;
 }
 
 // ---------------------------------------------------------------------------
@@ -313,14 +340,18 @@ function concreteLobby(): string[] {
     52,
     34,
     shadow(26, 31, 22) +
-      `<polygon points="8,17 12,17 16,30 12,30" fill="#c9894a" ${S1}/>` +
-      `<polygon points="12,17 8,17 4,30 8,30" fill="#b9833f" ${S1}/>` +
-      `<polygon points="40,17 44,17 48,30 44,30" fill="#c9894a" ${S1}/>` +
-      `<polygon points="44,17 40,17 36,30 40,30" fill="#b9833f" ${S1}/>` +
+      use('os-concrete-trestle', 0, 0) +
+      use('os-concrete-trestle', 32, 0) +
       `<rect x="4" y="12" width="44" height="5" rx="2" fill="#dfa35f" ${S}/>` +
       `<rect x="21" y="2" width="12" height="9" rx="1" fill="#4a4468" ${S1}/>` +
       `<rect x="23" y="4" width="8" height="5" fill="#9fd8ff" stroke="none"/>` +
-      `<rect x="20" y="10" width="14" height="2" rx="1" fill="#6a7486" ${S1}/>`
+      `<rect x="20" y="10" width="14" height="2" rx="1" fill="#6a7486" ${S1}/>`,
+    // One A-frame trestle leg pair, stamped twice under the tabletop.
+    sym(
+      'os-concrete-trestle',
+      `<polygon points="8,17 12,17 16,30 12,30" fill="#c9894a" ${S1}/>` +
+        `<polygon points="12,17 8,17 4,30 8,30" fill="#b9833f" ${S1}/>`
+    )
   );
   const boxStack = item(
     36,
@@ -562,7 +593,7 @@ function jungleWall(): string[] {
       `<rect x="14.5" y="21" width="3" height="32" fill="#b9833f" ${S1}/>` +
       `<ellipse cx="16" cy="53" rx="9" ry="3" fill="#8a5a35" ${S}/>` +
       `<rect x="4" y="18" width="24" height="3" rx="1.5" fill="#b9833f" ${S1}/>` +
-      `<g class="os-anim-bob">` +
+      `<g class="os-anim-bob"${phase('jungle-parrot')}>` +
       `<path d="M9 18 L4 29 L8 28 L11 19 z" fill="#38b6ff" ${S1}/>` +
       `<path d="M8 18 C4 12 6 4 12 3 C17 2 19 7 17 12 C16 16 13 18 8 18 z" fill="#ff5d55" ${S}/>` +
       `<path d="M9 9 C13 8 15 11 13 15 C10 16 8 13 9 9 z" fill="#ffb02e" ${S1}/>` +
@@ -717,22 +748,28 @@ function sunsetWall(): string[] {
     [70, 6],
     [84, 6],
   ];
+  // One bulb symbol (currentColor glass), six stamps: `color` picks the
+  // tint per stamp and each gets its own twinkle phase.
   const garland = item(
     92,
     28,
     `<path d="M2 4 Q24 14 46 6 T90 6" fill="none" stroke="#4a4468" stroke-width="1.5"/>` +
       bulbXY
-        .map(([x, y], i) => {
-          const c = bulbColors[i % 3];
-          return (
-            `<g class="os-anim-twinkle">` +
-            `<line x1="${x}" y1="${y}" x2="${x}" y2="${y + 5}" stroke="#4a4468" stroke-width="1.2"/>` +
-            `<circle cx="${x}" cy="${y + 9}" r="6" fill="${c}" opacity=".3"/>` +
-            `<circle cx="${x}" cy="${y + 9}" r="3.5" fill="${c}" ${S1}/>` +
-            `</g>`
-          );
-        })
-        .join('')
+        .map(([x, y], i) =>
+          use(
+            'os-sunset-bulb',
+            x,
+            y,
+            ` color="${bulbColors[i % 3]}" class="os-anim-twinkle"${phase(`sunset-bulb-${i}`)}`
+          )
+        )
+        .join(''),
+    sym(
+      'os-sunset-bulb',
+      `<line x1="0" y1="0" x2="0" y2="5" stroke="#4a4468" stroke-width="1.2"/>` +
+        `<circle cx="0" cy="9" r="6" fill="currentColor" opacity=".3"/>` +
+        `<circle cx="0" cy="9" r="3.5" fill="currentColor" ${S1}/>`
+    )
   );
   const vinyls = item(
     48,
@@ -876,21 +913,21 @@ function neonWall(): string[] {
     54,
     `<line x1="18" y1="0" x2="18" y2="10" stroke="#4a4468" stroke-width="1.5"/>` +
       `<rect x="4" y="10" width="28" height="28" rx="3" fill="#171030" ${S}/>` +
-      `<g class="os-anim-neon">${neonPath(heartD, '#ff4fd8', 2, 'rgba(255,79,216,.18)')}</g>`
+      `<g class="os-anim-neon"${phase('neon-heart')}>${neonPath(heartD, '#ff4fd8', 2, 'rgba(255,79,216,.18)')}</g>`
   );
   const boltD = 'M14 8 L6 30 L12 30 L9 46 L20 22 L14 22 L18 8 z';
   const bolt = item(
     26,
     54,
     `<line x1="13" y1="0" x2="13" y2="8" stroke="#4a4468" stroke-width="1.5"/>` +
-      `<g class="os-anim-neon">${neonPath(boltD, '#38e8ff', 2, 'rgba(56,232,255,.15)')}</g>`
+      `<g class="os-anim-neon"${phase('neon-bolt')}>${neonPath(boltD, '#38e8ff', 2, 'rgba(56,232,255,.15)')}</g>`
   );
   const shipIt = item(
     72,
     50,
     `<line x1="18" y1="0" x2="18" y2="10" stroke="#4a4468" stroke-width="1.5"/>` +
       `<line x1="54" y1="0" x2="54" y2="10" stroke="#4a4468" stroke-width="1.5"/>` +
-      `<g class="os-anim-neon">` +
+      `<g class="os-anim-neon"${phase('neon-shipit')}>` +
       `<text x="36" y="28" text-anchor="middle" font-size="14" font-weight="800" letter-spacing="1" fill="none" stroke="#fff06e" stroke-width="4.5" stroke-linejoin="round" opacity=".25">SHIP IT</text>` +
       `<text x="36" y="28" text-anchor="middle" font-size="14" font-weight="800" letter-spacing="1" fill="none" stroke="#fff06e" stroke-width="1.4" stroke-linejoin="round">SHIP IT</text>` +
       neonPath('M14 36 H58', '#ff4fd8', 2) +
@@ -921,14 +958,19 @@ function neonWall(): string[] {
     shadow(19, 55, 15) +
       `<rect x="5" y="4" width="28" height="50" rx="3" fill="#241a4d" ${S}/>` +
       `<rect x="9" y="8" width="14" height="30" rx="2" fill="url(#os-neon-vend)" ${S1}/>` +
-      `<rect x="11" y="11" width="4" height="6" rx="1" fill="#ff5d55" ${S1}/><rect x="17" y="11" width="4" height="6" rx="1" fill="#38e8ff" ${S1}/>` +
-      `<rect x="11" y="20" width="4" height="6" rx="1" fill="#fff06e" ${S1}/><rect x="17" y="20" width="4" height="6" rx="1" fill="#ff4fd8" ${S1}/>` +
-      `<rect x="11" y="29" width="4" height="6" rx="1" fill="#7dffd8" ${S1}/><rect x="17" y="29" width="4" height="6" rx="1" fill="#ff5d55" ${S1}/>` +
+      // Six identical soda cans behind the glass, tinted via currentColor.
+      use('os-neon-can', 11, 11, ' color="#ff5d55"') +
+      use('os-neon-can', 17, 11, ' color="#38e8ff"') +
+      use('os-neon-can', 11, 20, ' color="#fff06e"') +
+      use('os-neon-can', 17, 20, ' color="#ff4fd8"') +
+      use('os-neon-can', 11, 29, ' color="#7dffd8"') +
+      use('os-neon-can', 17, 29, ' color="#ff5d55"') +
       `<rect x="26" y="8" width="4" height="22" rx="1.5" fill="#38e8ff" opacity=".8"/>` +
       `<rect x="26" y="33" width="4" height="2.5" fill="#0d0820" ${S1}/>` +
       `<rect x="9" y="42" width="14" height="7" rx="1" fill="#101a3d" ${S1}/>` +
       `<rect x="8" y="54" width="5" height="2.5" fill="#171030"/><rect x="25" y="54" width="5" height="2.5" fill="#171030"/>`,
-    lg('os-neon-vend', '#1c2c5e', '#101a3d')
+    lg('os-neon-vend', '#1c2c5e', '#101a3d') +
+      sym('os-neon-can', `<rect width="4" height="6" rx="1" fill="currentColor" ${S1}/>`)
   );
   const cyberPlant = item(
     32,
@@ -951,7 +993,7 @@ function neonRoof(): string[] {
     shadow(20, 37, 12) +
       `<rect x="14" y="34" width="12" height="3" rx="1" fill="#171030" ${S1}/>` +
       `<rect x="18" y="24" width="4" height="10" fill="#4a4468" ${S1}/>` +
-      `<g class="os-anim-neon">` +
+      `<g class="os-anim-neon"${phase('neon-holo')}>` +
       `<rect x="4" y="2" width="32" height="22" rx="2" fill="url(#os-neon-holo)" stroke="#38e8ff" stroke-width="1.5"/>` +
       `<rect x="12" y="8" width="4" height="4" fill="#fff06e"/><rect x="24" y="8" width="4" height="4" fill="#fff06e"/>` +
       `<path d="M13 17 q7 5 14 0" fill="none" stroke="#fff06e" stroke-width="2" stroke-linecap="round"/>` +
@@ -994,7 +1036,7 @@ function neonLobby(): string[] {
       `<path d="M13 26 q5 -4 9 0 t8 -1" fill="none" stroke="#ff4fd8" stroke-width="1.5" stroke-linecap="round"/>` +
       `<path d="M14 35 q6 3 10 -1 q4 -3 8 1" fill="none" stroke="#7dffd8" stroke-width="1.5" stroke-linecap="round"/>` +
       `<circle cx="32" cy="30" r="1.4" fill="#fff06e" ${S1}/>` +
-      `<g class="os-anim-neon">` +
+      `<g class="os-anim-neon"${phase('neon-open')}>` +
       `<rect x="12" y="5" width="22" height="10" rx="2" fill="#0d0820" ${S1}/>` +
       `<text x="23" y="12.6" text-anchor="middle" font-size="6.5" font-weight="800" fill="none" stroke="#38e8ff" stroke-width="2.6" opacity=".3">OPEN</text>` +
       `<text x="23" y="12.6" text-anchor="middle" font-size="6.5" font-weight="800" fill="none" stroke="#38e8ff" stroke-width=".9">OPEN</text>` +
@@ -1174,18 +1216,21 @@ function zenRoof(): string[] {
 }
 
 function zenLobby(): string[] {
-  const shojiLattice = (x: number): string =>
-    `<rect x="${x}" y="4" width="18" height="42" fill="#f7f0dd" ${S}/>` +
-    `<path d="M${x + 6} 4 v42 M${x + 12} 4 v42 M${x} 14 h18 M${x} 25 h18 M${x} 36 h18" stroke="#8a6942" stroke-width="1.2"/>`;
+  // One shoji lattice panel, stamped twice for the sliding double door.
   const door = item(
     48,
     52,
-    shojiLattice(6) +
-      shojiLattice(24) +
+    use('os-zen-shoji', 6, 0) +
+      use('os-zen-shoji', 24, 0) +
       `<circle cx="21" cy="26" r="1.3" fill="#8a6942" ${S1}/>` +
       `<circle cx="27" cy="26" r="1.3" fill="#8a6942" ${S1}/>` +
       `<rect x="4" y="46" width="40" height="3" rx="1" fill="#8a6942" ${S1}/>` +
-      `<rect x="8" y="49" width="32" height="3" rx="1.5" fill="#dccf9f" ${S1}/>`
+      `<rect x="8" y="49" width="32" height="3" rx="1.5" fill="#dccf9f" ${S1}/>`,
+    sym(
+      'os-zen-shoji',
+      `<rect x="0" y="4" width="18" height="42" fill="#f7f0dd" ${S}/>` +
+        `<path d="M6 4 v42 M12 4 v42 M0 14 h18 M0 25 h18 M0 36 h18" stroke="#8a6942" stroke-width="1.2"/>`
+    )
   );
   const lowDesk = item(
     52,
@@ -1248,18 +1293,20 @@ function goldWall(): string[] {
       tube('M26 18 C40 18 44 25 44 31', '#caa24d', 2.5) +
       tube('M26 18 C19 20 17 25 17 29', '#caa24d', 2.5) +
       tube('M26 18 C33 20 35 25 35 29', '#caa24d', 2.5) +
-      `<rect x="5" y="30" width="6" height="4" rx="1" fill="#ffc93c" ${S1}/>` +
-      `<rect x="14" y="28" width="6" height="4" rx="1" fill="#ffc93c" ${S1}/>` +
-      `<rect x="32" y="28" width="6" height="4" rx="1" fill="#ffc93c" ${S1}/>` +
-      `<rect x="41" y="30" width="6" height="4" rx="1" fill="#ffc93c" ${S1}/>` +
-      `<path d="M8 25.5 q2 3 0 4.5 q-2 -1.5 0 -4.5 z" fill="#ffe9a8" ${S1}/>` +
-      `<path d="M17 23.5 q2 3 0 4.5 q-2 -1.5 0 -4.5 z" fill="#ffe9a8" ${S1}/>` +
-      `<path d="M35 23.5 q2 3 0 4.5 q-2 -1.5 0 -4.5 z" fill="#ffe9a8" ${S1}/>` +
-      `<path d="M44 25.5 q2 3 0 4.5 q-2 -1.5 0 -4.5 z" fill="#ffe9a8" ${S1}/>` +
+      // Four identical candles (holder + flame) on the four arm tips.
+      use('os-gold-candle', 5, 25.5) +
+      use('os-gold-candle', 14, 23.5) +
+      use('os-gold-candle', 32, 23.5) +
+      use('os-gold-candle', 41, 25.5) +
       `<circle cx="26" cy="22" r="3" fill="#ffc93c" ${S1}/>` +
       `<polygon points="26,26 28,29.5 26,33 24,29.5" fill="#cde8f8" opacity=".92" ${S1}/>` +
       `<polygon points="13,35 14.5,37.5 13,40 11.5,37.5" fill="#cde8f8" opacity=".9" stroke="${INK}" stroke-width=".7"/>` +
-      `<polygon points="39,35 40.5,37.5 39,40 37.5,37.5" fill="#cde8f8" opacity=".9" stroke="${INK}" stroke-width=".7"/>`
+      `<polygon points="39,35 40.5,37.5 39,40 37.5,37.5" fill="#cde8f8" opacity=".9" stroke="${INK}" stroke-width=".7"/>`,
+    sym(
+      'os-gold-candle',
+      `<rect x="0" y="4.5" width="6" height="4" rx="1" fill="#ffc93c" ${S1}/>` +
+        `<path d="M3 0 q2 3 0 4.5 q-2 -1.5 0 -4.5 z" fill="#ffe9a8" ${S1}/>`
+    )
   );
   const sconce = item(
     24,
@@ -1384,19 +1431,22 @@ function goldLobby(): string[] {
       `<rect x="32" y="5" width="13" height="3" rx="0.5" fill="#8a1f2e" ${S1}/>` +
       `<line x1="38.5" y1="5" x2="38.5" y2="8" stroke="#ffc93c" stroke-width=".8"/>`
   );
+  // One brass post (base + shaft + ball top), stamped twice for the rope.
   const stanchions = item(
     48,
     36,
     shadow(24, 33, 21) +
-      `<ellipse cx="10" cy="31" rx="6" ry="2.5" fill="#caa24d" ${S1}/>` +
-      `<ellipse cx="38" cy="31" rx="6" ry="2.5" fill="#caa24d" ${S1}/>` +
-      `<rect x="8.5" y="10" width="3" height="21" fill="#ffc93c" ${S1}/>` +
-      `<rect x="36.5" y="10" width="3" height="21" fill="#ffc93c" ${S1}/>` +
-      `<circle cx="10" cy="8.5" r="3" fill="#ffc93c" ${S}/>` +
-      `<circle cx="38" cy="8.5" r="3" fill="#ffc93c" ${S}/>` +
+      use('os-gold-post', 4, 0) +
+      use('os-gold-post', 32, 0) +
       tube('M13 12 C20 21 28 21 35 12', '#8a1f2e', 3) +
       `<circle cx="13" cy="12" r="1.2" fill="#caa24d" ${S1}/>` +
-      `<circle cx="35" cy="12" r="1.2" fill="#caa24d" ${S1}/>`
+      `<circle cx="35" cy="12" r="1.2" fill="#caa24d" ${S1}/>`,
+    sym(
+      'os-gold-post',
+      `<ellipse cx="6" cy="31" rx="6" ry="2.5" fill="#caa24d" ${S1}/>` +
+        `<rect x="4.5" y="10" width="3" height="21" fill="#ffc93c" ${S1}/>` +
+        `<circle cx="6" cy="8.5" r="3" fill="#ffc93c" ${S}/>`
+    )
   );
   const orchid = item(
     24,
@@ -1627,19 +1677,21 @@ export function constructionDecor(seed = 0): string {
         `<rect x="9" y="14.4" width="16" height="2.6" rx="1.3" fill="#ffd23e" ${S1}/>` +
         `<path d="M17 10.4 v4" fill="none" stroke="${INK}" stroke-width="1" opacity=".4"/>`
     );
-    // Two traffic cones carrying a hazard-stripe plank.
+    // Two traffic cones (one <symbol>) carrying a hazard-stripe plank.
     const cones = item(
       52,
       30,
       shadow(26, 27, 20) +
         `<rect x="8" y="12" width="36" height="5" rx="1" fill="#ffb02e" ${S1}/>` +
         `<path d="M11 16.2 l4 -3.6 h4 l-4 3.6 z M22 16.2 l4 -3.6 h4 l-4 3.6 z M33 16.2 l4 -3.6 h4 l-4 3.6 z" fill="${INK}" opacity=".8" stroke="none"/>` +
+        use('os-constr-cone', 0, 0) +
+        use('os-constr-cone', 32, 0),
+      sym(
+        'os-constr-cone',
         `<rect x="4" y="23" width="12" height="3" rx="1.5" fill="#ff8a2a" ${S1}/>` +
-        `<path d="M6.4 23 L10 10 L13.6 23 z" fill="#ff8a2a" ${S1}/>` +
-        `<line x1="8.2" y1="18.5" x2="11.8" y2="18.5" stroke="#fff" stroke-width="2"/>` +
-        `<rect x="36" y="23" width="12" height="3" rx="1.5" fill="#ff8a2a" ${S1}/>` +
-        `<path d="M38.4 23 L42 10 L45.6 23 z" fill="#ff8a2a" ${S1}/>` +
-        `<line x1="40.2" y1="18.5" x2="43.8" y2="18.5" stroke="#fff" stroke-width="2"/>`
+          `<path d="M6.4 23 L10 10 L13.6 23 z" fill="#ff8a2a" ${S1}/>` +
+          `<line x1="8.2" y1="18.5" x2="11.8" y2="18.5" stroke="#fff" stroke-width="2"/>`
+      )
     );
     const extras = [banner, tools, cones];
     const a = (mix >>> 2) % 3;

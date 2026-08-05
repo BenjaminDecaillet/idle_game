@@ -852,3 +852,410 @@ contradict the HUD: after buying, income rises by exactly Δ.
    **payback ≈ 20 min**. An earned early-mid goal, not a trap.
 3. **No value**: 1 seated intern, second Basic Desk ($24): pairing
    unchanged, Δ = 0 → **no hint shown** (desk buys ahead of hiring).
+
+## Phase A — earned automation (improvements #23)
+
+Three automations in the Antimatter-Dimensions mold: tedium converted into
+an anticipated reward. Each is **unlocked** by a durable lifetime counter
+(mid-game per the human curve, survives prestige like all lifetime
+counters) OR **bought early** for VsCoin (convenience-speed, priced in the
+vault-5 / pets-4–10 band, never power). Once unlocked, each automation is
+a **per-company toggle, default OFF** (`company.auto = { train, hire,
+desks }`, all `false`) — automation must never surprise a player who
+didn't ask for it, and per-company toggles let the player automate the
+farm companies while hand-tuning the new one. Checks run inside `tick()`
+every `AUTOMATION_CHECK_INTERVAL_SEC (5)` so offline simulation gets them
+for free (60 s offline chunks ≥ the interval — fine, coarser is safe).
+
+| automation | milestone unlock (durable counter) | VsCoin early unlock | behavior when ON |
+|---|---|---|---|
+| 🔁 Auto-train | 25 lifetime trainings completed (**new** global counter `trainingsDone`, mirrors `promotionsDone`) | 6 | for each idle worker below their cap: restart training if wallet ≥ `AUTO_CASH_RESERVE_FACTOR (2)` × trainCost **and** free builders > `AUTO_BUILDER_RESERVE (1)` |
+| 🤝 Auto-hire | 40 lifetime hires (**new** global counter `hiresDone`) | 8 | when an idle desk exists (`workstations.length > workers.length`) and wallet ≥ hireCost + `AUTO_HIRE_SALARY_COVER_SEC (1800)` × the candidate's salary: hire the best candidate by `seatPotential` |
+| 🖥️ Auto-desks | 75 desks owned (global `desks` mission metric) | 10 | buy the def with the **lowest** `deskPaybackSec` when payback ≤ `AUTO_DESK_PAYBACK_MAX_SEC (1800)` and wallet ≥ `AUTO_CASH_RESERVE_FACTOR (2)` × cost |
+
+Threshold TTVs (human curve): 25 trainings ≈ day 2–4 for a player using
+the training loop (3–8 programs per early company); 40 lifetime hires ≈
+the tower era (~company 4–5, churn included); 75 global desks ≈ a 4–5
+company empire at 3–5 floors each. All three land squarely mid-game —
+after the habit exists, before it becomes a chore multiplied by 8
+companies. VsCoin prices total 24 ≈ one more "identity" slice of the ~150
+lifetime budget (Phase W sanity check still holds: it competes with
+builders #4–5 at 23).
+
+Guard-rail rationale (the numbers that keep automation debt-safe):
+- `AUTO_HIRE_SALARY_COVER_SEC = 1800` — 30 min of the **new hire's own**
+  salary in the bank, i.e. 3× the debt-crisis threshold anchor
+  (`DEBT_CRISIS_SALARY_SEC` 600): auto-hire can never be the thing that
+  tips a country into a quit spiral. Early: mid hire = 500 + 0.5×1800 =
+  $1,400 trigger. Late (orbital #8 principal): ≈ 83M + 16.6M ≈ 100M ≈
+  17 min of the orbital plateau — same session-scale feel (Phase S parity).
+- `AUTO_DESK_PAYBACK_MAX_SEC = 1800` — buys everything the Phase Q hint
+  would call obviously good (80 s early buys, ~20 min reshuffles) and
+  stops exactly where Phase Q's "earned early-mid goal" band ends; capped
+  companies show hour-scale paybacks and are correctly left alone.
+- `AUTO_CASH_RESERVE_FACTOR = 2` — automation never spends the second
+  half of the wallet, so the player's own planned purchase (floor, next
+  company) is never silently eaten.
+- `AUTO_BUILDER_RESERVE = 1` — auto-train never takes the last free
+  builder; promotions/floors/foundings (all manual decisions) stay
+  startable. Promotions are deliberately **not** automated: promoting is
+  the hire-vs-grow choice (Phase 1) and must stay a decision.
+
+**Phase H guard note:** the harness bot never toggles automation
+(default-off), so the measured curve and all CI anchors are untouched. If
+a future harness variant enables automations, note that every unlock
+threshold sits beyond the guard-anchor milestones for the greedy bot (it
+skips training entirely, so `trainingsDone` stays 0). New state
+(`company.auto`, `trainingsDone`, `hiresDone`) → additive fields +
+`migrate()` hygiene defaults, `SAVE_VERSION` bump per the beta policy.
+
+Watch metric: if <30% of players with the milestone ever toggle a given
+automation ON, the guard thresholds (reserve factor / cover seconds) are
+too conservative — loosen the reserve factor to 1.5 first, one knob.
+
+## Phase M — ownership milestone multipliers (improvements #24)
+
+Pecorella step-multipliers, adapted to ISV's hard capacity: a company can
+never own more than `MAX_FLOORS (8) × FLOOR_CAPACITY (4) = 32` desks, and
+headcount is capped by desk slots — so the survey's 25/50/100 steps are
+unreachable per company. The steps become **8 / 16 / 32**, i.e. "fill
+floor 2" / "fill half the tower" / "full house", which maps each step to
+an existing purchase ladder (floors) instead of an arbitrary count.
+
+Two tracks per company, both durable ownership counts:
+- desks: `workstations.length` ≥ 8 / 16 / 32
+- employees: `workers.length` ≥ 8 / 16 / 32
+
+`milestoneMult(company) = (1 + Σ deskBonuses) × (1 + Σ workerBonuses)`
+with `COMPANY_MILESTONE_BONUS = [0.05, 0.10, 0.15]` per step reached
+(additive within a track, tracks multiply). Multiplies into
+`globalOutputMultiplier` — so it raises plateau income too, which is the
+point: the soft-cap plateau stops being a dead end and becomes a
+staircase whose top step (full house, 1.30 × 1.30 ≈ **1.69×**) is an
+authored per-company capstone.
+
+| step | requirement | bonus (track) | expected TTV |
+|---|---|---|---|
+| 8 desks / 8 employees | fill floor 2 (Gabriel's gift floor) | +5% each | first session, ~20–40 min (~$60–500 of desks + hires) |
+| 16 / 16 | 4 floors (garage floors 3–4 ≈ $14k + $86k) | +10% each | early-mid, ~1–3 h garage; minutes for later scaled companies |
+| 32 / 32 | all 8 floors (garage floor 8 ≈ $112M) | +15% each | late per-company goal, post-plateau — the reason to finish a tower |
+
+Why these sizes: each single step (+5/10/15%) is at most one coffee-level
+(+10%) to 1.5 coffee-levels of power — visible, never mandatory. The
+combined 1.69× full-house ceiling ≈ one moonshot level (+50%) plus change,
+and it costs the entire floor ladder (≈ $131M in the garage) — priced like
+the late-game upgrade it is. Milder than the survey's example (+10/15/25%)
+per step *because* there are two stacking tracks that in practice complete
+together (headcount cap = desk slots).
+
+**Phase H guard note:** the greedy bot hits 8/8 and later 16/16 in company
+1 before the second-company anchor → up to 1.10 × 1.10 ≈ +21% output at
+that point, pulling the measured 10.3 h second company toward ~8.5–9 h and
+$1M (9.3 h) similarly. Both stay far inside the "within one simulated day"
+guards (~2× slack). **Rerun `npm run balance:sim` in the landing commit
+and move the anchors to the new measured curve anyway** (the guards
+anchor on measurements, not targets). No new stored state (derived from
+counts) — no save-version impact.
+
+Watch metric: if plateau-era retention telemetry shows players parking at
+16/16 and never buying floors 5–8, raise the top step to +20% per track
+(full house 1.35² ≈ 1.82×) — one knob.
+
+## Phase K — quarterly market seasons (improvements #26)
+
+Kittens-style rhythm, fully deterministic from **tick-accumulated
+playtime** (`state.playTimeSec`, which already advances inside `tick()`
+and therefore accrues through offline simulation too — no new state, no
+randomness, nothing for `migrate()` to touch).
+
+```
+SEASON_LENGTH_SEC = 21_600           // 6 h of played+simulated time per quarter
+SEASON_ORDER = ['stable', 'boom', 'crunch', 'recovery']
+quarter  = floor(playTimeSec / SEASON_LENGTH_SEC)
+season   = SEASON_ORDER[quarter % 4]
+cycle    = floor(quarter / 4)
+boomSpec = SPECIALIZATIONS[cycle % 4]   // deterministic rotation
+```
+
+Payout multipliers (applied to project **payouts** at completion time and
+mirrored in `grossRewardRate`/`companyIncome` via one shared helper — the
+stored `currentReward` and the soft-cap math are never touched, so the
+plateau/cap invariants of Phase 5 are undisturbed):
+
+| season | multiplier | note |
+|---|---|---|
+| 🌤️ stable | ×1.0 all projects | first 6 h of a fresh save = neutral — tutorial-safe with zero gating code |
+| 🚀 boom | ×`SEASON_BOOM_SPEC_MULT (1.6)` on `boomSpec` projects, ×1.0 others | the engaged-play hook: reassign floors (Phase 5 slots) to ride it |
+| 📉 crunch | ×`SEASON_CRUNCH_MULT (0.8)` all projects | labeled in the HUD (a season chip) — an *explained* dip, not the "decline reads as a bug" trap |
+| 📈 recovery | ×`SEASON_RECOVERY_MULT (1.05)` all projects | gentle rebound, distinct identity from stable |
+
+**Long-run average = 1.0 exactly** under the ~¼-income-in-favored-spec
+assumption: (1.15 + 1.0 + 0.8 + 1.05) / 4 = 1.0 (boom's expected global
+value is 1 + 0.25 × 0.6 = 1.15). Bounds if the assumption breaks: a player
+who never matches the boom spec averages ×0.9625 (−3.75%); a player who
+reassigns everything into every boom averages ×1.1125 (+11%) — that spread
+*is* the intended skill expression, and both ends sit far inside the ~2×
+Phase H slack. Sample timeline: first boom at 6–12 h of playtime
+(typically day 2), first full cycle after ~24 h of accumulated time
+(~1–2 real days with offline).
+
+Income-anchored prices (marketing, shop packs, daily earn target, vault
+cap) read the season through `grossRewardRate` and simply breathe ±20%
+with it — self-consistent by construction; the daily earn target is
+snapshotted at roll (Phase D), so a crunch-time roll only ever gets easier.
+
+**Phase H guard note:** the 4-day harness run spans 4 full cycles; the
+spec-agnostic bot lands between the −3.75% and 0% bounds → the measured
+curve shifts ≤ ~4%, absorbed by guard slack. Rerun the sim table in the
+landing commit regardless.
+
+Watch metric: if session telemetry shows logins avoiding crunch quarters,
+soften `SEASON_CRUNCH_MULT` to 0.9 and rebalance boom to 1.4 to keep the
+mean at 1.0 ((1.10 + 1 + 0.9 + 1.0)/4 with recovery back at 1.0) — two
+knobs, one constraint: the quartet must keep averaging 1.0.
+
+## Phase R — recruiters (improvements #28)
+
+Producer-of-producers, grounded in the actual candidate flow: the engine
+already refills 3 fresh candidates the moment the pool empties, so raw
+candidate *supply* is not the late-game bottleneck — pool **size** and
+**freshness** are (finding spec-matched high-tier candidates for 32-desk
+buildings, feeding Phase A auto-hire). A per-company **Recruiting** level:
+
+- pool capacity = `3 + level` (max **8** at `RECRUITER_MAX_LEVEL (5)`)
+- one empty slot refills with a standard weighted roll every
+  `RECRUITER_INTERVAL_SEC (600) / level` seconds (L1 = 10 min, L5 = 2 min)
+- level-0 behavior is exactly today's (instant refill-of-3 on empty) — no
+  early-game regression, and manual reroll (Phase S pricing) stays the
+  fast lane for impatient players: recruiters are comfort, not power.
+
+Cost curve (Pecorella `b·r^k`, Phase S–scaled so it self-anchors at every
+tier): `cost(level) = RECRUITER_BASE_COST (50_000) ×
+RECRUITER_COST_GROWTH (3)^level × companyCostScale(company)` (level 0 →
+L1 uses exponent 0).
+
+| company | L1 | L5 | TTV / relevance |
+|---|---|---|---|
+| garage (scale 1) | 50k | 4.05M | unaffordable in session one (~10–40 $/s) → **irrelevant early** by price alone; ~4–8 min at the plateau if wanted |
+| tower #5 (scale 45.6) | 2.3M | 185M | mid-game: minutes of empire income when staffing 20+ desks |
+| orbital #8 (scale 1041) | 52M | 4.2B | late: L1 ≈ 9 min of the ~100k $/s plateau; L5 during a 32-desk bulk staffing |
+
+Throughput check at the 50+ employee scale it is designed for: L5 + an
+8-slot pool + auto-hire ≈ 30 hires/h sustained, i.e. a fresh 32-desk
+company staffs itself in ~1 h hands-off — while a present player clicking
+manual rerolls is still strictly faster. Rationale for growth 3: matches
+the mid-game upgrade tracks (fiber/chairs/synergy), keeping L4–L5 a real
+save rather than an auto-include.
+
+**Phase H guard note:** recruiters produce candidates, not income; the
+harness hires from the default pool and never buys recruiters → zero
+guard impact. New state: `company.recruiterLevel` (additive, default 0) +
+timer field → `SAVE_VERSION` bump with the rest of this wave.
+
+Watch metric: if manual reroll spend collapses to ~0 among L3+ companies,
+recruiters are cannibalizing the reroll sink faster than intended — raise
+`RECRUITER_INTERVAL_SEC` to 900 before touching prices.
+
+## Phase X — market-scouting expeditions (improvements #29)
+
+Level13-style chapter opening: each country unlock (after International
+Business) is **gated** by a completed expedition to that country — a
+country-level timed action started from the active country, occupying 1
+builder (the Phase W scarcity economy applies; several expeditions may run
+in parallel to different targets).
+
+- **Cost**: `EXPEDITION_COST_FRACTION (0.02) × countryUnlockCost(state)`,
+  cash, paid at start. 2% of the mountain you are already saving toward —
+  a real stake that scales with the ×3 unlock ladder automatically, never
+  a second mountain. (First expedition: 0.02 × 5e13 = 1e12.)
+- **Duration**: `EXPEDITION_DURATION_BASE_SEC (14_400) ×
+  EXPEDITION_DURATION_GROWTH (1.3)^(countriesUnlocked − 1)`.
+
+| expedition | duration | fast-forward | context |
+|---|---|---|---|
+| → country #2 | 4 h | 24 VsCoin | overlaps the 5e13 save-up — no added wall, same trick as the company-founding overlap |
+| → country #5 | ~8.8 h | 53 VsCoin | one offline gap |
+| → country #8 | ~19.3 h | 116 VsCoin | empire capstone; the skip is deliberately whale-priced (cf. builder #10 at 227) |
+
+Durations sit intentionally **above** the construction ladder's worst case
+(floor 8 company 8 ≈ 5 h): an expedition is a chapter transition, not a
+routine build, and it always runs concurrently with a multi-hour cash
+save-up, so its wall-clock cost is ~zero for a player who starts it early.
+
+**Reward — decided: report + permanent modifier, not purely
+informational.** Completing the expedition yields the market report
+(authored flavor + preview) **and** a permanent
+`EXPEDITION_OUTPUT_BONUS (0.05)` — +5% output for all companies in that
+country, forever. Justification: countries are mechanically identical
+(data.ts says so), so a purely informational report has zero pull on a
+second read; +5% (half a coffee level) makes the wait *earned* without
+creating a growth axis, and it seeds the future per-country-modifier
+system the report fiction promises. Scouted-country set + bonus live on
+global state and **survive prestige** (knowledge is the one thing a
+founder keeps) — a deliberate small accelerant for post-prestige world
+tours, consistent with Phase P's "each restart measurably faster".
+
+**Phase H guard note:** the harness horizon (4 days, 4 companies) never
+reaches the world stage; the +5% applies only to countries the guards
+never see. No impact. New state: `state.scoutedCountries: string[]` +
+`expedition` timed-action kind → `SAVE_VERSION` bump.
+
+Watch metric: if players report the gate as a wall (unlock cash ready,
+expedition forgotten), surface the expedition CTA on the world map the
+moment `worldUnlocked()` flips — a UI fix, not a number fix.
+
+## Phase B — viral clickables (improvements #31)
+
+The golden-cookie analog: a "🔥 viral moment" bubble, spawned by the UI
+scheduler (briefcase/event precedent: wall-clock, never while hidden,
+never offline, **no offline compensation by design**) once
+`tutorial.done && totalEarned ≥ VIRAL_MIN_EARNED (5_000)`.
+
+- Spawn window: uniform `VIRAL_MIN_INTERVAL_SEC (480)` –
+  `VIRAL_MAX_INTERVAL_SEC (900)` (8–15 min; deliberately offset from the
+  random-event window 6–11 min so the two presence systems interleave
+  instead of colliding).
+- Lifetime: `VIRAL_LIFETIME_SEC (18)` on screen, then gone — long enough
+  on mobile, short enough to be a presence reward.
+- Reward: `VIRAL_REWARD_MINUTES (3)` of gross income (floor
+  `VIRAL_REWARD_FLOOR (250)`), through the same income-anchor formula as
+  events/packs. Early: ~3 × 60 × 30 $/s ≈ 5.4k. Plateau: ~27k–45k. Late:
+  scale-invariant by construction.
+- Jackpot: `VIRAL_JACKPOT_CHANCE (0.08)` of +`VIRAL_JACKPOT_VSCOIN (1)`
+  instead of a big cash pop, hard-capped at
+  `VIRAL_JACKPOT_DAILY_CAP (2)` per UTC day (reuses the daily day
+  number; durable counters `state.viral = { day, jackpotsToday,
+  lifetimeCatches }` — the lifetime counter is the future mission hook).
+
+Budget math (the "must not beat dailies" constraint): an attentive 2 h/day
+player sees ~10 spawns (mean interval 11.5 min), catches ~8 → **cash**
++24 min of income per day (~+26% on top of that live session's passive
+income — active play visibly better, the genre's ~2× active:idle target,
+and strictly less than the random-event EV already shipped) and
+**VsCoin** E[jackpots] = 8 × 0.08 ≈ 0.64/day; even a 6 h grinder is
+clamped to 2/day by the cap — comfortably under the dailies' realized
+2.5–3.5/day, so dailies remain the headline retention income.
+Online-only fairness holds because the reward is minutes-of-income
+(missing bubbles while offline costs a bonus, never base progression) and
+the offline doubler already owns the offline-reward moment.
+
+**Phase H guard note:** entirely UI-scheduled; `tick()` and the harness
+are untouched; no compensation → no pacing shift. Additive `state.viral`
+defaults via `migrate()` hygiene + `SAVE_VERSION` bump with this wave.
+
+Watch metric: if telemetry shows catch-rate < 40% on mobile, raise
+`VIRAL_LIFETIME_SEC` to 25 before raising rewards; if VsCoin/day from
+jackpots exceeds 1.5 at the median, drop `VIRAL_JACKPOT_CHANCE` to 0.05 —
+one knob per symptom.
+
+## Phase F — deep prestige: differentiated exits & founder points (improvements #30, post-1.0)
+
+### How the exits map onto the current single prestige
+
+Today (`engine.ts`): one prestige — `prestigeReset()` gated on the
+`dream-achieved` story beat + `prestigePreview ≥ 1`, banking Reputation
+(log of all-time earnings, Phase P) into a permanent output multiplier.
+Phase F **keeps that system intact** — same reset, same Reputation
+constants, same output multiplier — and layers exits on top:
+
+- The current prestige *becomes* the mid-tier **IPO** exit verbatim (same
+  gates, same narrative). Nothing about Phase P's numbers changes.
+- **Acquisition** (early) and **Spin-off** (late) are new *eligibility
+  gates* for the very same `prestigeReset()`. Reputation is still banked
+  in delta form on every exit (an early Acquisition simply banks +0 rep,
+  honestly previewed, because 1e9 ≪ `PRESTIGE_MIN_LIFETIME` 1e14).
+- **Founder Points (FP)** are a new, parallel prestige currency banked on
+  *every* exit, spent on a respec-able perk board.
+
+| exit | gate (durable) | narrative | expected first TTV |
+|---|---|---|---|
+| 🤝 Acquisition | all-time earned ≥ `ACQ_MIN_EARNED (1e9)` | "sell the startup" | ~2–3 days (harness reaches 1e9 ≈ 69 h; humans faster) |
+| 🔔 IPO | current gates unchanged (`dream-achieved` + rep preview ≥ 1) | Phase P's open-source epilogue | ~10–14 days |
+| 🌍 Spin-off | countries ≥ `SPINOFF_MIN_COUNTRIES (3)` at exit | "found the holding" | weeks (post world-tour) |
+
+### Founder Point tracks (fractional-power, high-water, delta form)
+
+Three tracks, each a pure function of a **never-decreasing durable
+metric**, banked in delta form exactly like Reputation (so preview =
+award, nothing is lost across resets, and no metric can be farmed by
+cycling — re-reaching an old high-water banks nothing):
+
+```
+fpAcq(E)  = E < ACQ_MIN_EARNED ? 0 : floor(ACQ_FP_K (3) × (E / ACQ_MIN_EARNED)^ACQ_FP_EXP (0.1))
+fpIpo(H)  = floor(IPO_FP_K (1) × H^IPO_FP_EXP (0.6))        // H = lifetime peak concurrent headcount
+fpSpin(C) = floor(SPINOFF_FP_K (8) × (C − 1)^SPINOFF_FP_EXP (0.7))  // C = max countries ever held
+award on any exit = Σ over tracks (fpTrack(metric high-water) − bankedTrack)
+```
+
+On the exponents: headcount and countries take Pecorella's p ≈ 0.5–0.7
+directly (0.6 / 0.7). Earnings are exponential, so a 0.5 power would
+explode across 9 decades; `E^0.1` is the power-law form of the same
+intent — ×1.26 FP-value per earned decade, matching Phase P's
+one-decade-at-a-time rhythm. Sample points:
+
+| track | early | mid | late |
+|---|---|---|---|
+| Acquisition (E) | 1e9 → 3 FP | 3e14 → 10 FP | 1e17 → 18 FP · 1e20 → 37 FP |
+| IPO (peak heads) | 12 → 4 FP | 40 → 9 FP | 100 → 15 FP · 256 (full country) → 27 FP |
+| Spin-off (countries) | 2 → 8 FP | 4 → 17 FP | 8 → 31 FP |
+
+Lifetime ceiling ≈ 37 + 27 + 31 = **95 FP** vs. a 70-FP full perk board —
+the board is completable only by a player who does everything, in ~4–6
+exits.
+
+**Patience is strictly rewarded, small resets stay viable:** because all
+tracks bank on every exit and are high-water functions, total FP is a
+function of *how far you have ever pushed each metric*, not of how often
+you reset. At equal wall-clock, the player who waited for IPO has higher
+E (uninterrupted compounding + world bonus, no rebuild tax) **and**
+higher peak H, so their bankable FP strictly dominates the serial
+acquirer's — e.g. day-4 Acquisition banks 3 FP and restarts from money
+50, while the day-12 IPO player banks ~19 FP (10 + 9) in one exit. Yet
+the early Acquisition is never a trap: its 3 FP (output rank 1 + training
+rank 1, permanent) is a real, immediate perk head start, and the delta
+form guarantees the reset destroys no future FP.
+
+### The perk board (7 perks, respec-able)
+
+Costs are per rank; `Σ` = full track. Effects hook into existing
+formulas only (no new math surfaces). Respec: **free once per exit**
+(`FOUNDER_RESPEC_FREE_PER_EXIT = 1`, flag reset on prestige) — Trimps
+precedent; experimentation is the point, thrash is not.
+
+| perk | effect per rank | ranks | FP costs | Σ | rationale |
+|---|---|---|---|---|---|
+| 📈 Vision | +5% output | 5 | 1/2/3/4/5 | 15 | the plain-power track; full = 1 Aura level, deliberately modest vs rep's 2× |
+| 🎓 Alumni network | training duration ×0.90 | 4 | 1/2/3/4 | 10 | stacks with Mentorship (0.85) — tames the 1.6^n training tail |
+| 🧾 Lean ops | salaries ×0.95 | 4 | 1/2/3/4 | 10 | independent of HR's 0.4 floor; total ×0.815 |
+| ☁️ Cloud infra | offline cap +4 h | 3 | 2/3/4 | 9 | 24 → 36 h; the "offline cap as content" hook (#36) |
+| 💰 War chest | starting cash 500 / 5,000 / 50,000 | 3 | 1/2/3 | 6 | replaces `COUNTRY_STARTING_MONEY` (50) on restarts *and* fresh countries; 50k ≈ skips ~10 min of garage — convenience only |
+| 👷 Foreman | all timed-action durations ×0.92 | 4 | 2/3/4/5 | 14 | the builder-economy perk; total ×0.716 — priced highest because it discounts the VsCoin fast-forward sink |
+| 🧲 Reputation hire | hire costs ×0.95 | 3 | 1/2/3 | 6 | stacks with Talent Network |
+
+First-IPO shopping check: ~19 FP buys Vision 1–3 + Alumni 1 + War chest 1
+(+15% output, faster training, 500 start) — a felt, chosen head start on
+top of rep's 2×, without doubling it.
+
+**Phase H guard note:** post-1.0 feature; the harness never prestiges, so
+guards are untouched. State needed: `state.founder = { points, banked:
+{acq, ipo, spin}, peakHeadcount, maxCountries, perks: {}, respecUsed }` —
+`peakHeadcount` updated in the hire path (init from current headcount in
+`migrate()`), `maxCountries` in `unlockCountry`. `SAVE_VERSION` bump.
+Story/mission hooks: each exit type is a natural mission-chain terminus
+(improvements #30's "long-horizon chains").
+
+Watch metrics: if >50% of first exits are Acquisitions at the 1e9 floor
+followed by churn, raise `ACQ_MIN_EARNED` to 1e10 (shifts the whole track,
+one knob); if the board completes in < 3 exits at the median, raise
+`IPO_FP_EXP`'s denominator instead of touching perk costs (income knob
+before price knob, as always).
+
+## VsCoin flows (Phase A/B/F update)
+
+New sinks: automation early-unlocks (6/8/10, one-time, global), expedition
+fast-forwards (24–116, luxury). New sources: viral jackpots (realized
+~0.6–0.8/day, hard-capped 2/day — below dailies by design). The Phase W
+"one identity" budget survives: automations (24) now compete with builders
+#4–5 (23), full Aura (30) and the pack ladder for the ~150 + dailies
+income. Founder Points are deliberately **not** purchasable for VsCoin —
+prestige depth stays gameplay-earned.
